@@ -1,5 +1,7 @@
 {
-  "name": "CitaPlanner AI",
-  "description": "Una aplicación inteligente de agenda que utiliza Gemini AI para convertir lenguaje natural en eventos. Integra notificaciones vía WhatsApp (WAHA), SMS (LabsMobile) y CRM (Chatwoot) orquestadas por N8N.",
-  "requestFramePermissions": []
+  "name": "Citaplanner AI",
+  "description": "Plataforma de gestión de ultra-lujo para micropigmentación y estética avanzada, potenciada por Gemini AI.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, User, ShieldAlert, Plus, Trash2, 
-  Save, Check, ChevronRight, AlertCircle, Coffee, CalendarDays, Settings, X, Loader2
+  Save, Check, Coffee, CalendarDays, Settings, X, Loader2
 } from 'lucide-react';
-import { Professional, DailySchedule, TimeSlot, ScheduleException, ExceptionType } from '../types';
+import { toast } from 'sonner';
+import { Professional, ScheduleException, ExceptionType } from '../types';
 import { api } from '../services/api';
 
-// Helper para días de la semana
 const DAYS_OF_WEEK = [
   { id: 1, name: 'Lunes' },
   { id: 2, name: 'Martes' },
@@ -25,11 +25,9 @@ export const SchedulesPage: React.FC = () => {
   const [selectedProId, setSelectedProId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'WEEKLY' | 'EXCEPTIONS'>('WEEKLY');
   
-  // Edit Professional Modal State
   const [isEditProModalOpen, setIsEditProModalOpen] = useState(false);
   const [proFormData, setProFormData] = useState<Partial<Professional>>({});
 
-  // Estado para el formulario de excepciones
   const [newException, setNewException] = useState<{
     startDate: string;
     endDate: string;
@@ -42,7 +40,6 @@ export const SchedulesPage: React.FC = () => {
     description: ''
   });
 
-  // Cargar datos
   useEffect(() => {
     loadProfessionals();
   }, []);
@@ -59,8 +56,6 @@ export const SchedulesPage: React.FC = () => {
 
   const selectedPro = professionals.find(p => p.id === selectedProId) || professionals[0];
 
-  // --- Handlers para Edición de Profesional ---
-  
   const openEditProModal = () => {
     setProFormData({
         name: selectedPro.name,
@@ -78,18 +73,17 @@ export const SchedulesPage: React.FC = () => {
     setSaving(true);
     const updatedPro = { ...selectedPro, ...proFormData };
     
-    // UI Update (Optimistic)
     setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
     
-    // API Call
     const success = await api.updateProfessional(updatedPro);
     setSaving(false);
     
     if (success) {
       setIsEditProModalOpen(false);
+      toast.success("Profesional actualizado");
     } else {
-      alert("Error al guardar cambios del profesional.");
-      loadProfessionals(); // Revert
+      toast.error("Error al guardar cambios del profesional.");
+      loadProfessionals(); 
     }
   };
 
@@ -113,15 +107,13 @@ export const SchedulesPage: React.FC = () => {
       const res = await api.createProfessional(newPro);
       if(res.success) {
           await loadProfessionals();
-          // Select new pro
           if(res.id) setSelectedProId(res.id);
+          toast.success("Profesional creado");
       } else {
-          alert("Error creando profesional");
+          toast.error("Error creando profesional");
       }
       setLoading(false);
   };
-
-  // --- Handlers para Horario Semanal ---
 
   const handleToggleDay = (dayId: number) => {
     if (!selectedPro) return;
@@ -151,14 +143,11 @@ export const SchedulesPage: React.FC = () => {
     if (!selectedPro) return;
     const updatedSchedule = selectedPro.weeklySchedule.map(day => {
       if (day.dayOfWeek === dayId) {
-        // Lógica simple para añadir un slot después del último o por defecto
         const lastSlot = day.slots[day.slots.length - 1];
         let newStart = '13:00';
         let newEnd = '14:00';
         
         if (lastSlot) {
-            // Intenta añadir 1 hora después
-            // (Para una implementación real, parsear horas sería mejor, aquí simplificamos)
              newStart = lastSlot.end;
              newEnd = '18:00'; 
         }
@@ -194,20 +183,17 @@ export const SchedulesPage: React.FC = () => {
     const success = await api.updateProfessional(selectedPro);
     setSaving(false);
     if (success) {
-      alert("Horarios guardados correctamente.");
+      toast.success("Horarios guardados correctamente.");
     } else {
-      alert("Error al guardar en el servidor.");
+      toast.error("Error al guardar en el servidor.");
     }
   };
-
-  // --- Handlers para Excepciones ---
 
   const handleAddException = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newException.startDate || !newException.endDate || !selectedPro) return;
 
     const exception: ScheduleException = {
-      // Use Date + Math.random fallback for non-secure contexts
       id: Date.now().toString(36) + Math.random().toString(36).substring(2),
       startDate: new Date(newException.startDate).toISOString(),
       endDate: new Date(newException.endDate).toISOString(),
@@ -215,18 +201,16 @@ export const SchedulesPage: React.FC = () => {
       description: newException.description
     };
 
-    // Optimistic
     const updatedExceptions = [...selectedPro.exceptions, exception];
     const updatedPro = { ...selectedPro, exceptions: updatedExceptions };
     setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
 
-    // Reset form
     setNewException({ startDate: '', endDate: '', type: 'UNAVAILABLE', description: '' });
 
-    // Save Immediately for better UX on lists
     setSaving(true);
     await api.updateProfessional(updatedPro);
     setSaving(false);
+    toast.success("Excepción añadida");
   };
 
   const removeException = async (exceptionId: string) => {
@@ -241,6 +225,7 @@ export const SchedulesPage: React.FC = () => {
     setSaving(true);
     await api.updateProfessional(updatedPro);
     setSaving(false);
+    toast.success("Excepción eliminada");
   };
 
   const getExceptionLabel = (type: ExceptionType) => {
@@ -274,7 +259,6 @@ export const SchedulesPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
-        {/* Sidebar: Lista de Profesionales */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50">
@@ -322,7 +306,6 @@ export const SchedulesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="lg:col-span-3">
           {professionals.length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
@@ -332,8 +315,6 @@ export const SchedulesPage: React.FC = () => {
               </div>
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm min-h-[600px]">
-                
-                {/* Tabs Header */}
                 <div className="flex border-b border-slate-200">
                 <button
                     onClick={() => setActiveTab('WEEKLY')}
@@ -359,7 +340,6 @@ export const SchedulesPage: React.FC = () => {
                 </button>
                 </div>
 
-                {/* Content: Weekly Schedule */}
                 {activeTab === 'WEEKLY' && selectedPro && (
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6">
@@ -373,7 +353,6 @@ export const SchedulesPage: React.FC = () => {
                     <div className="space-y-4">
                     {DAYS_OF_WEEK.map((dayObj) => {
                         const schedule = selectedPro.weeklySchedule.find(d => d.dayOfWeek === dayObj.id);
-                        // Fallback if schedule is not initialized
                         const isEnabled = schedule?.isEnabled ?? false;
                         const slots = schedule?.slots || [];
 
@@ -381,7 +360,6 @@ export const SchedulesPage: React.FC = () => {
                         <div key={dayObj.id} className={`p-4 rounded-lg border transition-all ${isEnabled ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100 opacity-75'}`}>
                             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                             
-                            {/* Day Toggle */}
                             <div className="w-32 flex-shrink-0 pt-2">
                                 <label className="flex items-center gap-3 cursor-pointer">
                                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isEnabled ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
@@ -399,7 +377,6 @@ export const SchedulesPage: React.FC = () => {
                                 </label>
                             </div>
 
-                            {/* Time Slots */}
                             <div className="flex-grow">
                                 {isEnabled ? (
                                 <div className="space-y-3">
@@ -460,12 +437,9 @@ export const SchedulesPage: React.FC = () => {
                 </div>
                 )}
 
-                {/* Content: Exceptions */}
                 {activeTab === 'EXCEPTIONS' && selectedPro && (
                 <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    
-                    {/* Form */}
                     <div className="md:col-span-1">
                         <h3 className="font-bold text-slate-800 mb-4">Agregar Excepción</h3>
                         <form onSubmit={handleAddException} className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -525,7 +499,6 @@ export const SchedulesPage: React.FC = () => {
                         </form>
                     </div>
 
-                    {/* List */}
                     <div className="md:col-span-2">
                         <h3 className="font-bold text-slate-800 mb-4">Próximas Ausencias y Bloqueos</h3>
                         
@@ -579,7 +552,6 @@ export const SchedulesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Edit Professional Modal */}
       {isEditProModalOpen && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-scale-in">

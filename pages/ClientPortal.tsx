@@ -1,134 +1,272 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Plus, History, MapPin } from 'lucide-react';
+import { 
+  Calendar, Clock, Plus, History, MapPin, Sparkles, 
+  User, Heart, Loader2, XCircle, 
+  MessageSquare, ShieldCheck, Zap, Wand2, Globe
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Appointment, AppointmentStatus } from '../types';
+import { Appointment, AppointmentStatus, LandingSettings } from '../types';
+import { api } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { GoogleGenAI } from '@google/genai';
 
 export const ClientPortal: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // MOCK DATA (In real app, fetch using user.phone)
-  const [appointments] = useState<Appointment[]>([
-    {
-      id: '1',
-      title: 'Consulta General',
-      startDateTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
-      endDateTime: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
-      clientName: 'Maria Garcia',
-      clientPhone: '5512345678', // Matches Mock User Phone
-      status: AppointmentStatus.SCHEDULED,
-      description: 'Revisión anual'
-    },
-    {
-      id: 'old1',
-      title: 'Limpieza',
-      startDateTime: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-      endDateTime: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-      clientName: 'Maria Garcia',
-      clientPhone: '5512345678',
-      status: AppointmentStatus.COMPLETED,
-      description: ''
-    }
-  ]);
+  const queryClient = useQueryClient();
+  const [settings, setSettings] = useState<LandingSettings | null>(null);
+  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [loadingAdvice, setLoadingAdvice] = useState(false);
 
-  const myAppointments = appointments.filter(a => a.clientPhone === user?.phone);
-  const upcoming = myAppointments.filter(a => new Date(a.startDateTime) > new Date());
-  const history = myAppointments.filter(a => new Date(a.startDateTime) <= new Date());
+  const { data: allAppointments = [], isLoading } = useQuery({
+    queryKey: ['appointments'],
+    queryFn: api.getAppointments
+  });
+
+  useEffect(() => {
+    api.getLandingSettings().then(setSettings);
+  }, []);
+
+  const myAppointments = useMemo(() => {
+    return allAppointments.filter(a => a.clientPhone === user?.phone);
+  }, [allAppointments, user]);
+
+  const upcoming = useMemo(() => 
+    myAppointments.filter(a => new Date(a.startDateTime) > new Date() && a.status === AppointmentStatus.SCHEDULED)
+    .sort((a,b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+  , [myAppointments]);
+
+  const history = useMemo(() => 
+    myAppointments.filter(a => new Date(a.startDateTime) <= new Date() || a.status !== AppointmentStatus.SCHEDULED)
+    .sort((a,b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime())
+  , [myAppointments]);
+
+  useEffect(() => {
+    const getBeautyAdvice = async () => {
+        if (!user || myAppointments.length === 0 || loadingAdvice) return;
+        setLoadingAdvice(true);
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        try {
+          const lastApt = history[0];
+          const prompt = `Como concierge experto de "Shula Studio" de ultra-lujo, analiza la última cita de ${user.name}: "${lastApt?.title || 'Tratamiento Elite'}". Sugiere un consejo de mantenimiento sofisticado. Sé elegante y breve. Máximo 20 palabras.`;
+          
+          const result = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt
+          });
+          setAiAdvice(result.text);
+        } catch (e) { console.error(e); } finally { setLoadingAdvice(false); }
+    };
+    if (history.length > 0) getBeautyAdvice();
+  }, [history, user, loadingAdvice, myAppointments.length]);
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.cancelAppointment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success("Experiencia cancelada");
+    }
+  });
+
+  if (isLoading || !settings) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Mi Portal</h1>
-          <p className="text-slate-500">Hola, {user?.name}. Gestiona tus visitas.</p>
+    <div className="max-w-7xl mx-auto px-6 py-16 animate-entrance">
+      
+      {/* Membership Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-24 gap-12">
+        <div className="flex items-center gap-10">
+            <div className="relative group">
+                <div className="w-36 h-36 rounded-full border border-[#D4AF37]/30 p-2 bg-gradient-to-tr from-[#111] to-black shadow-2xl">
+                    <div className="w-full h-full rounded-full bg-[#050505] flex items-center justify-center text-6xl font-black gold-text-gradient group-hover:scale-105 transition-transform duration-700">
+                        {user?.name.charAt(0)}
+                    </div>
+                </div>
+                <div className="absolute -bottom-2 -right-2 bg-[#D4AF37] p-2.5 rounded-full shadow-[0_0_25px_#D4AF37] animate-pulse">
+                  <Sparkles className="text-black" size={20} />
+                </div>
+            </div>
+            <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[#D4AF37] mb-3 block opacity-80">Elite Network Membership</span>
+                <h1 className="text-7xl font-black text-white tracking-tighter uppercase leading-none">{user?.name.split(' ')[0]}</h1>
+                <div className="flex items-center gap-4 mt-6">
+                    <span className="px-4 py-1.5 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[9px] font-black text-[#D4AF37] uppercase tracking-[0.2em]">Partner Gold</span>
+                    <span className="text-slate-600 font-bold uppercase tracking-[0.2em] text-[9px]">ID: {user?.phone}</span>
+                </div>
+            </div>
         </div>
         <button 
           onClick={() => navigate('/book')}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center gap-2"
+          className="gold-btn px-16 py-6 rounded-[2.5rem] flex items-center gap-4 text-[10px] uppercase tracking-[0.4em] active:scale-95"
         >
-          <Plus size={18} /> Nueva Cita
+          <Plus size={20} /> Solicitar Experiencia
         </button>
       </div>
 
-      <div className="space-y-8">
-        {/* Upcoming */}
-        <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Calendar className="text-indigo-600" size={20} />
-            Próximas Citas
-          </h2>
-          
-          {upcoming.length === 0 ? (
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 text-center text-slate-500">
-              No tienes citas programadas.
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {upcoming.map(apt => (
-                <div key={apt.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-slate-800">{apt.title}</h3>
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-bold">PROGRAMADA</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-4 text-slate-600 text-sm mt-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-slate-400" />
-                      {new Date(apt.startDateTime).toLocaleDateString('es-ES', {weekday: 'long', day: 'numeric', month: 'long'})}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+        
+        {/* Left Column (Stats & AI) */}
+        <div className="lg:col-span-4 space-y-12">
+            
+            {/* AI Concierge */}
+            <div className="glass-card rounded-[3.5rem] p-12 relative overflow-hidden group">
+                <div className="absolute -top-12 -right-12 w-56 h-56 bg-[#D4AF37]/5 rounded-full blur-[80px]" />
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-10">
+                        <div className="p-3 bg-[#D4AF37]/10 rounded-2xl text-[#D4AF37] border border-[#D4AF37]/10">
+                          <Wand2 size={24} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Concierge <span className="text-white">Active</span></span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-slate-400" />
-                      {new Date(apt.startDateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-slate-400" />
-                      Consultorio 1
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* History */}
-        <section>
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <History className="text-slate-400" size={20} />
-            Historial
-          </h2>
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-             <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th className="px-6 py-3 font-semibold text-slate-600">Fecha</th>
-                        <th className="px-6 py-3 font-semibold text-slate-600">Servicio</th>
-                        <th className="px-6 py-3 font-semibold text-slate-600 text-center">Estado</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                    {history.map(apt => (
-                        <tr key={apt.id}>
-                            <td className="px-6 py-4 text-slate-600">
-                                {new Date(apt.startDateTime).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 font-medium text-slate-800">
-                                {apt.title}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">
-                                    {apt.status === 'COMPLETED' ? 'Completada' : 'Cancelada'}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
-                    {history.length === 0 && (
-                        <tr><td colSpan={3} className="p-6 text-center text-slate-400">Sin historial reciente.</td></tr>
+                    {loadingAdvice ? (
+                        <div className="space-y-4"><div className="h-3 w-full bg-white/5 animate-pulse rounded-full" /><div className="h-3 w-2/3 bg-white/5 animate-pulse rounded-full" /></div>
+                    ) : aiAdvice ? (
+                        <p className="text-2xl font-light text-slate-200 leading-tight italic tracking-tight">"{aiAdvice}"</p>
+                    ) : (
+                        <p className="text-slate-600 italic font-medium">Sincronizando sus preferencias de lujo...</p>
                     )}
-                </tbody>
-             </table>
-          </div>
-        </section>
+                </div>
+            </div>
+
+            {/* Loyalty Points */}
+            <div className="glass-card rounded-[3.5rem] p-12 border-[#D4AF37]/5 bg-gradient-to-tr from-[#050505] to-[#0a0a0a]">
+                <div className="flex justify-between items-center mb-10">
+                  <h3 className="font-black text-white text-[10px] uppercase tracking-[0.4em] flex items-center gap-3">
+                      <Zap size={20} className="text-[#D4AF37]" /> Wallet Aurum
+                  </h3>
+                </div>
+                <div className="space-y-8">
+                    <div className="flex justify-between items-end">
+                        <span className="text-6xl font-black text-white tracking-tighter">1,250</span>
+                        <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest mb-3">Créditos de Belleza</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div style={{ width: '75%' }} className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F1C40F] shadow-[0_0_20px_rgba(212,175,55,0.4)]" />
+                    </div>
+                    <p className="text-[8px] text-slate-600 font-black uppercase tracking-[0.3em] text-center">Faltan 250 créditos para su beneficio Platinum</p>
+                </div>
+            </div>
+
+            {/* Node Info */}
+            <div className="glass-card rounded-[3.5rem] p-12">
+                <div className="space-y-10">
+                    <div className="flex gap-6 items-start">
+                        <div className="p-4 bg-white/5 rounded-3xl text-[#D4AF37] border border-white/5"><MapPin size={24} /></div>
+                        <div>
+                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Master Node</p>
+                            <span className="text-sm text-slate-400 font-medium leading-relaxed block max-w-[200px]">Av. Paseo de la Reforma 250, Polanco.</span>
+                        </div>
+                    </div>
+                    <div className="pt-6 border-t border-white/5">
+                        <button className="flex items-center justify-center gap-3 w-full bg-white/5 text-slate-400 py-4 rounded-[2rem] font-black text-[9px] uppercase tracking-[0.4em] hover:bg-white/10 transition-all border border-white/5">
+                           <MessageSquare size={16} /> WhatsApp Personal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Right Column (Appointments) */}
+        <div className="lg:col-span-8 space-y-20">
+            {/* Upcoming Section */}
+            <section>
+                <div className="flex justify-between items-end mb-12">
+                  <h2 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
+                      <Calendar className="text-[#D4AF37]" size={32} /> Próximas Sesiones
+                  </h2>
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] mb-1">{upcoming.length} Reserva(s)</span>
+                </div>
+                
+                {upcoming.length === 0 ? (
+                    <div className="glass-card p-24 rounded-[4rem] border-dashed border-white/10 text-center group">
+                        <p className="text-slate-600 font-black uppercase tracking-[0.4em] text-[10px] mb-10">Sin actividad de red activa</p>
+                        <button onClick={() => navigate('/book')} className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] border border-[#D4AF37]/30 px-10 py-5 rounded-[2rem] hover:bg-[#D4AF37] hover:text-black transition-all group-hover:scale-105">Solicitar acceso a agenda</button>
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        {upcoming.map(apt => (
+                            <div key={apt.id} className="glass-card p-12 rounded-[4rem] relative overflow-hidden group glass-card-hover transition-all duration-700">
+                                <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#D4AF37] to-transparent" />
+                                <div className="flex flex-col md:flex-row justify-between gap-12">
+                                    <div className="flex gap-10 items-center">
+                                        <div className="bg-[#0a0a0a] rounded-[2.5rem] p-10 text-center min-w-[140px] border border-white/5 shadow-2xl">
+                                            <span className="block text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em] mb-2">{new Date(apt.startDateTime).toLocaleString('es-ES', { month: 'short' })}</span>
+                                            <span className="block text-5xl font-black text-white tracking-tighter">{new Date(apt.startDateTime).getDate()}</span>
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <h3 className="font-black text-3xl text-white tracking-tight group-hover:text-[#D4AF37] transition-colors">{apt.title}</h3>
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                            </div>
+                                            <div className="flex flex-wrap gap-12 text-[12px] font-bold text-slate-500 uppercase tracking-[0.2em]">
+                                                <span className="flex items-center gap-3"><Clock size={18} className="text-slate-700" /> {new Date(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="flex items-center gap-3"><Globe size={18} className="text-slate-700" /> Shula Polanco Node</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-8 border-t md:border-t-0 md:border-l border-white/5 pt-10 md:pt-0 md:pl-12">
+                                        <button 
+                                            onClick={() => window.confirm("¿Confirmar cancelación estratégica?") && cancelMutation.mutate(apt.id)}
+                                            className="w-14 h-14 bg-white/5 text-slate-700 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all flex items-center justify-center border border-white/5"
+                                        >
+                                            <XCircle size={28} />
+                                        </button>
+                                        <div className="hidden lg:block">
+                                          <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Status Red</p>
+                                          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
+
+            {/* History Section */}
+            <section>
+                <h2 className="text-xl font-black text-slate-700 uppercase tracking-[0.5em] mb-12 flex items-center gap-4">
+                    <History size={24} /> Registro Histórico Master
+                </h2>
+                <div className="glass-card rounded-[3.5rem] overflow-hidden border-white/5 shadow-2xl">
+                    <table className="w-full text-left">
+                        <thead className="bg-white/5 border-b border-white/5">
+                            <tr>
+                                <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em]">Fecha de Operación</th>
+                                <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em]">Experiencia</th>
+                                <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em] text-center">Frecuencia</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {history.length === 0 ? (
+                                <tr><td colSpan={3} className="px-12 py-24 text-center text-slate-700 italic uppercase tracking-[0.3em] text-[10px]">Base de datos histórica vacía</td></tr>
+                            ) : (
+                                history.map(apt => (
+                                    <tr key={apt.id} className="hover:bg-white/5 transition-colors group">
+                                        <td className="px-12 py-8 text-[12px] font-bold text-slate-500 uppercase tracking-widest">
+                                            {new Date(apt.startDateTime).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="px-12 py-8">
+                                            <p className="font-black text-white text-lg uppercase tracking-tight group-hover:text-[#D4AF37] transition-colors">{apt.title}</p>
+                                        </td>
+                                        <td className="px-12 py-8 text-center">
+                                            <span className={`text-[9px] font-black px-5 py-2 rounded-full uppercase tracking-widest ${
+                                                apt.status === AppointmentStatus.COMPLETED ? 'text-[#D4AF37] border border-[#D4AF37]/30' : 'text-slate-600 border border-white/5'
+                                            }`}>
+                                                {apt.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
       </div>
     </div>
   );

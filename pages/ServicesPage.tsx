@@ -1,8 +1,11 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { BriefcaseMedical, Search, Plus, Clock, Filter, Edit2, Trash2, CheckCircle2, XCircle, DollarSign, Tag, Loader2 } from 'lucide-react';
+import { BriefcaseMedical, Search, Plus, Clock, Filter, Edit2, Trash2, CheckCircle2, XCircle, DollarSign, Tag } from 'lucide-react';
+import { toast } from 'sonner';
 import { Service } from '../types';
 import { ServiceModal } from '../components/ServiceModal';
 import { api } from '../services/api';
+import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
 
 export const ServicesPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -11,24 +14,21 @@ export const ServicesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   
-  // Estado Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | undefined>(undefined);
 
-  // Cargar datos
   useEffect(() => {
     loadServices();
   }, []);
 
   const loadServices = async () => {
     setLoading(true);
-    // Traer todos, incluidos inactivos, para gestión
-    const data = await api.getServices(true);
+    // Fix: calling getServices with 0 arguments as defined in api.ts
+    const data = await api.getServices();
     setServices(data);
     setLoading(false);
   };
 
-  // Filtrado
   const filteredServices = useMemo(() => {
     return services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -39,23 +39,23 @@ export const ServicesPage: React.FC = () => {
 
   const categories = Array.from(new Set(services.map(s => s.category)));
 
-  // Handlers
   const handleSaveService = async (service: Service) => {
     if (editingService) {
       const success = await api.updateService(service);
       if (success) {
         setServices(prev => prev.map(s => s.id === service.id ? service : s));
+        toast.success("Servicio actualizado correctamente");
       } else {
-        alert("Error actualizando servicio");
+        toast.error("Error actualizando servicio");
       }
     } else {
-      // Remove placeholder ID before sending to API
       const { id, ...newServiceData } = service; 
       const created = await api.createService(newServiceData);
       if (created) {
         setServices(prev => [...prev, created]);
+        toast.success("Servicio creado correctamente");
       } else {
-        alert("Error creando servicio");
+        toast.error("Error creando servicio");
       }
     }
   };
@@ -65,8 +65,9 @@ export const ServicesPage: React.FC = () => {
       const success = await api.deleteService(id);
       if (success) {
         setServices(prev => prev.filter(s => s.id !== id));
+        toast.success("Servicio eliminado");
       } else {
-        alert("Error al eliminar el servicio");
+        toast.error("Error al eliminar el servicio");
       }
     }
   };
@@ -83,7 +84,6 @@ export const ServicesPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -101,32 +101,40 @@ export const ServicesPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-           <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><BriefcaseMedical size={24}/></div>
-           <div>
-             <p className="text-sm text-slate-500 font-medium uppercase">Total Servicios</p>
-             <p className="text-2xl font-bold text-slate-800">{services.length}</p>
-           </div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-           <div className="p-3 bg-green-50 text-green-600 rounded-lg"><CheckCircle2 size={24}/></div>
-           <div>
-             <p className="text-sm text-slate-500 font-medium uppercase">Activos</p>
-             <p className="text-2xl font-bold text-slate-800">{services.filter(s => s.status === 'ACTIVE').length}</p>
-           </div>
-        </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-           <div className="p-3 bg-purple-50 text-purple-600 rounded-lg"><Tag size={24}/></div>
-           <div>
-             <p className="text-sm text-slate-500 font-medium uppercase">Categorías</p>
-             <p className="text-2xl font-bold text-slate-800">{categories.length}</p>
-           </div>
-        </div>
+        {loading ? (
+            <>
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+            </>
+        ) : (
+            <>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><BriefcaseMedical size={24}/></div>
+                <div>
+                    <p className="text-sm text-slate-500 font-medium uppercase">Total Servicios</p>
+                    <p className="text-2xl font-bold text-slate-800">{services.length}</p>
+                </div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="p-3 bg-green-50 text-green-600 rounded-lg"><CheckCircle2 size={24}/></div>
+                <div>
+                    <p className="text-sm text-slate-500 font-medium uppercase">Activos</p>
+                    <p className="text-2xl font-bold text-slate-800">{services.filter(s => s.status === 'ACTIVE').length}</p>
+                </div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className="p-3 bg-purple-50 text-purple-600 rounded-lg"><Tag size={24}/></div>
+                <div>
+                    <p className="text-sm text-slate-500 font-medium uppercase">Categorías</p>
+                    <p className="text-2xl font-bold text-slate-800">{categories.length}</p>
+                </div>
+                </div>
+            </>
+        )}
       </div>
 
-      {/* Filters Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -152,11 +160,10 @@ export const ServicesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
         {loading ? (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="animate-spin text-indigo-600" size={32} />
+            <div className="p-6">
+                {[1, 2, 3, 4, 5].map((i) => <TableRowSkeleton key={i} />)}
             </div>
         ) : (
             <div className="overflow-x-auto">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { CalendarDays, Lock, Phone, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, Phone, ArrowRight, Loader2, Sparkles, ShieldCheck, Globe, Mail } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [phone, setPhone] = useState('');
@@ -28,90 +28,126 @@ export const LoginPage: React.FC = () => {
             else navigate('/');
         }
       } else {
-        setError('Credenciales inválidas. Intente de nuevo.');
+        setError('Acceso denegado. Credenciales no autorizadas.');
       }
     } catch (err) {
-      setError('Ocurrió un error al intentar iniciar sesión.');
+      setError('Falla crítica en la infraestructura Aurum.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col md:flex-row">
-        
-        <div className="w-full p-8 md:p-10">
-          <div className="flex items-center gap-2 font-bold text-2xl text-indigo-600 mb-8 justify-center">
-            <CalendarDays className="h-8 w-8" />
-            <span>CitaPlanner</span>
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#0a0a0a]">
+      
+      {/* 11 Satellites Network Simulation (Abstract Representation) */}
+      <div className="absolute inset-0 pointer-events-none">
+         {[...Array(11)].map((_, i) => (
+           <div 
+            key={i}
+            className="absolute satellite-node"
+            style={{
+              top: `${Math.random() * 90 + 5}%`,
+              left: `${Math.random() * 90 + 5}%`,
+              animationDelay: `${i * 0.7}s`,
+              animationDuration: `${6 + Math.random() * 4}s`
+            }}
+           >
+             <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.8)]" />
+             {/* Subtle line connections simulated by faint radial gradients around nodes */}
+             <div className="absolute -inset-10 bg-[radial-gradient(circle,rgba(212,175,55,0.03)_0%,transparent_70%)] rounded-full" />
+           </div>
+         ))}
+      </div>
+
+      <div className="w-full max-w-lg z-10 animate-fade-in-up">
+        <div className="glass-card p-10 md:p-14 rounded-[3.5rem] relative">
+          
+          {/* Brand Identity Header */}
+          <div className="flex flex-col items-center mb-12">
+            <div className="mb-4">
+               <div className="w-20 h-20 rounded-[2rem] border-2 border-[#D4AF37]/30 flex items-center justify-center bg-black/40 shadow-2xl relative group overflow-hidden">
+                  <Sparkles className="text-[#D4AF37] group-hover:scale-125 transition-transform duration-500" size={36} />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-[#D4AF37]/10 to-transparent" />
+               </div>
+            </div>
+            <h1 className="text-4xl font-black tracking-tighter text-white uppercase flex items-center gap-2">
+              Cita<span className="gold-text-gradient">Planner</span>
+            </h1>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em] mt-2">Elite Business Management</p>
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-800 mb-2 text-center">Bienvenido</h2>
-          <p className="text-slate-500 text-center mb-8">Ingresa a tu cuenta para gestionar tus citas.</p>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono o Usuario</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Identidad de Operación</label>
+              <div className="relative group">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#D4AF37] transition-colors">
+                  <Mail size={18} />
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="Tu número de celular"
+                  placeholder="admin@citaplanner.ai"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white gold-focus placeholder-slate-700"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Bóveda de Seguridad</label>
+              <div className="relative group">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#D4AF37] transition-colors">
+                  <Lock size={18} />
+                </div>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white gold-focus placeholder-slate-700"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-100 text-center">
+              <div className="text-red-400 text-[11px] font-black uppercase tracking-widest bg-red-950/20 p-4 rounded-2xl border border-red-900/30 text-center">
                 {error}
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  Iniciar Sesión <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
-          
-          <div className="mt-8 text-center">
-            <p className="text-sm text-slate-400">
-              ¿No tienes cuenta? <Link to="/book" className="text-indigo-600 font-medium hover:underline">Reserva una cita pública</Link>
-            </p>
-            <div className="mt-4 text-xs text-slate-300 border-t pt-4">
-                <p>Credenciales Demo:</p>
-                <p>Admin: admin / 123</p>
-                <p>Prof: 5551001 / 123</p>
-                <p>Cliente: 5512345678 / 123</p>
+            <div className="pt-4">
+              <button
+                id="login-btn-71427321893"
+                type="submit"
+                disabled={loading}
+                className="w-full gold-btn py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 disabled:opacity-50 shadow-lg active:scale-95"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    Iniciar Sesión <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+
+              {/* Endorsement of Hierarchy */}
+              <p className="aurum-endorsement-41948871">
+                A strategic solution by <a href="https://aurumcapital.mx" target="_blank" rel="noopener noreferrer"><b>Aurum Capital</b></a>
+              </p>
             </div>
+          </form>
+
+          {/* Infrastructure Security Footer */}
+          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
+             <div className="flex items-center gap-2 px-5 py-2 bg-white/5 rounded-full border border-white/5 shadow-inner">
+                <ShieldCheck className="text-[#D4AF37]" size={14} />
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Secured by Aurum Infrastructure</span>
+             </div>
+             <p className="text-[9px] text-slate-600 font-bold uppercase tracking-[0.1em]">© 2026 CitaPlanner Global Ecosystem</p>
           </div>
         </div>
       </div>

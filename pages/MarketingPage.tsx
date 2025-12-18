@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Megaphone, Mail, MessageCircle, Send, Plus, Users, Zap, Clock, CheckCircle2, AlertCircle, Play } from 'lucide-react';
+import { toast } from 'sonner';
 import { Campaign, AutomationRule, MarketingChannel } from '../types';
 import { launchCampaign, saveAutomationRule } from '../services/integrationService';
 
 export const MarketingPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'CAMPAIGNS' | 'AUTOMATIONS'>('CAMPAIGNS');
 
-  // --- STATE FOR CAMPAIGNS ---
   const [campaigns, setCampaigns] = useState<Campaign[]>([
     {
       id: 'c1',
@@ -37,7 +37,6 @@ export const MarketingPage: React.FC = () => {
   });
   const [sending, setSending] = useState(false);
 
-  // --- STATE FOR AUTOMATIONS ---
   const [automations, setAutomations] = useState<AutomationRule[]>([
     {
       id: 'a1',
@@ -53,7 +52,7 @@ export const MarketingPage: React.FC = () => {
       name: 'Reactivación de Clientes',
       isActive: false,
       triggerType: 'CLIENT_INACTIVE',
-      delayHours: 720, // 30 días
+      delayHours: 720,
       channel: 'EMAIL',
       templateMessage: 'Te extrañamos. Aquí tienes un cupón de descuento.'
     },
@@ -62,13 +61,11 @@ export const MarketingPage: React.FC = () => {
       name: 'Saludo de Cumpleaños',
       isActive: true,
       triggerType: 'BIRTHDAY',
-      delayHours: 9, // 9 AM
+      delayHours: 9,
       channel: 'WHATSAPP',
       templateMessage: '¡Feliz cumpleaños {{name}}! 🎉 Tienes un regalo esperando en tu próxima visita.'
     }
   ]);
-
-  // --- HANDLERS ---
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +84,7 @@ export const MarketingPage: React.FC = () => {
     setCampaigns([campaign, ...campaigns]);
     setNewCampaign({ name: '', channel: 'EMAIL', targetSegment: 'ALL', content: '', subject: '' });
     setIsCampaignModalOpen(false);
+    toast.success("Borrador creado");
   };
 
   const handleSendCampaign = async (id: string) => {
@@ -102,12 +100,12 @@ export const MarketingPage: React.FC = () => {
         setCampaigns(prev => prev.map(c => 
           c.id === id ? { ...c, status: 'SENT', sentCount: result.sentCount } : c
         ));
-        alert(result.message);
+        toast.success(result.message);
       } else {
-        alert("Error al enviar la campaña.");
+        toast.error("Error al enviar la campaña.");
       }
     } catch (error) {
-      alert("Error de conexión con N8N.");
+      toast.error("Error de conexión con N8N.");
     } finally {
       setSending(false);
     }
@@ -119,20 +117,16 @@ export const MarketingPage: React.FC = () => {
 
     const newStatus = !rule.isActive;
     
-    // UI Optimistic Update
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, isActive: newStatus } : a));
 
-    // Backend Sync
     try {
       await saveAutomationRule({ ...rule, isActive: newStatus });
+      toast.success(newStatus ? 'Automatización activada' : 'Automatización desactivada');
     } catch (error) {
-      // Revert if error
       setAutomations(prev => prev.map(a => a.id === id ? { ...a, isActive: !newStatus } : a));
-      alert("Error guardando la configuración.");
+      toast.error("Error guardando la configuración.");
     }
   };
-
-  // --- RENDER HELPERS ---
 
   const getChannelIcon = (channel: MarketingChannel) => {
     switch (channel) {
@@ -144,7 +138,6 @@ export const MarketingPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -158,7 +151,6 @@ export const MarketingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-6">
         <button
           onClick={() => setActiveTab('CAMPAIGNS')}
@@ -182,7 +174,6 @@ export const MarketingPage: React.FC = () => {
         </button>
       </div>
 
-      {/* CAMPAIGNS CONTENT */}
       {activeTab === 'CAMPAIGNS' && (
         <div className="animate-fade-in-up">
            <div className="flex justify-between items-center mb-6">
@@ -240,7 +231,6 @@ export const MarketingPage: React.FC = () => {
         </div>
       )}
 
-      {/* AUTOMATIONS CONTENT */}
       {activeTab === 'AUTOMATIONS' && (
         <div className="animate-fade-in-up">
            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mb-6 flex gap-3 items-start">
@@ -294,7 +284,6 @@ export const MarketingPage: React.FC = () => {
         </div>
       )}
 
-      {/* CREATE CAMPAIGN MODAL */}
       {isCampaignModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-scale-in">

@@ -1,39 +1,30 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { AIParsedAppointment } from "../types";
 
-const apiKey = process.env.API_KEY;
-// Initialize securely - assumes process.env.API_KEY is available in the environment
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+import { GoogleGenAI, Type } from "@google/genai";
+import { AIParsedAppointment, Service } from "../types";
+
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const parseAppointmentRequest = async (input: string): Promise<AIParsedAppointment | null> => {
-  if (!ai) {
-    console.error("Gemini API Key is missing.");
-    throw new Error("Falta la API Key");
-  }
-
   const now = new Date().toISOString();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  // Instrucciones actualizadas para español
   const systemInstruction = `
-    Eres un asistente inteligente de agenda para CitaPlanner.
-    Tu tarea es extraer detalles de citas a partir de texto en lenguaje natural (principalmente en español).
+    Eres "Citaplanner AI", el asistente inteligente de una plataforma SaaS líder para la gestión de negocios de belleza elite.
+    Tu tarea es extraer detalles de citas que los administradores o clientes ingresan en lenguaje natural.
     
     Hora de Referencia Actual: ${now}
-    Zona Horaria del Usuario: ${timeZone}
+    Zona Horaria: ${timeZone}
     
-    Reglas:
-    1. Analiza fechas relativas (ej: "mañana", "el próximo viernes", "pasado mañana") basándote en la Hora de Referencia Actual.
-    2. La duración predeterminada es de 1 hora si no se especifica.
-    3. Devuelve las fechas en formato estricto ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ).
-    4. Si el usuario menciona el nombre de una persona, asígnalo a 'clientName'.
-    5. Si detectas un número de teléfono o mención de contacto, extráelo a 'clientPhone'.
-    6. Traduce o mantén el título y la descripción en el idioma de entrada (preferiblemente español).
+    Reglas de Oro:
+    1. Interpreta fechas relativas (mañana, próximo martes, etc.) con precisión.
+    2. El tono es profesional, eficiente y sofisticado.
+    3. Si el usuario no especifica servicio, asume "Tratamiento General Citaplanner".
+    4. Formato de salida: JSON estricto.
   `;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3-flash-preview",
       contents: input,
       config: {
         systemInstruction: systemInstruction,
@@ -41,24 +32,58 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            title: { type: Type.STRING, description: "Resumen corto de la cita" },
-            startDateTime: { type: Type.STRING, description: "Fecha y hora de inicio ISO 8601" },
-            endDateTime: { type: Type.STRING, description: "Fecha y hora de fin ISO 8601" },
-            clientName: { type: Type.STRING, description: "Nombre del cliente si se menciona" },
-            clientPhone: { type: Type.STRING, description: "Número de teléfono del cliente" },
-            description: { type: Type.STRING, description: "Detalles adicionales" },
+            title: { type: Type.STRING, description: "Servicio Citaplanner" },
+            startDateTime: { type: Type.STRING, description: "ISO 8601" },
+            endDateTime: { type: Type.STRING, description: "ISO 8601" },
+            clientName: { type: Type.STRING },
+            clientPhone: { type: Type.STRING },
+            description: { type: Type.STRING },
           },
           required: ["title", "startDateTime", "endDateTime"],
         },
       },
     });
 
-    const text = response.text;
-    if (!text) return null;
-
-    return JSON.parse(text) as AIParsedAppointment;
+    return JSON.parse(response.text) as AIParsedAppointment;
   } catch (error) {
-    console.error("Error parsing appointment with Gemini:", error);
+    console.error("Citaplanner AI Error:", error);
     return null;
+  }
+};
+
+/**
+ * Nueva función para responder dudas de clientes basadas en el catálogo real.
+ */
+export const answerServiceQuery = async (customerMessage: string, catalog: Service[]): Promise<string> => {
+  const catalogContext = catalog.map(s => `- ${s.name}: $${s.price} (Duración: ${s.duration} min). Desc: ${s.description}`).join('\n');
+
+  const systemInstruction = `
+    Eres el Concierge Digital de un prestigioso estudio de belleza avanzada.
+    Tu objetivo es responder dudas sobre servicios y precios basándote EXCLUSIVAMENTE en el catálogo proporcionado.
+    
+    CATÁLOGO ACTUAL:
+    ${catalogContext}
+    
+    REGLAS:
+    1. Si el cliente pregunta por un precio, dáselo con elegancia.
+    2. Si el servicio no está en el catálogo, indica que no lo tenemos pero ofrece el más parecido o invita a una valoración.
+    3. Usa un tono extremadamente educado, lujoso y acogedor.
+    4. Mantén la respuesta breve (máximo 50 palabras).
+    5. No inventes precios ni servicios.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: customerMessage,
+      config: {
+        systemInstruction: systemInstruction,
+      },
+    });
+
+    return response.text || "Lo siento, no he podido procesar tu solicitud en este momento. Por favor, contacta con un agente humano.";
+  } catch (error) {
+    console.error("AI Catalog Query Error:", error);
+    return "Nuestras líneas digitales están experimentando alta demanda. Un especialista te atenderá en breve.";
   }
 };

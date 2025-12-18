@@ -1,19 +1,51 @@
+
 import React, { useState } from 'react';
-import { User, Phone, Mail, Plus, Search, Trash2, Edit2, StickyNote, Calendar, Gift } from 'lucide-react';
+import { Phone, Mail, Plus, Search, Trash2, Edit2, StickyNote, Calendar, Gift, Zap, MessageSquare, AlertCircle, Loader2, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { GoogleGenAI } from '@google/genai';
 import { Client } from '../types';
+import { ClientDossier } from '../components/ClientDossier';
 
 export const ClientsPage: React.FC = () => {
-  // Mock initial data
   const [clients, setClients] = useState<Client[]>([
-    { id: '1', name: 'Maria Garcia', email: 'maria@example.com', phone: '+1 555-0101', notes: 'Cliente VIP. Prefiere citas por la mañana.', birthDate: '1990-05-15' },
-    { id: '2', name: 'Juan Perez', email: 'juan@example.com', phone: '+1 555-0102', notes: '', birthDate: new Date().toISOString().split('T')[0] }, // Cumpleaños hoy para demo
-    { id: '3', name: 'Roberto Sanchez', email: 'roberto@company.com', phone: '+1 555-0103', notes: 'Contacto clave de la empresa Acme Corp.' },
+    { 
+      id: '1', 
+      name: 'Maria Garcia', 
+      email: 'maria@example.com', 
+      phone: '+1 555-0101', 
+      notes: 'Cliente VIP. Prefiere citas por la mañana.', 
+      birthDate: '1990-05-15',
+      skinType: 'Tipo II - Sensible',
+      allergies: 'Látex',
+      medicalConditions: 'Ninguna',
+      treatmentHistory: [
+        { id: 't1', date: '2024-02-15T10:00:00Z', serviceName: 'Micropigmentación Cejas', notes: 'Saturación media, cicatrización perfecta.', pigmentsUsed: 'Soft Brown #2', professionalName: 'Valeria S.' }
+      ]
+    },
+    { 
+      id: '2', 
+      name: 'Juan Perez', 
+      email: 'juan@example.com', 
+      phone: '+1 555-0102', 
+      notes: '', 
+      birthDate: new Date().toISOString().split('T')[0],
+      treatmentHistory: []
+    },
+    { 
+      id: '3', 
+      name: 'Roberto Sanchez', 
+      email: 'roberto@company.com', 
+      phone: '+1 555-0103', 
+      notes: 'Inactivo hace 4 meses.',
+      treatmentHistory: []
+    },
   ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<string | null>(null);
+  const [selectedClientForDossier, setSelectedClientForDossier] = useState<Client | null>(null);
   
-  // Consolidated form state including notes and birthDate
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', notes: '', birthDate: '' });
 
   const filteredClients = clients.filter(c => 
@@ -21,33 +53,59 @@ export const ClientsPage: React.FC = () => {
     c.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleRetentionPulse = async (client: Client) => {
+    setIsAnalyzing(client.id);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Redacta un mensaje de WhatsApp corto y muy cálido para reconectar con una clienta llamada ${client.name} que no ha venido al salón en 3 meses. El salón se llama Glow Beauty Studio. Sé profesional y sugiere que tenemos promociones nuevas. Máximo 30 palabras.`,
+      });
+
+      const message = response.text;
+      toast(`AI Sugiere: "${message}"`, {
+        action: {
+          label: 'Enviar WA',
+          onClick: () => window.open(`https://wa.me/${client.phone.replace(/\D/g,'')}?text=${encodeURIComponent(message || '')}`)
+        }
+      });
+    } catch (error) {
+      toast.error("Frecuencia de IA inestable");
+    } finally {
+      setIsAnalyzing(null);
+    }
+  };
+
   const isBirthdayToday = (dateString?: string) => {
     if (!dateString) return false;
     const today = new Date();
     const birth = new Date(dateString);
-    // Usar UTC methods para evitar problemas de zona horaria con strings simples YYYY-MM-DD
     return today.getUTCDate() === birth.getUTCDate() && today.getUTCMonth() === birth.getUTCMonth();
   };
 
   const handleSaveClient = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (editingId) {
-      // Update existing client
       setClients(clients.map(c => c.id === editingId ? { ...c, ...formData } : c));
+      toast.success("Cliente actualizado");
       setEditingId(null);
     } else {
-      // Create new client with safe ID
       const client: Client = {
         id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-        ...formData
+        ...formData,
+        treatmentHistory: []
       };
       setClients([...clients, client]);
+      toast.success("Cliente creado exitosamente");
     }
-    
-    // Reset form
     setFormData({ name: '', email: '', phone: '', notes: '', birthDate: '' });
     setIsFormOpen(false);
+  };
+
+  const handleUpdateFromDossier = (updatedClient: Client) => {
+    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+    setSelectedClientForDossier(updatedClient);
   };
 
   const handleEdit = (client: Client) => {
@@ -62,24 +120,17 @@ export const ClientsPage: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  const handleCancel = () => {
-    setFormData({ name: '', email: '', phone: '', notes: '', birthDate: '' });
-    setEditingId(null);
-    setIsFormOpen(false);
-  };
-
-  const handleDelete = (id: string) => {
-    if(window.confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
-      setClients(clients.filter(c => c.id !== id));
-    }
-  };
-
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Clientes</h1>
-          <p className="text-slate-500">Gestiona tu base de datos de contactos</p>
+          <div className="flex items-center gap-4 mb-3">
+             <div className="w-1 h-10 bg-gradient-to-b from-[#D4AF37] to-transparent rounded-full shadow-[0_0_20px_#D4AF37]"></div>
+             <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
+                Client <span className="gold-text-gradient font-light">Intelligence</span>
+             </h1>
+          </div>
+          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Base de Datos Elite • Aurum Global CRM</p>
         </div>
         <button 
           onClick={() => {
@@ -87,178 +138,157 @@ export const ClientsPage: React.FC = () => {
             setEditingId(null);
             setIsFormOpen(true);
           }}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors"
+          className="gold-btn text-black px-10 py-4 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest active:scale-95"
         >
           <Plus size={18} />
-          {editingId ? 'Editar Cliente' : 'Añadir Cliente'}
+          {editingId ? 'Guardar Cambios' : 'Añadir Partner Elite'}
         </button>
       </div>
 
-      {/* Add/Edit Client Form */}
       {isFormOpen && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6 animate-fade-in-down">
-          <h3 className="font-semibold mb-4 text-slate-700">
-            {editingId ? 'Editar Cliente' : 'Detalles del Nuevo Cliente'}
+        <div className="glass-card p-10 rounded-[3rem] border-[#D4AF37]/10 mb-12 animate-slide-up">
+          <h3 className="text-2xl font-black mb-8 text-white uppercase tracking-tighter">
+            {editingId ? 'Sincronizar Perfil' : 'Registro de Nueva Entidad'}
           </h3>
-          <form onSubmit={handleSaveClient} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
+          <form onSubmit={handleSaveClient} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Identidad Completa</label>
               <input
                 required
-                placeholder="Ej: Maria Garcia"
+                placeholder="Nombre y Apellidos"
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full pl-6 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white focus:border-[#D4AF37]/50 placeholder-slate-700"
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <div className="space-y-2">
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Correo Electrónico</label>
               <input
-                placeholder="ejemplo@correo.com"
+                placeholder="partner@aurum.ai"
                 type="email"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full pl-6 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white focus:border-[#D4AF37]/50 placeholder-slate-700"
               />
             </div>
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+            <div className="space-y-2">
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Frecuencia Telefónica</label>
               <input
-                placeholder="+1 234 567 890"
+                placeholder="+52 1 234 5678"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full pl-6 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white focus:border-[#D4AF37]/50 placeholder-slate-700"
               />
             </div>
-
-            <div className="md:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento</label>
+            <div className="space-y-2">
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Ciclo de Nacimiento</label>
               <input
                 type="date"
                 value={formData.birthDate}
                 onChange={e => setFormData({...formData, birthDate: e.target.value})}
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full pl-6 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white focus:border-[#D4AF37]/50"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Para enviar felicitaciones automáticas.</p>
             </div>
-            
-            {/* Notes Field - Full Width */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] ml-2">Notas de Personalización</label>
               <textarea
-                placeholder="Información adicional, preferencias del cliente, historial..."
+                rows={3}
+                placeholder="Preferencias, sensibilidades, historial de marca..."
                 value={formData.notes}
                 onChange={e => setFormData({...formData, notes: e.target.value})}
-                className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[80px]"
+                className="w-full pl-6 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white focus:border-[#D4AF37]/50 placeholder-slate-700 resize-none"
               />
             </div>
-
-            <div className="md:col-span-2 flex justify-end gap-2 mt-2">
-              <button 
-                type="button" 
-                onClick={handleCancel}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-md"
-              >
-                Cancelar
-              </button>
-              <button 
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium"
-              >
-                {editingId ? 'Actualizar Cliente' : 'Guardar Cliente'}
-              </button>
+            <div className="md:col-span-2 flex justify-end gap-6 mt-4">
+              <button type="button" onClick={() => setIsFormOpen(false)} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Cancelar Operación</button>
+              <button type="submit" className="gold-btn px-12 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl">Confirmar Sincronización</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+      <div className="relative mb-12 group">
+        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#D4AF37] transition-colors" size={24} />
         <input 
           type="text"
-          placeholder="Buscar clientes por nombre o email..."
+          placeholder="Busca por identidad, teléfono o canal digital..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full pl-16 pr-6 py-6 bg-white/5 border border-white/5 rounded-3xl focus:outline-none focus:border-[#D4AF37]/30 text-lg font-medium text-white transition-all placeholder-slate-700"
         />
       </div>
 
-      {/* Client Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredClients.map(client => (
-          <div key={client.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full relative overflow-hidden">
+          <div key={client.id} className="glass-card p-10 rounded-[3.5rem] flex flex-col relative overflow-hidden group glass-card-hover transition-all duration-700 border-white/5">
             {isBirthdayToday(client.birthDate) && (
-              <div className="absolute top-0 right-0 bg-pink-100 text-pink-600 px-3 py-1 rounded-bl-xl text-xs font-bold flex items-center gap-1 z-10">
-                <Gift size={12} /> ¡Cumpleaños!
+              <div className="absolute top-0 right-0 bg-[#D4AF37] text-black px-5 py-2 rounded-bl-[2rem] text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 z-10 animate-pulse">
+                <Gift size={14} /> Ciclo de Vida Activo
               </div>
             )}
             
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold">
+            <div className="flex justify-between items-start mb-8">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-[2rem] bg-[#111] border border-[#D4AF37]/20 flex items-center justify-center text-2xl font-black text-[#D4AF37] group-hover:scale-110 transition-transform">
                   {client.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-800">{client.name}</h3>
-                  <span className="text-xs text-slate-500 uppercase tracking-wider">Cliente</span>
+                  <h3 className="font-black text-xl text-white tracking-tight leading-tight group-hover:text-[#D4AF37] transition-colors">{client.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div>
+                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Sincronizado</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-1">
-                 <button 
-                  onClick={() => handleEdit(client)}
-                  className="text-slate-300 hover:text-indigo-600 p-1.5 rounded-md hover:bg-indigo-50 transition-colors"
-                  title="Editar"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(client.id)}
-                  className="text-slate-300 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             </div>
             
-            <div className="space-y-2 text-sm text-slate-600 flex-grow">
-              <div className="flex items-center gap-2">
-                <Mail size={16} className="text-slate-400" />
-                {client.email || 'Sin email'}
+            <div className="space-y-4 text-xs font-bold text-slate-500 mb-10 flex-grow">
+              <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                <Mail size={16} className="text-[#D4AF37]" />
+                <span className="truncate tracking-widest uppercase text-[10px]">{client.email || 'Canal no registrado'}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone size={16} className="text-slate-400" />
-                {client.phone || 'Sin teléfono'}
+              <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                <Phone size={16} className="text-[#D4AF37]" />
+                <span className="tracking-widest uppercase text-[10px]">{client.phone}</span>
               </div>
-              {client.birthDate && (
-                <div className="flex items-center gap-2">
-                   <Calendar size={16} className={isBirthdayToday(client.birthDate) ? "text-pink-500" : "text-slate-400"} />
-                   <span className={isBirthdayToday(client.birthDate) ? "font-bold text-pink-600" : ""}>
-                     {new Date(client.birthDate).toLocaleDateString()}
-                   </span>
-                </div>
-              )}
             </div>
 
-            {/* Notes Display */}
-            {client.notes && (
-              <div className="mt-4 pt-3 border-t border-slate-100">
-                <div className="flex gap-2 items-start text-xs text-slate-500 bg-slate-50 p-2.5 rounded-md">
-                   <StickyNote size={14} className="mt-0.5 flex-shrink-0 text-slate-400" />
-                   <p className="line-clamp-3 italic leading-relaxed">{client.notes}</p>
+            <div className="flex flex-col gap-3 pt-8 border-t border-white/5">
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setSelectedClientForDossier(client)}
+                    className="flex items-center justify-center gap-2 bg-[#D4AF37]/10 text-[#D4AF37] py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-[#D4AF37]/20 transition-all border border-[#D4AF37]/10"
+                  >
+                    <FileText size={16} /> Expediente
+                  </button>
+                  <button 
+                    onClick={() => handleRetentionPulse(client)}
+                    disabled={isAnalyzing === client.id}
+                    className="flex items-center justify-center gap-2 bg-white/5 text-slate-400 py-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:text-white transition-all border border-white/5"
+                  >
+                    {isAnalyzing === client.id ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                    Growth AI
+                  </button>
                 </div>
-              </div>
-            )}
+                <button 
+                    onClick={() => handleEdit(client)}
+                    className="w-full py-4 text-slate-600 hover:text-[#D4AF37] transition-colors font-black text-[9px] uppercase tracking-[0.4em]"
+                  >
+                    Editar Master Profile
+                </button>
+            </div>
           </div>
         ))}
-        
-        {filteredClients.length === 0 && (
-          <div className="col-span-full text-center py-12 text-slate-500">
-            No se encontraron clientes con esos criterios.
-          </div>
-        )}
       </div>
+
+      {selectedClientForDossier && (
+        <ClientDossier 
+          client={selectedClientForDossier}
+          isOpen={!!selectedClientForDossier}
+          onClose={() => setSelectedClientForDossier(null)}
+          onUpdateClient={handleUpdateFromDossier}
+        />
+      )}
     </div>
   );
 };
