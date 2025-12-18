@@ -93,7 +93,6 @@ export interface Client {
   phone: string;
   notes?: string;
   birthDate?: string;
-  // Campos de Expediente
   skinType?: string;
   allergies?: string;
   medicalConditions?: string;
@@ -172,3 +171,24 @@ export interface CartItem {
 }
 
 export type PaymentMethod = 'CASH' | 'SPEI';
+
+// Fase 1: Nuevos Tipos
+export interface Transaction {
+  id: string;
+  date: string;
+  clientName: string;
+  total: number;
+  paymentMethod: PaymentMethod;
+  items: CartItem[];
+  status: 'PAID' | 'REFUNDED';
+}
+
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  date: string;
+  type: 'IN' | 'OUT' | 'ADJUSTMENT';
+  quantity: number;
+  reason: string;
+  user: string;
+}

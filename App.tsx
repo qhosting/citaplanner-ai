@@ -24,6 +24,7 @@ import { MarketingPage } from './pages/MarketingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { InsightsPage } from './pages/InsightsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 
@@ -85,6 +86,7 @@ const Navbar = () => {
             <div className="hidden lg:flex items-center gap-1">
               <NavLink to="/admin">Consola</NavLink>
               <NavLink to="/pos">VENTAS & POS</NavLink>
+              <NavLink to="/analytics">REPORTES</NavLink>
               <NavLink to="/clients">Directorio</NavLink>
               <div className="relative group/catalog">
                 <button className="px-4 py-2 text-slate-400 hover:text-white text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
@@ -153,7 +155,6 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* Agregados future flags para silenciar warnings de v7 */}
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="min-h-screen flex flex-col">
             <Toaster richColors position="top-right" theme="dark" />
@@ -165,6 +166,7 @@ const App: React.FC = () => {
                 <Route path="/book" element={<BookingPage />} /> 
                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
                 <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
                 <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
                 <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />

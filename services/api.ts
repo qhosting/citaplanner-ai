@@ -1,12 +1,11 @@
 
-import { Appointment, User, Role, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, AppointmentStatus, Branch, TemplateId } from "../types";
+import { Appointment, User, Role, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, AppointmentStatus, Branch, TemplateId, Transaction } from "../types";
 
 const API_URL = 'http://localhost:3000/api';
 
 export const SOLUTION_TIMEOUT = 741;
 export const ERROR_PROTECTION_CODE = '741';
 
-// Obtener rol del usuario actual para las cabeceras
 const getUserRole = () => {
     const stored = localStorage.getItem('citaPlannerUser');
     if (stored) {
@@ -24,7 +23,7 @@ async function safeRequest<T>(endpoint: string, options: RequestInit = {}, fallb
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'x-user-role': getUserRole(), // Inyectar rol para autorización básica
+        'x-user-role': getUserRole(),
         ...options.headers,
       },
     });
@@ -106,18 +105,41 @@ export const api = {
   getAppointments: async (): Promise<Appointment[]> => safeRequest<Appointment[]>('/appointments', {}, []),
   createAppointment: async (a: Omit<Appointment, 'id'>) => safeRequest<Appointment | null>('/appointments', { method: 'POST', body: JSON.stringify(a) }, null),
   cancelAppointment: async (id: string) => safeRequest<boolean>(`/appointments/${id}/cancel`, { method: 'POST' }, true),
+  
+  // Fase 1: Reportes y Finanzas
+  getBusinessStats: async () => {
+    const revenue = localStorage.getItem('cp_mock_revenue') || '45800';
+    return { 
+      revenueThisMonth: parseFloat(revenue), 
+      appointmentsCompleted: 1250, 
+      newClientsThisMonth: 180, 
+      occupationRate: 94 
+    };
+  },
+
+  getTransactions: async (): Promise<Transaction[]> => {
+    return safeRequest<Transaction[]>('/transactions', {}, []);
+  },
+
   updatePreferences: async (userId: string, prefs: NotificationPreferences) => true,
-  getBusinessStats: async () => ({ revenueThisMonth: 45800, appointmentsCompleted: 1250, newClientsThisMonth: 180, occupationRate: 94 }),
   updateProfessional: async (pro: Professional) => true,
-  // Added createProfessional to fix missing property error in SchedulesPage.tsx
   createProfessional: async (pro: Omit<Professional, 'id'>): Promise<{ success: boolean; id?: string }> => {
     const res = await safeRequest<any>('/professionals', { method: 'POST', body: JSON.stringify(pro) }, null);
     if (res) return { success: true, id: res.id?.toString() };
-    // Fallback for offline mode
     return { success: true, id: 'pro-' + Math.random().toString(36).substring(2, 9) };
   },
   createService: async (s: Omit<Service, 'id'>) => safeRequest<Service | null>('/services', { method: 'POST', body: JSON.stringify(s) }, null),
   updateService: async (s: any) => true,
   deleteService: async (id: string) => true,
-  processSale: async (s: any) => ({ success: true, saleId: 'CP-'+Math.random().toString(36).substring(2,8).toUpperCase(), date: new Date().toISOString() })
+  processSale: async (s: any) => {
+    // Almacenar localmente para que Analytics lo refleje en modo offline
+    const current = parseFloat(localStorage.getItem('cp_mock_revenue') || '45800');
+    localStorage.setItem('cp_mock_revenue', (current + s.total).toString());
+    
+    return safeRequest<any>('/sales', { method: 'POST', body: JSON.stringify(s) }, { 
+        success: true, 
+        saleId: 'CP-'+Math.random().toString(36).substring(2,8).toUpperCase(), 
+        date: new Date().toISOString() 
+    });
+  }
 };
