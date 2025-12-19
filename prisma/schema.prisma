@@ -1,0 +1,16 @@
+
+// COPIA DE SEGURIDAD - SCHEMA PRISMA CITAPLANNER
+// FECHA: 2025-05-24
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelos: User, Business, Client, Service, Appointment
+// Relaciones: Business es el Tenant principal.
+// Persistencia: Garantizada vía cuid() y PostgreSQL.
