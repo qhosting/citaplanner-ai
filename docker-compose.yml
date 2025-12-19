@@ -11,7 +11,6 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: citaplanner_prod
     volumes:
-      # PERSISTENCIA: Los datos viven en el host, no en el contenedor
       - postgres_data:/var/lib/postgresql/data
     networks:
       - citaplanner_internal
@@ -25,13 +24,11 @@ services:
     depends_on:
       - citaplanner-db
     environment:
-      # Conexión interna: el host es el nombre del servicio 'citaplanner-db'
       DATABASE_URL: postgresql://citaplanner_admin:${DATABASE_PASSWORD}@citaplanner-db:5432/citaplanner_prod?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${DOMAIN_URL}
       API_KEY: ${API_KEY}
     volumes:
-      # Persistencia para imágenes subidas localmente
       - uploads_data:/app/public/uploads
     networks:
       - citaplanner_internal
