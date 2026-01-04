@@ -32,11 +32,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
+const connectionString = process.env.DATABASE_URL;
 
 const pool = new Pool({ 
   connectionString: connectionString,
-  ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
+  ssl: connectionString?.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
   connectionTimeoutMillis: 5000, 
   statement_timeout: 10000 
 });
@@ -74,8 +74,6 @@ const initDB = async () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`);
 
-        // ... resto de tablas (simplificado para brevedad pero asumiendo existencia)
-
         await client.query('COMMIT');
         console.log("✅ Aurum Protocol: Database Schema Synchronized");
     }
@@ -87,7 +85,6 @@ const initDB = async () => {
   }
 };
 
-// ENDPOINT DE CARGA DE IMÁGENES
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -98,21 +95,17 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
 app.post('/api/login', async (req, res) => {
     const { phone, password } = req.body;
-    if (phone === 'dev' && password === 'dev') {
-        return res.json({
-            success: true,
-            user: { id: 'dev-master-001', name: 'Dev Admin', phone: 'dev', role: 'ADMIN', email: 'dev@aurum.ai', loyalty_points: 999 }
-        });
-    }
     try {
-        const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2", [phone, password]);
+        const result = await pool.query("SELECT id, name, phone, email, role, avatar, branch_id FROM users WHERE phone = $1 AND password = $2", [phone, password]);
         if (result.rows.length > 0) {
             const user = result.rows[0];
             res.json({ success: true, user });
         } else {
-            res.status(401).json({ success: false });
+            res.status(401).json({ success: false, message: "Credenciales inválidas" });
         }
-    } catch (e) { res.status(500).json({ error: "DB Error" }); }
+    } catch (e) { 
+        res.status(500).json({ error: "Falla en infraestructura de datos" }); 
+    }
 });
 
 app.get('*', (req, res) => {

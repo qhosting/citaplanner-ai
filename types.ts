@@ -99,6 +99,13 @@ export interface LandingSettings {
   socialLinks?: SocialLinks;
   testimonials?: Testimonial[];
   gallery?: string[];
+  // SEO & GEO
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
+  latitude?: string;
+  longitude?: string;
+  googleMapsUrl?: string;
 }
 
 export interface User {

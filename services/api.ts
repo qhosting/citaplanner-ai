@@ -13,8 +13,8 @@ const DEFAULT_LANDING_DATA: LandingSettings = {
   templateId: 'beauty',
   slogan: 'Redefiniendo la Estética de Ultra-Lujo',
   aboutText: 'Santuario de belleza líder en alta tecnología.',
-  address: 'Presidente Masaryk 450, Polanco, CDMX',
-  contactPhone: '+52 55 7142 7321',
+  address: 'Dirección no configurada',
+  contactPhone: '',
   heroSlides: [],
   stats: [],
   testimonials: [],
@@ -22,45 +22,8 @@ const DEFAULT_LANDING_DATA: LandingSettings = {
   socialLinks: { instagram: '', facebook: '', tiktok: '' },
   maintenanceMode: false,
   showWhatsappButton: true,
-  operatingHours: [
-    { day: 'Lunes', open: '09:00', close: '18:00', closed: false },
-    { day: 'Martes', open: '09:00', close: '18:00', closed: false },
-    { day: 'Miércoles', open: '09:00', close: '18:00', closed: false },
-    { day: 'Jueves', open: '09:00', close: '18:00', closed: false },
-    { day: 'Viernes', open: '09:00', close: '18:00', closed: false },
-    { day: 'Sábado', open: '09:00', close: '14:00', closed: false },
-    { day: 'Domingo', open: '00:00', close: '00:00', closed: true },
-  ]
+  operatingHours: []
 };
-
-const IMAGE_SERVICES_DATA: Service[] = [
-  { id: 's1', name: 'TÉCNICA CLÁSICA NATURAL', duration: 90, price: 1200, category: 'Pestañas', status: 'ACTIVE', description: 'Protocolo de application pestaña a pestaña.', imageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9' },
-  { id: 's2', name: 'HENNA BROWS ELITE', duration: 45, price: 650, category: 'Cejas', status: 'ACTIVE', description: 'Diseño arquitectónico de cejas.', imageUrl: 'https://images.unsplash.com/photo-1596178065887-1198b6148b2b' },
-  { id: 's3', name: 'PEDICURA SPA AURUM', duration: 60, price: 850, category: 'Pies', status: 'ACTIVE', description: 'Relajación y estética avanzada.', imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035' }
-];
-
-const DEFAULT_CLIENTS_DATA: Client[] = [
-  {
-    id: 'c-aurum-001',
-    name: 'Isabella Valerius',
-    email: 'isabella.v@aurum.mx',
-    phone: '+52 55 1122 3344',
-    notes: 'Preferencia por café expreso doble. Cliente VIP Platinum.',
-    birthDate: '1992-05-15',
-    skinType: 'Tipo II - Seca',
-    allergies: 'Látex sutil',
-    medicalConditions: 'Ninguna',
-    treatmentHistory: [
-      {
-        id: 'rec-001',
-        date: new Date().toISOString(),
-        serviceName: 'Henna Brows Elite',
-        notes: 'Excelente retención de pigmento. Diseño arqueado.',
-        professionalName: 'Elena Valery'
-      }
-    ]
-  }
-];
 
 export const api = {
   uploadImage: async (file: File): Promise<string | null> => {
@@ -97,16 +60,6 @@ export const api = {
   },
 
   login: async (phone: string, pass: string): Promise<User | null> => {
-    if (phone === 'dev' && pass === 'dev') {
-      return {
-        id: 'dev-master-001',
-        name: 'Dev Admin',
-        phone: 'dev',
-        role: 'ADMIN',
-        email: 'dev@aurum.ai',
-        preferences: { whatsapp: true, email: true, sms: true }
-      };
-    }
     try {
         const res = await fetch(`${API_URL}/login`, {
             method: 'POST',
@@ -155,12 +108,8 @@ export const api = {
   getClients: async (): Promise<Client[]> => {
     try {
       const res = await fetch(`${API_URL}/clients`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) return data;
-      }
-      return DEFAULT_CLIENTS_DATA;
-    } catch { return DEFAULT_CLIENTS_DATA; }
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
   },
 
   createClient: async (c: Partial<Client>): Promise<any> => {
@@ -195,8 +144,7 @@ export const api = {
   getAppointments: async (): Promise<Appointment[]> => {
     try {
       const res = await fetch(`${API_URL}/appointments`);
-      if (!res.ok) return [];
-      return res.json();
+      return res.ok ? res.json() : [];
     } catch { return []; }
   },
 
@@ -317,12 +265,8 @@ export const api = {
   getBranches: async (): Promise<Branch[]> => {
     try {
       const res = await fetch(`${API_URL}/branches`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length > 0) return data;
-      }
-      return [{ id: 'b1', name: 'Master Node Polanco', address: 'Presidente Masaryk 450, CDMX', phone: '55 1234 5678', manager: 'Elena Valery', status: 'ACTIVE' }];
-    } catch { return [{ id: 'b1', name: 'Master Node Polanco', address: 'Presidente Masaryk 450, CDMX', phone: '55 1234 5678', manager: 'Elena Valery', status: 'ACTIVE' }]; }
+      return res.ok ? res.json() : [];
+    } catch { return []; }
   },
 
   createBranch: async (b: Omit<Branch, 'id'>): Promise<any> => {
@@ -357,12 +301,8 @@ export const api = {
   getServices: async (): Promise<Service[]> => {
     try {
         const res = await fetch(`${API_URL}/services`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) return data;
-        }
-        return IMAGE_SERVICES_DATA;
-    } catch { return IMAGE_SERVICES_DATA; }
+        return res.ok ? res.json() : [];
+    } catch { return []; }
   },
 
   createService: async (s: Omit<Service, 'id'>): Promise<Service | null> => {

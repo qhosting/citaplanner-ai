@@ -108,7 +108,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="admin / dev"
+                  placeholder="ID de Acceso"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white placeholder-slate-700"
