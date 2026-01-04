@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Phone, ArrowRight, Loader2, Sparkles, ShieldCheck, Globe, Mail } from 'lucide-react';
@@ -9,8 +9,17 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+        if(user.role === 'ADMIN') navigate('/admin');
+        else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
+        else if(user.role === 'CLIENT') navigate('/client-portal');
+        else navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,16 +28,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       const success = await login(phone, password);
-      if (success) {
-        const userStr = localStorage.getItem('citaPlannerUser');
-        if(userStr) {
-            const u = JSON.parse(userStr);
-            if(u.role === 'ADMIN') navigate('/admin');
-            else if(u.role === 'PROFESSIONAL') navigate('/professional-dashboard');
-            else if(u.role === 'CLIENT') navigate('/client-portal');
-            else navigate('/');
-        }
-      } else {
+      if (!success) {
         setError('Acceso denegado. Credenciales no autorizadas.');
       }
     } catch (err) {

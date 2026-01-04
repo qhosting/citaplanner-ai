@@ -325,7 +325,7 @@ export const MarketingPage: React.FC = () => {
                         >
                            <option value="ALL">Todos los Clientes</option>
                            <option value="ACTIVE_LAST_30_DAYS">Activos (30 días)</option>
-                           <option value="INACTIVE_90_DAYS">Inactivos (>90 días)</option>
+                           <option value="INACTIVE_90_DAYS">Inactivos (&gt;90 días)</option>
                         </select>
                     </div>
                  </div>
