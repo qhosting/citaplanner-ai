@@ -108,7 +108,8 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.get('*', (req, res) => {
+// Fix para Express 5.x: las rutas comodín '*' ahora requieren una expresión regular o nombre de parámetro
+app.get('(.*)', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
