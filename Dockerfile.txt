@@ -1,37 +1,44 @@
-# MIRROR DOCKERFILE - CITAPLANNER (EASYPANEL READY)
-# FECHA DE AUDITORÍA: 2025
-# STATUS: SINCRONIZADO CON DOCKERFILE PRODUCCIÓN
+# [AURUM PROTOCOL] - DOCKERFILE MIRROR
+# PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE
+# REVISIÓN: 2026.2
+# STATUS: PRODUCTION READY (OPTIMIZADO PARA ES MODULES)
 
-# STAGE 1: Builder
+# --- FASE 1: BUILDER ---
 FROM node:20-alpine AS builder
-
-WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
 
-COPY package*.json ./
-COPY prisma ./prisma/
+WORKDIR /app
 
+COPY package*.json ./
 RUN npm install
-RUN if [ -f "./prisma/schema.prisma" ]; then npx prisma generate; fi
 
 COPY . .
+
+# Generación de Prisma Client (Opcional)
+RUN if [ -f "./prisma/schema.prisma" ]; then npx prisma generate; fi
+
+# Build del Frontend (Vite)
 RUN npm run build
 
-# STAGE 2: Runner
+# --- FASE 2: RUNNER ---
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=3000
 
+# Seguridad: Usuario no-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 citaplanner
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+
+# Solo dependencias de producción
+RUN npm install --omit=dev
 
 RUN chown -R citaplanner:nodejs /app
 
@@ -39,12 +46,9 @@ USER citaplanner
 
 EXPOSE 3000
 
-ENV PORT=3000
-
 CMD ["node", "server.js"]
 
-# NOTAS DE EASYPANEL:
-# ------------------
-# Easypanel leerá este Dockerfile automáticamente al detectar el archivo en la raíz.
-# Asegúrese de mapear el puerto 3000 en la configuración del servicio.
-# El esquema Prisma se genera solo si el archivo .prisma está presente.
+# METADATA DE DESPLIEGUE:
+# - Puerto: 3000 (Backend + Frontend Static)
+# - Base de Datos: PostgreSQL (DATABASE_URL)
+# - IA: Gemini (API_KEY)

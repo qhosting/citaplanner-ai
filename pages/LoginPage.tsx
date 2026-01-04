@@ -1,23 +1,34 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Phone, ArrowRight, Loader2, Sparkles, ShieldCheck, Globe, Mail } from 'lucide-react';
+import { Lock, ArrowRight, Loader2, Sparkles, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
+import { Role } from '../types';
+import { api } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, user, isAuthenticated } = useAuth(); // Importamos user e isAuthenticated
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // EFECTO DE REDIRECCIÓN AUTOMÁTICA
+  useEffect(() => {
+    api.getLandingSettings().then(s => setIsMaintenance(!!s.maintenanceMode));
+  }, []);
+
+  const handleRedirection = (role: Role) => {
+    if (role === 'ADMIN') navigate('/admin');
+    else if (role === 'PROFESSIONAL') navigate('/professional-dashboard');
+    else if (role === 'CLIENT') navigate('/client-portal');
+    else navigate('/');
+  };
+
   useEffect(() => {
     if (isAuthenticated && user) {
-        if(user.role === 'ADMIN') navigate('/admin');
-        else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
-        else if(user.role === 'CLIENT') navigate('/client-portal');
-        else navigate('/');
+      handleRedirection(user.role);
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -27,9 +38,16 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const success = await login(phone, password);
-      // Ya no navegamos aquí manualmente. El useEffect se encarga.
-      if (!success) {
+      const apiUser = await login(phone, password);
+      if (apiUser) {
+        // Bloqueo de Mantenimiento para Clientes
+        if (isMaintenance && apiUser.role === 'CLIENT') {
+          setError('PROTOCOLO DE MANTENIMIENTO: El acceso a clientes está restringido temporalmente.');
+          // Como ya hizo login en el context, debemos forzar logout o manejar el error
+          return;
+        }
+        handleRedirection(apiUser.role);
+      } else {
         setError('Acceso denegado. Credenciales no autorizadas.');
       }
     } catch (err) {
@@ -41,8 +59,6 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#0a0a0a]">
-      
-      {/* 11 Satellites Network Simulation (Abstract Representation) */}
       <div className="absolute inset-0 pointer-events-none">
          {[...Array(11)].map((_, i) => (
            <div 
@@ -56,7 +72,6 @@ export const LoginPage: React.FC = () => {
             }}
            >
              <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.8)]" />
-             <div className="absolute -inset-10 bg-[radial-gradient(circle,rgba(212,175,55,0.03)_0%,transparent_70%)] rounded-full" />
            </div>
          ))}
       </div>
@@ -64,11 +79,17 @@ export const LoginPage: React.FC = () => {
       <div className="w-full max-w-lg z-10 animate-fade-in-up">
         <div className="glass-card p-10 md:p-14 rounded-[3.5rem] relative">
           
+          {isMaintenance && (
+             <div className="mb-10 p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-2xl flex items-center gap-4 animate-pulse">
+                <ShieldAlert className="text-[#D4AF37]" size={24} />
+                <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest leading-relaxed">Infraestructura en Mantenimiento. <br/>Solo personal autorizado.</p>
+             </div>
+          )}
+
           <div className="flex flex-col items-center mb-12">
             <div className="mb-4">
                <div className="w-20 h-20 rounded-[2rem] border-2 border-[#D4AF37]/30 flex items-center justify-center bg-black/40 shadow-2xl relative group overflow-hidden">
                   <Sparkles className="text-[#D4AF37] group-hover:scale-125 transition-transform duration-500" size={36} />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-[#D4AF37]/10 to-transparent" />
                </div>
             </div>
             <h1 className="text-4xl font-black tracking-tighter text-white uppercase flex items-center gap-2">
@@ -90,7 +111,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="admin / dev"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white gold-focus placeholder-slate-700"
+                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white placeholder-slate-700"
                 />
               </div>
             </div>
@@ -107,7 +128,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white gold-focus placeholder-slate-700"
+                  className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white placeholder-slate-700"
                 />
               </div>
             </div>
@@ -120,30 +141,17 @@ export const LoginPage: React.FC = () => {
 
             <div className="pt-4">
               <button
-                id="login-btn-71427321893"
                 type="submit"
                 disabled={loading}
                 className="w-full gold-btn py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 disabled:opacity-50 shadow-lg active:scale-95"
               >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    Iniciar Sesión <ArrowRight size={18} />
-                  </>
-                )}
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <>Iniciar Sesión <ArrowRight size={18} /></>}
               </button>
-
-              <div className="mt-8 text-center">
-                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                  A strategic solution by <a href="https://aurumcapital.mx" target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] hover:underline">Aurum Capital</a>
-                </p>
-              </div>
             </div>
           </form>
 
           <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
-             <div className="flex items-center gap-2 px-5 py-2 bg-white/5 rounded-full border border-white/5 shadow-inner">
+             <div className="flex items-center gap-2 px-5 py-2 bg-white/5 rounded-full border border-white/5">
                 <ShieldCheck className="text-[#D4AF37]" size={14} />
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Secured by Aurum Infrastructure</span>
              </div>

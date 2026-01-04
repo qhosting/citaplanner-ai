@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, BriefcaseMedical, Clock, DollarSign, Tag, FileText } from 'lucide-react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { X, BriefcaseMedical, Clock, DollarSign, Tag, FileText, ImageIcon, Sparkles, Check, Upload, Loader2 } from 'lucide-react';
 import { Service } from '../types';
+import { api } from '../services/api';
+import { toast } from 'sonner';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -15,42 +18,63 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   onSave, 
   initialData 
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState<Partial<Service>>({
     name: '',
     duration: 30,
     price: 0,
     description: '',
     category: 'General',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    imageUrl: ''
   });
 
   useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    } else {
-      setFormData({
-        name: '',
-        duration: 30,
-        price: 0,
-        description: '',
-        category: 'General',
-        status: 'ACTIVE'
-      });
+    if (isOpen) {
+      if (initialData) {
+        setFormData(initialData);
+      } else {
+        setFormData({
+          name: '',
+          duration: 30,
+          price: 0,
+          description: '',
+          category: 'General',
+          status: 'ACTIVE',
+          imageUrl: ''
+        });
+      }
     }
   }, [initialData, isOpen]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const url = await api.uploadImage(file);
+    if (url) {
+      setFormData(prev => ({ ...prev, imageUrl: url }));
+      toast.success("Fotografía editorial cargada.");
+    } else {
+      toast.error("Error al sincronizar imagen.");
+    }
+    setUploading(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const serviceToSave: Service = {
-      // Si existe initialData.id se usa, sino se genera uno temporal que el padre (o API) manejará
       id: initialData?.id || (Date.now().toString(36) + Math.random().toString(36).substring(2)),
       name: formData.name || 'Nuevo Servicio',
       duration: Number(formData.duration) || 30,
       price: Number(formData.price) || 0,
       description: formData.description || '',
       category: formData.category || 'General',
-      status: formData.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE'
+      status: formData.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE',
+      imageUrl: formData.imageUrl || ''
     };
 
     onSave(serviceToSave);
@@ -60,136 +84,170 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+      <div className="glass-card w-full max-w-2xl rounded-[3.5rem] overflow-hidden flex flex-col max-h-[90vh] border-[#D4AF37]/20 shadow-[0_0_100px_rgba(212,175,55,0.1)] animate-scale-in">
         {/* Header */}
-        <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
-              <BriefcaseMedical size={20} />
+        <div className="flex justify-between items-center p-10 border-b border-white/5 bg-white/5">
+          <div className="flex items-center gap-5">
+            <div className="p-3.5 rounded-2xl bg-black border border-[#D4AF37]/30 text-[#D4AF37] shadow-xl">
+              <Sparkles size={24} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800">
-                {initialData ? 'Editar Servicio' : 'Nuevo Servicio'}
+              <h3 className="font-black text-2xl text-white tracking-tighter uppercase">
+                {initialData ? 'Configurar Nodo Maestro' : 'Integrar Nuevo Servicio'}
               </h3>
-              <p className="text-xs text-slate-500">Configura los detalles del servicio</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-1">Ecosistema Aurum • Service Intelligence</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1 hover:bg-slate-200 rounded-full">
-            <X size={20} />
+          <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all rounded-2xl border border-white/5">
+            <X size={24} />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} className="p-10 overflow-y-auto space-y-8 custom-scrollbar">
           
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Servicio</label>
-            <input
-              required
-              type="text"
-              className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              placeholder="Ej: Consulta General"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
-              <div className="relative">
-                <Tag size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  list="categories"
-                  type="text"
-                  className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  placeholder="Categoría"
-                />
-                <datalist id="categories">
-                  <option value="General" />
-                  <option value="Odontología" />
-                  <option value="Medicina" />
-                  <option value="Estética" />
-                  <option value="Consultoría" />
-                </datalist>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Identidad del Servicio</label>
+              <input
+                required
+                type="text"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white outline-none focus:border-[#D4AF37] transition-all font-bold"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Ej: Técnica Clásica Natural"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Categoría Master</label>
+                <div className="relative">
+                  <Tag size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#D4AF37]/50" />
+                  <input
+                    list="categories"
+                    type="text"
+                    className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    placeholder="Eje: PESTAÑAS"
+                  />
+                  <datalist id="categories">
+                    <option value="PESTAÑAS" />
+                    <option value="CEJAS" />
+                    <option value="DEPILACION" />
+                    <option value="UÑAS" />
+                    <option value="PIES" />
+                  </datalist>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Estado Operativo</label>
+                <select
+                  className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold appearance-none cursor-pointer"
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE'})}
+                >
+                  <option value="ACTIVE">OPERATIVO (Visible)</option>
+                  <option value="INACTIVE">MANTENIMIENTO (Oculto)</option>
+                </select>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-              <select
-                className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE'})}
-              >
-                <option value="ACTIVE">Activo</option>
-                <option value="INACTIVE">Inactivo</option>
-              </select>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Duración (min)</label>
+            <div className="grid grid-cols-2 gap-6">
               <div className="relative">
-                <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  required
-                  type="number"
-                  min="5"
-                  step="5"
-                  className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({...formData, duration: Number(e.target.value)})}
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Fotografía Editorial</label>
+                <div className="group relative w-full h-40 bg-black/60 rounded-[2rem] border border-white/10 overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/50 transition-all" onClick={() => fileInputRef.current?.click()}>
+                  {formData.imageUrl ? (
+                    <>
+                      <img src={formData.imageUrl} className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" alt="Preview" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Upload className="text-white" size={24} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="text-slate-700 mx-auto mb-2" size={32} />
+                      <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Subir Imagen Real</p>
+                    </div>
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                      <Loader2 className="animate-spin text-[#D4AF37]" size={24} />
+                    </div>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="input-file-hidden" 
+                  accept="image/*" 
+                  onChange={handleFileUpload}
                 />
               </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Duración (Minutos)</label>
+                  <div className="relative">
+                    <Clock size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#D4AF37]/50" />
+                    <input
+                      required
+                      type="number"
+                      min="5"
+                      step="5"
+                      className="w-full pl-14 pr-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({...formData, duration: Number(e.target.value)})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Inversión ($)</label>
+                  <div className="relative">
+                    <DollarSign size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#D4AF37]/50" />
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="w-full pl-14 pr-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Precio ($)</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Narrativa del Servicio</label>
               <div className="relative">
-                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
-                />
+                  <FileText size={16} className="absolute left-5 top-6 text-[#D4AF37]/50" />
+                  <textarea
+                    rows={4}
+                    className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-3xl text-white outline-none focus:border-[#D4AF37] resize-none font-medium text-sm leading-relaxed"
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Detalles sobre los beneficios y la técnica..."
+                  />
               </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
-            <div className="relative">
-                <FileText size={16} className="absolute left-3 top-3 text-slate-400" />
-                <textarea
-                rows={3}
-                className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
-                value={formData.description || ''}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Detalles sobre qué incluye este servicio..."
-                />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex justify-end gap-6 pt-10 border-t border-white/5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+              className="text-[10px] font-black uppercase text-slate-500 hover:text-white transition-colors tracking-widest"
             >
-              Cancelar
+              Abortar Cambios
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-colors"
+              className="gold-btn px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.4em] shadow-2xl flex items-center gap-3 active:scale-95"
             >
-              {initialData ? 'Actualizar' : 'Guardar'}
+              <Check size={18} /> {initialData ? 'Sincronizar Nodo' : 'Integrar Nodo'}
             </button>
           </div>
         </form>

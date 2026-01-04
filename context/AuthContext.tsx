@@ -1,13 +1,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Role } from '../types';
+import { User } from '../types';
 import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
-  login: (phone: string, password: string) => Promise<boolean>;
+  login: (phone: string, password: string) => Promise<User | null>;
   logout: () => void;
-  updatePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
+  updatePassword: (current: string, next: string) => Promise<boolean>;
   isAuthenticated: boolean;
 }
 
@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(JSON.parse(storedUser));
         }
       } catch (e) {
-        console.warn('LocalStorage access restricted:', e);
+        console.warn('Auth Sync Error:', e);
       } finally {
         setIsLoading(false);
       }
@@ -33,16 +33,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (phone: string, pass: string): Promise<boolean> => {
+  const login = async (phone: string, pass: string): Promise<User | null> => {
     const apiUser = await api.login(phone, pass);
-    
     if (apiUser) {
       setUser(apiUser);
-      localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
-      return true;
+      try {
+        localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
+      } catch (e) {
+        console.warn('Storage Error:', e);
+      }
+      return apiUser;
     }
-
-    return false;
+    return null;
   };
 
   const logout = () => {
@@ -50,15 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       localStorage.removeItem('citaPlannerUser');
     } catch (e) {
-      console.warn('LocalStorage access restricted:', e);
+      console.warn('Storage Cleanup Error:', e);
     }
   };
 
-  const updatePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
-    // Simulación de cambio de password
-    await new Promise(resolve => setTimeout(resolve, 800));
-    console.log(`Password updated for user ${user?.phone} (Simulation)`);
-    return true;
+  const updatePassword = async (current: string, next: string): Promise<boolean> => {
+    if (!user) return false;
+    return await api.updatePassword(user.id, current, next);
   };
 
   const value = {
@@ -69,9 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user
   };
 
-  if (isLoading) {
-    return null; // O un spinner de carga global
-  }
+  if (isLoading) return null;
 
   return (
     <AuthContext.Provider value={value}>

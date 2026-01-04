@@ -8,13 +8,70 @@ export enum AppointmentStatus {
 export type Role = 'ADMIN' | 'PROFESSIONAL' | 'CLIENT';
 export type TemplateId = 'citaplanner' | 'beauty' | 'dentist' | 'barber';
 
-export interface Branch {
+export interface OperatingHours {
+  day: string;
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface BusinessRule {
+  id: string;
+  label: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface HeroSlide {
+  image: string;
+  title: string;
+  subtitle: string;
+  text: string;
+}
+
+export interface LandingStat {
+  value: string;
+  label: string;
+}
+
+export interface Testimonial {
   id: string;
   name: string;
-  address: string;
-  phone: string;
-  manager: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  role: string;
+  quote: string;
+  avatar?: string;
+}
+
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  whatsapp?: string;
+}
+
+// --- INFRAESTRUCTURA DE ECOSISTEMA ---
+export interface WahaConfig {
+  serverUrl: string;
+  sessionId: string;
+  apiToken: string;
+}
+
+export interface N8NConfig {
+  webhookUrl: string;
+  apiKey: string;
+}
+
+export interface OdooConfig {
+  host: string;
+  db: string;
+  username: string;
+  apiKey: string;
+}
+
+export interface AiCoreConfig {
+  model: string;
+  creativity: number;
+  tone: 'sophisticated' | 'friendly' | 'minimalist';
 }
 
 export interface LandingSettings {
@@ -28,12 +85,27 @@ export interface LandingSettings {
   heroImageUrl?: string;
   contactPhone?: string;
   address?: string;
+  operatingHours?: OperatingHours[];
+  businessRules?: BusinessRule[];
+  heroSlides?: HeroSlide[];
+  stats?: LandingStat[];
+  waha?: WahaConfig;
+  n8n?: N8NConfig;
+  odoo?: OdooConfig;
+  aiCore?: AiCoreConfig;
+  maintenanceMode?: boolean;
+  showWhatsappButton?: boolean;
+  // Nuevos campos
+  socialLinks?: SocialLinks;
+  testimonials?: Testimonial[];
+  gallery?: string[];
 }
 
 export interface User {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   role: Role;
   relatedId?: string;
   avatar?: string;
@@ -48,6 +120,7 @@ export interface Service {
   description?: string;
   category: string;
   status: 'ACTIVE' | 'INACTIVE';
+  imageUrl?: string;
 }
 
 export interface Appointment {
@@ -97,15 +170,10 @@ export interface Client {
   allergies?: string;
   medicalConditions?: string;
   treatmentHistory: TreatmentRecord[];
-}
-
-export interface AIParsedAppointment {
-  title: string;
-  startDateTime: string;
-  endDateTime: string;
-  clientName?: string;
-  clientPhone?: string;
-  description?: string;
+  // Campos de Consentimiento
+  consentAccepted?: boolean;
+  consentDate?: string;
+  consentType?: string; 
 }
 
 export interface NotificationPreferences {
@@ -148,6 +216,8 @@ export interface Product {
   minStock: number;
   status: 'ACTIVE' | 'INACTIVE';
   usage: 'RETAIL' | 'INTERNAL';
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 export type ExceptionType = 'VACATION' | 'HOLIDAY' | 'UNAVAILABLE';
@@ -158,6 +228,15 @@ export interface ScheduleException {
   endDate: string;
   type: ExceptionType;
   description?: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  manager: string;
+  status: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface CartItem {
@@ -172,7 +251,6 @@ export interface CartItem {
 
 export type PaymentMethod = 'CASH' | 'SPEI';
 
-// Fase 1: Nuevos Tipos
 export interface Transaction {
   id: string;
   date: string;
@@ -186,9 +264,19 @@ export interface Transaction {
 export interface InventoryMovement {
   id: string;
   productId: string;
+  productName: string;
   date: string;
   type: 'IN' | 'OUT' | 'ADJUSTMENT';
   quantity: number;
   reason: string;
   user: string;
+}
+
+export interface AIParsedAppointment {
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+  clientName?: string;
+  clientPhone?: string;
+  description?: string;
 }

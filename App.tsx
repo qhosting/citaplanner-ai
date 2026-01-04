@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'rea
 import { 
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
   Sparkles, ShoppingBag, Megaphone, Settings, 
-  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3
+  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,16 +34,30 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isChecking, setIsChecking] = React.useState(true);
 
   React.useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: location }, replace: true });
-    } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-      if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
-      else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
-      else navigate('/admin', { replace: true });
-    }
+    const timer = setTimeout(() => {
+        if (!isAuthenticated) {
+          navigate('/login', { state: { from: location }, replace: true });
+        } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+          if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
+          else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
+          else navigate('/admin', { replace: true });
+        }
+        setIsChecking(false);
+    }, 50);
+
+    return () => clearTimeout(timer);
   }, [isAuthenticated, user, allowedRoles, location, navigate]);
+
+  if (!isAuthenticated && isChecking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) return null;
   return <>{children}</>;
@@ -57,51 +71,58 @@ const Navbar = () => {
   if (location.pathname === '/' && !user) return null;
 
   const isActive = (path: string) => {
-    return location.pathname === path ? 'text-[#D4AF37]' : 'text-slate-400 hover:text-white';
+    return location.pathname === path;
   };
 
   const NavLink = ({ to, children }: { to: string, children?: React.ReactNode }) => (
-    <Link to={to} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${isActive(to)}`}>
+    <Link to={to} className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] transition-all flex items-center gap-2 ${
+      isActive(to) 
+        ? 'text-[#D4AF37]' 
+        : 'text-zinc-300 hover:text-white hover:bg-white/5'
+    }`}>
       {children}
+      {isActive(to) && (
+        <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#D4AF37] rounded-full shadow-[0_0_10px_#D4AF37]" />
+      )}
     </Link>
   );
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-black/40 backdrop-blur-3xl border-b border-white/5 h-20">
+    <nav className="sticky top-0 z-50 w-full bg-black/90 backdrop-blur-2xl border-b border-white/10 h-20 shadow-2xl">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-        <div className="flex items-center gap-10">
+        <div className="flex items-center gap-8">
           <Link to={user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'PROFESSIONAL' ? '/professional-dashboard' : '/admin'}>
             <div className="flex items-center gap-3 group">
-              <div className="p-2 rounded-xl bg-gradient-to-tr from-[#111] to-black border border-[#D4AF37]/20 group-hover:border-[#D4AF37]/50 transition-all">
-                <Sparkles className="text-[#D4AF37]" size={20} />
+              <div className="p-2.5 rounded-xl bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30 group-hover:border-[#D4AF37]/60 transition-all shadow-lg">
+                <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-xl tracking-tighter text-white uppercase leading-none">Cita<span className="gold-text-gradient">Planner</span></span>
-                <span className="text-[7px] font-bold text-slate-600 uppercase tracking-[0.4em]">Aurum Ecosystem</span>
+                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">Aurum Ecosystem</span>
               </div>
             </div>
           </Link>
           
           {user && user.role === 'ADMIN' && (
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden xl:flex items-center gap-1">
               <NavLink to="/admin">Consola</NavLink>
-              <NavLink to="/pos">VENTAS & POS</NavLink>
-              <NavLink to="/analytics">REPORTES</NavLink>
+              <NavLink to="/pos">Ventas & POS</NavLink>
+              <NavLink to="/analytics">Reportes</NavLink>
               <NavLink to="/clients">Directorio</NavLink>
               <div className="relative group/catalog">
-                <button className="px-4 py-2 text-slate-400 hover:text-white text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                <button className="px-4 py-2 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2 transition-all">
                   Módulos <ChevronDown size={10} className="group-hover/catalog:rotate-180 transition-transform" />
                 </button>
-                <div className="absolute top-full left-0 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/catalog:opacity-100 group-hover/catalog:translate-y-0 group-hover/catalog:pointer-events-auto transition-all duration-500">
-                  <div className="glass-card w-64 rounded-3xl p-3 border border-white/10 shadow-2xl">
-                    <Link to="/insights" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-[#D4AF37] hover:bg-white/5 rounded-2xl transition-all"><BarChart3 size={14}/> Estrategia AI</Link>
+                <div className="absolute top-full left-0 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/catalog:opacity-100 group-hover/catalog:translate-y-0 group-hover/catalog:pointer-events-auto transition-all duration-300">
+                  <div className="glass-card w-64 rounded-[2rem] p-3 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-black/95 backdrop-blur-xl">
+                    <Link to="/insights" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><BarChart3 size={14}/> Estrategia AI</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
-                    <Link to="/branches" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-2xl transition-all"><MapPin size={14}/> Sedes</Link>
-                    <Link to="/schedules" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-2xl transition-all"><Clock size={14}/> Personal</Link>
-                    <Link to="/services" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-2xl transition-all"><Scissors size={14}/> Servicios</Link>
-                    <Link to="/inventory" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-slate-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-2xl transition-all"><Package size={14}/> Inventario</Link>
+                    <Link to="/branches" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><MapPin size={14}/> Sedes</Link>
+                    <Link to="/schedules" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Clock size={14}/> Personal</Link>
+                    <Link to="/services" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Scissors size={14}/> Servicios</Link>
+                    <Link to="/inventory" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Package size={14}/> Inventario</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
-                    <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-[9px] font-black uppercase text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 rounded-2xl transition-all"><Settings size={14}/> Configuración Master</Link>
+                    <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/40 rounded-2xl transition-all"><Settings size={14}/> Configuración</Link>
                   </div>
                 </div>
               </div>
@@ -112,20 +133,23 @@ const Navbar = () => {
 
         <div className="flex items-center gap-6">
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5">
               <div className="hidden sm:block text-right">
-                <p className="text-[10px] font-black text-white uppercase tracking-tighter">{user.name}</p>
-                <p className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{user.role}</p>
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter mb-0.5">{user.name}</p>
+                <div className="flex items-center gap-1 justify-end">
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{user.role}</p>
+                </div>
               </div>
-              <Link to="/profile" className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#222] to-[#111] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 transition-transform overflow-hidden shadow-lg">
+              <Link to="/profile" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#333] to-[#111] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 hover:border-[#D4AF37] transition-all overflow-hidden shadow-xl">
                 {user.avatar || user.name.charAt(0)}
               </Link>
-              <button onClick={logout} className="p-2 text-slate-600 hover:text-[#D4AF37] transition-colors">
-                <LogOut size={16} />
+              <button onClick={logout} className="p-2.5 text-zinc-500 hover:text-[#D4AF37] hover:bg-white/5 rounded-xl transition-all">
+                <LogOut size={18} />
               </button>
             </div>
           ) : (
-            <Link to="/login" className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] hover:opacity-70">Iniciar Sesión</Link>
+            <Link to="/login" className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:opacity-70 border-b border-[#D4AF37]/30 pb-0.5">Iniciar Sesión</Link>
           )}
         </div>
       </div>
@@ -138,13 +162,13 @@ const InternalFooter = () => {
   if (location.pathname === '/' || location.pathname === '/login') return null;
 
   return (
-    <footer className="w-full bg-black border-t border-white/5 py-10 px-10">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-[8px] font-black uppercase tracking-[0.3em] text-slate-700">
-        <p>© 2026 CitaPlanner Global Infrastructure</p>
+    <footer className="w-full bg-[#050505] border-t border-white/5 py-12 px-10">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600">
+        <p>© 2026 CitaPlanner Global Infrastructure • Secure Node</p>
         <p className="flex items-center gap-8">
-          <span>Powered by <a href="https://aurumcapital.mx" target="_blank" className="text-slate-500 hover:text-[#D4AF37] transition-colors">Aurum Capital</a></span>
+          <span>Powered by <a href="https://aurumcapital.mx" target="_blank" className="text-zinc-500 hover:text-[#D4AF37] transition-colors">Aurum Capital</a></span>
           <span className="w-1 h-1 rounded-full bg-white/10" />
-          <span>Infrastructure by <a href="https://qhosting.com.mx" target="_blank" className="text-slate-500 hover:text-white transition-colors">QHosting</a></span>
+          <span>Infrastructure by <a href="https://qhosting.com.mx" target="_blank" className="text-zinc-500 hover:text-white transition-colors">QHosting</a></span>
         </p>
       </div>
     </footer>
@@ -156,7 +180,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col bg-[#050505]">
             <Toaster richColors position="top-right" theme="dark" />
             <Navbar />
             <div className="flex-grow">
