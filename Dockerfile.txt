@@ -1,15 +1,50 @@
 # MIRROR DOCKERFILE - CITAPLANNER (EASYPANEL READY)
 # FECHA DE AUDITORÍA: 2025
+# STATUS: SINCRONIZADO CON DOCKERFILE PRODUCCIÓN
 
-CONFIGURACIÓN DETECTADA:
-------------------------
-1. Base: node:20-alpine
-2. Estrategia: Multi-stage (Reduce tamaño de imagen de 1GB a ~150MB)
-3. Prisma: Ejecuta 'prisma generate' en fase de build.
-4. Seguridad: No corre como Root (usa usuario nextjs).
-5. Output: standalone (optimizado para microservicios).
+# STAGE 1: Builder
+FROM node:20-alpine AS builder
 
-NOTAS DE EASYPANEL:
-------------------
-Easypanel leerá este Dockerfile automáticamente al detectar el archivo en la raíz.
-Asegúrese de mapear el puerto 3000 en la configuración del servicio.
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+RUN npm install
+RUN if [ -f "./prisma/schema.prisma" ]; then npx prisma generate; fi
+
+COPY . .
+RUN npm run build
+
+# STAGE 2: Runner
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 citaplanner
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+RUN chown -R citaplanner:nodejs /app
+
+USER citaplanner
+
+EXPOSE 3000
+
+ENV PORT=3000
+
+CMD ["node", "server.js"]
+
+# NOTAS DE EASYPANEL:
+# ------------------
+# Easypanel leerá este Dockerfile automáticamente al detectar el archivo en la raíz.
+# Asegúrese de mapear el puerto 3000 en la configuración del servicio.
+# El esquema Prisma se genera solo si el archivo .prisma está presente.
