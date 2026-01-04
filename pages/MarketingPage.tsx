@@ -203,7 +203,7 @@ export const MarketingPage: React.FC = () => {
                    <h3 className="font-bold text-slate-800 mb-1">{campaign.name}</h3>
                    <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
                      <Users size={12} /> 
-                     Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (>90 días)'}
+                     Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (&gt;90 días)'}
                    </p>
                    
                    <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 mb-4 flex-grow italic border border-slate-100">
@@ -325,7 +325,7 @@ export const MarketingPage: React.FC = () => {
                         >
                            <option value="ALL">Todos los Clientes</option>
                            <option value="ACTIVE_LAST_30_DAYS">Activos (30 días)</option>
-                           <option value="INACTIVE_90_DAYS">Inactivos (>90 días)</option>
+                           <option value="INACTIVE_90_DAYS">Inactivos (&gt;90 días)</option>
                         </select>
                     </div>
                  </div>

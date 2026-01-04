@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, User, ShieldAlert, Plus, Trash2, 
-  Save, Check, Coffee, CalendarDays, Settings, X, Loader2
+  Save, Check, Coffee, CalendarDays, Settings, X, Loader2, Sparkles, Mail, Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Professional, ScheduleException, ExceptionType } from '../types';
@@ -26,6 +27,7 @@ export const SchedulesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'WEEKLY' | 'EXCEPTIONS'>('WEEKLY');
   
   const [isEditProModalOpen, setIsEditProModalOpen] = useState(false);
+  const [isCreateProModalOpen, setIsCreateProModalOpen] = useState(false);
   const [proFormData, setProFormData] = useState<Partial<Professional>>({});
 
   const [newException, setNewException] = useState<{
@@ -66,53 +68,58 @@ export const SchedulesPage: React.FC = () => {
     setIsEditProModalOpen(true);
   };
 
-  const handleSaveProData = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPro) return;
-    
-    setSaving(true);
-    const updatedPro = { ...selectedPro, ...proFormData };
-    
-    setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
-    
-    const success = await api.updateProfessional(updatedPro);
-    setSaving(false);
-    
-    if (success) {
-      setIsEditProModalOpen(false);
-      toast.success("Profesional actualizado");
-    } else {
-      toast.error("Error al guardar cambios del profesional.");
-      loadProfessionals(); 
-    }
+  const openCreateProModal = () => {
+    setProFormData({
+      name: '',
+      role: '',
+      email: '',
+      birthDate: ''
+    });
+    setIsCreateProModalOpen(true);
   };
 
-  const handleCreatePro = async () => {
-      const name = prompt("Nombre del nuevo profesional:");
-      if(!name) return;
-      const role = prompt("Rol/Especialidad:");
-      if(!role) return;
-
+  const handleSaveProData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPro && !isCreateProModalOpen) return;
+    
+    setSaving(true);
+    
+    if (isCreateProModalOpen) {
       const newPro: Omit<Professional, 'id'> = {
-          name, role, email: '', 
-          weeklySchedule: DAYS_OF_WEEK.map(d => ({
-            dayOfWeek: d.id,
-            isEnabled: d.id !== 0 && d.id !== 6,
-            slots: [{ start: '09:00', end: '18:00' }]
-          })),
-          exceptions: []
+        name: proFormData.name || '',
+        role: proFormData.role || '',
+        email: proFormData.email || '',
+        birthDate: proFormData.birthDate,
+        weeklySchedule: DAYS_OF_WEEK.map(d => ({
+          dayOfWeek: d.id,
+          isEnabled: d.id !== 0 && d.id !== 6,
+          slots: [{ start: '09:00', end: '18:00' }]
+        })),
+        exceptions: []
       };
       
-      setLoading(true);
       const res = await api.createProfessional(newPro);
-      if(res.success) {
-          await loadProfessionals();
-          if(res.id) setSelectedProId(res.id);
-          toast.success("Profesional creado");
+      if (res.success) {
+        await loadProfessionals();
+        if (res.id) setSelectedProId(res.id);
+        toast.success("Nuevo profesional integrado al ecosistema");
+        setIsCreateProModalOpen(false);
       } else {
-          toast.error("Error creando profesional");
+        toast.error("Error en la creación del nodo profesional");
       }
-      setLoading(false);
+    } else {
+      const updatedPro = { ...selectedPro, ...proFormData };
+      setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
+      const success = await api.updateProfessional(updatedPro);
+      if (success) {
+        setIsEditProModalOpen(false);
+        toast.success("Perfil actualizado con éxito");
+      } else {
+        toast.error("Error sincronizando cambios");
+        loadProfessionals();
+      }
+    }
+    setSaving(false);
   };
 
   const handleToggleDay = (dayId: number) => {
@@ -183,9 +190,9 @@ export const SchedulesPage: React.FC = () => {
     const success = await api.updateProfessional(selectedPro);
     setSaving(false);
     if (success) {
-      toast.success("Horarios guardados correctamente.");
+      toast.success("Matriz de horarios sincronizada");
     } else {
-      toast.error("Error al guardar en el servidor.");
+      toast.error("Fallo en la comunicación con la infraestructura");
     }
   };
 
@@ -210,12 +217,12 @@ export const SchedulesPage: React.FC = () => {
     setSaving(true);
     await api.updateProfessional(updatedPro);
     setSaving(false);
-    toast.success("Excepción añadida");
+    toast.success("Excepción de calendario registrada");
   };
 
   const removeException = async (exceptionId: string) => {
     if (!selectedPro) return;
-    if (!window.confirm("¿Eliminar esta excepción?")) return;
+    if (!window.confirm("¿Confirmar eliminación de excepción?")) return;
 
     const updatedExceptions = selectedPro.exceptions.filter(exc => exc.id !== exceptionId);
     const updatedPro = { ...selectedPro, exceptions: updatedExceptions };
@@ -230,124 +237,116 @@ export const SchedulesPage: React.FC = () => {
 
   const getExceptionLabel = (type: ExceptionType) => {
     switch (type) {
-      case 'VACATION': return { label: 'Vacaciones', color: 'bg-green-100 text-green-700 border-green-200' };
-      case 'HOLIDAY': return { label: 'Festivo', color: 'bg-purple-100 text-purple-700 border-purple-200' };
-      case 'UNAVAILABLE': return { label: 'Bloqueo / Ausencia', color: 'bg-red-100 text-red-700 border-red-200' };
-      default: return { label: type, color: 'bg-slate-100' };
+      case 'VACATION': return { label: 'Vacaciones', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
+      case 'HOLIDAY': return { label: 'Festivo', color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' };
+      case 'UNAVAILABLE': return { label: 'Bloqueo Master', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' };
+      default: return { label: type, color: 'bg-white/5' };
     }
   };
 
   if (loading) {
       return (
-          <div className="flex h-screen items-center justify-center">
-              <Loader2 className="animate-spin text-indigo-600" size={32} />
+          <div className="flex h-screen items-center justify-center bg-black">
+              <Loader2 className="animate-spin text-[#D4AF37]" size={48} />
           </div>
       );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Clock className="text-indigo-600" />
-            Gestión de Horarios
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
+            Schedule <span className="gold-text-gradient font-light">Architecture</span>
           </h1>
-          <p className="text-slate-500 mt-1">Configura disponibilidad, turnos y vacaciones del personal.</p>
+          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5 mt-2">Personal Management • Aurum Operational Node</p>
         </div>
+        <button 
+          onClick={openCreateProModal}
+          className="gold-btn text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl"
+        >
+          <Plus size={18} /> Integrar Nuevo Especialista
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
         
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50">
-              <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-                <User size={18} /> Profesionales
+          <div className="glass-card rounded-[2.5rem] border-white/5 overflow-hidden">
+            <div className="p-6 border-b border-white/5 bg-white/5">
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                <User size={16} className="text-[#D4AF37]" /> Staff Activo
               </h3>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-white/5">
               {professionals.map(pro => (
                 <div 
                    key={pro.id}
-                   className={`flex items-center justify-between p-4 transition-colors ${
-                    selectedProId === pro.id ? 'bg-indigo-50 border-l-4 border-indigo-600' : 'border-l-4 border-transparent hover:bg-slate-50'
+                   className={`flex items-center justify-between p-6 transition-all cursor-pointer ${
+                    selectedProId === pro.id ? 'bg-[#D4AF37]/5 border-l-4 border-[#D4AF37]' : 'border-l-4 border-transparent hover:bg-white/5'
                    }`}
+                   onClick={() => setSelectedProId(pro.id)}
                 >
-                    <button
-                        onClick={() => setSelectedProId(pro.id)}
-                        className="text-left flex-grow"
-                    >
-                        <p className={`font-medium ${selectedProId === pro.id ? 'text-indigo-900' : 'text-slate-700'}`}>
+                    <div className="text-left">
+                        <p className={`font-black text-sm uppercase tracking-tight ${selectedProId === pro.id ? 'text-white' : 'text-slate-500'}`}>
                         {pro.name}
                         </p>
-                        <p className="text-xs text-slate-500">{pro.role}</p>
-                    </button>
+                        <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-1">{pro.role}</p>
+                    </div>
                     {selectedProId === pro.id && (
                         <button 
-                            onClick={openEditProModal}
-                            className="p-1.5 text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700 rounded-md transition-colors"
-                            title="Editar Datos del Profesional"
+                            onClick={(e) => { e.stopPropagation(); openEditProModal(); }}
+                            className="p-2 text-slate-600 hover:text-[#D4AF37] transition-colors"
                         >
-                            <Settings size={16} />
+                            <Settings size={14} />
                         </button>
                     )}
                 </div>
               ))}
-            </div>
-            <div className="p-3 bg-slate-50 border-t border-slate-100">
-               <button 
-                 onClick={handleCreatePro}
-                 className="w-full py-2 border border-dashed border-slate-300 rounded-lg text-slate-500 text-sm hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2"
-               >
-                 <Plus size={16} /> Agregar Profesional
-               </button>
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-3">
           {professionals.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-                  <User size={48} className="mx-auto text-slate-300 mb-4" />
-                  <p className="text-slate-500">No hay profesionales registrados.</p>
-                  <button onClick={handleCreatePro} className="text-indigo-600 font-medium hover:underline mt-2">Crea el primero</button>
+              <div className="glass-card rounded-[3.5rem] border-dashed border-white/10 p-24 text-center">
+                  <User size={64} className="mx-auto text-slate-800 mb-8" />
+                  <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-[10px]">No se detectan nodos de personal activos</p>
+                  <button onClick={openCreateProModal} className="text-[#D4AF37] font-black uppercase tracking-widest text-[9px] mt-6 border-b border-[#D4AF37]/30 pb-1">Iniciar Secuencia de Creación</button>
               </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm min-h-[600px]">
-                <div className="flex border-b border-slate-200">
+            <div className="glass-card rounded-[3.5rem] border-white/5 min-h-[600px] overflow-hidden">
+                <div className="flex border-b border-white/5 bg-white/5">
                 <button
                     onClick={() => setActiveTab('WEEKLY')}
-                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-6 text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 ${
                     activeTab === 'WEEKLY' 
-                        ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        ? 'text-[#D4AF37] bg-[#D4AF37]/5' 
+                        : 'text-slate-500 hover:text-white'
                     }`}
                 >
-                    <CalendarDays size={18} />
-                    Horario Base Semanal
+                    <CalendarDays size={18} /> Disponibilidad Base
                 </button>
                 <button
                     onClick={() => setActiveTab('EXCEPTIONS')}
-                    className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-6 text-[10px] font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 ${
                     activeTab === 'EXCEPTIONS' 
-                        ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
-                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                        ? 'text-[#D4AF37] bg-[#D4AF37]/5' 
+                        : 'text-slate-500 hover:text-white'
                     }`}
                 >
-                    <ShieldAlert size={18} />
-                    Excepciones y Vacaciones
+                    <ShieldAlert size={18} /> Bloqueos y Vacaciones
                 </button>
                 </div>
 
                 {activeTab === 'WEEKLY' && selectedPro && (
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-800">Configuración Recurrente</h3>
-                    <div className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1">
-                        <Coffee size={12} />
-                        <span>Permite configurar pausas agregando múltiples franjas</span>
-                    </div>
+                <div className="p-10 space-y-10">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xl font-black text-white tracking-tighter uppercase">Configuración de Turnos</h3>
+                      <div className="bg-white/5 px-5 py-2 rounded-full border border-white/5 flex items-center gap-3">
+                          <Coffee size={14} className="text-[#D4AF37]" />
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Soporta múltiples franjas horarias</span>
+                      </div>
                     </div>
 
                     <div className="space-y-4">
@@ -357,21 +356,21 @@ export const SchedulesPage: React.FC = () => {
                         const slots = schedule?.slots || [];
 
                         return (
-                        <div key={dayObj.id} className={`p-4 rounded-lg border transition-all ${isEnabled ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100 opacity-75'}`}>
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                        <div key={dayObj.id} className={`p-6 rounded-[2rem] border transition-all ${isEnabled ? 'bg-white/5 border-white/10' : 'bg-black/20 border-white/5 opacity-40'}`}>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-8">
                             
-                            <div className="w-32 flex-shrink-0 pt-2">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isEnabled ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
+                            <div className="w-32 flex-shrink-0">
+                                <label className="flex items-center gap-4 cursor-pointer group">
+                                <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${isEnabled ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-black/40 border-white/10'}`}>
                                     <input 
-                                    type="checkbox" 
-                                    className="hidden" 
-                                    checked={isEnabled}
-                                    onChange={() => handleToggleDay(dayObj.id)}
+                                      type="checkbox" 
+                                      className="hidden" 
+                                      checked={isEnabled}
+                                      onChange={() => handleToggleDay(dayObj.id)}
                                     />
-                                    {isEnabled && <Check size={12} className="text-white" />}
+                                    {isEnabled && <Check size={14} className="text-black font-black" />}
                                 </div>
-                                <span className={`font-medium ${isEnabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                                <span className={`font-black text-xs uppercase tracking-widest transition-colors ${isEnabled ? 'text-white' : 'text-slate-700'}`}>
                                     {dayObj.name}
                                 </span>
                                 </label>
@@ -379,42 +378,42 @@ export const SchedulesPage: React.FC = () => {
 
                             <div className="flex-grow">
                                 {isEnabled ? (
-                                <div className="space-y-3">
+                                <div className="flex flex-wrap gap-4 items-center">
                                     {slots.map((slot, index) => (
-                                    <div key={index} className="flex items-center gap-3">
+                                    <div key={index} className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl border border-white/5">
                                         <input
-                                        type="time"
-                                        value={slot.start}
-                                        onChange={(e) => handleTimeChange(dayObj.id, index, 'start', e.target.value)}
-                                        className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                          type="time"
+                                          value={slot.start}
+                                          onChange={(e) => handleTimeChange(dayObj.id, index, 'start', e.target.value)}
+                                          className="bg-transparent text-white font-black text-xs outline-none focus:text-[#D4AF37] transition-colors"
                                         />
-                                        <span className="text-slate-400">-</span>
+                                        <span className="text-slate-700 font-bold">—</span>
                                         <input
-                                        type="time"
-                                        value={slot.end}
-                                        onChange={(e) => handleTimeChange(dayObj.id, index, 'end', e.target.value)}
-                                        className="p-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                          type="time"
+                                          value={slot.end}
+                                          onChange={(e) => handleTimeChange(dayObj.id, index, 'end', e.target.value)}
+                                          className="bg-transparent text-white font-black text-xs outline-none focus:text-[#D4AF37] transition-colors"
                                         />
                                         {slots.length > 1 && (
                                         <button 
                                             onClick={() => removeSlot(dayObj.id, index)}
-                                            className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50"
+                                            className="text-slate-600 hover:text-rose-500 transition-colors"
                                         >
-                                            <Trash2 size={16} />
+                                            <X size={14} />
                                         </button>
                                         )}
                                     </div>
                                     ))}
                                     <button 
-                                    onClick={() => addSlot(dayObj.id)}
-                                    className="text-xs text-indigo-600 font-medium flex items-center gap-1 hover:underline mt-2"
+                                      onClick={() => addSlot(dayObj.id)}
+                                      className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all"
                                     >
-                                    <Plus size={14} /> Agregar Turno / Pausa
+                                      <Plus size={16} />
                                     </button>
                                 </div>
                                 ) : (
-                                <div className="pt-2 text-sm text-slate-400 italic flex items-center gap-2">
-                                    <ShieldAlert size={16} /> No disponible
+                                <div className="text-[10px] text-slate-700 font-black uppercase tracking-widest italic flex items-center gap-2">
+                                    <ShieldAlert size={14} /> Nodo Desactivado
                                 </div>
                                 )}
                             </div>
@@ -424,198 +423,224 @@ export const SchedulesPage: React.FC = () => {
                     })}
                     </div>
                     
-                    <div className="mt-8 flex justify-end">
+                    <div className="mt-12 flex justify-end">
                     <button 
                         onClick={handleSaveSchedule}
                         disabled={saving}
-                        className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 shadow-md shadow-indigo-200 flex items-center gap-2 disabled:opacity-70"
+                        className="gold-btn text-black px-12 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-4 disabled:opacity-50"
                     >
                         {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                        Guardar Cambios
+                        Sincronizar Matriz de Horarios
                     </button>
                     </div>
                 </div>
                 )}
 
                 {activeTab === 'EXCEPTIONS' && selectedPro && (
-                <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="md:col-span-1">
-                        <h3 className="font-bold text-slate-800 mb-4">Agregar Excepción</h3>
-                        <form onSubmit={handleAddException} className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Tipo</label>
-                            <select 
-                            className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                            value={newException.type}
-                            onChange={(e) => setNewException({...newException, type: e.target.value as ExceptionType})}
-                            >
-                            <option value="UNAVAILABLE">Bloqueo Horario</option>
-                            <option value="VACATION">Vacaciones</option>
-                            <option value="HOLIDAY">Día Festivo</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Desde</label>
-                            <input 
-                            type="date"
-                            required
-                            className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                            value={newException.startDate}
-                            onChange={(e) => setNewException({...newException, startDate: e.target.value})}
-                            />
-                        </div>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Hasta</label>
-                            <input 
-                            type="date"
-                            required
-                            className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                            value={newException.endDate}
-                            onChange={(e) => setNewException({...newException, endDate: e.target.value})}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Motivo (Opcional)</label>
-                            <input 
-                            type="text"
-                            placeholder="Ej: Consulta Médica"
-                            className="w-full p-2 border border-slate-300 rounded-lg text-sm"
-                            value={newException.description}
-                            onChange={(e) => setNewException({...newException, description: e.target.value})}
-                            />
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            disabled={saving}
-                            className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-70 flex justify-center"
-                        >
-                            {saving ? <Loader2 className="animate-spin" size={16} /> : 'Agregar Bloqueo'}
-                        </button>
-                        </form>
-                    </div>
-
-                    <div className="md:col-span-2">
-                        <h3 className="font-bold text-slate-800 mb-4">Próximas Ausencias y Bloqueos</h3>
-                        
-                        {selectedPro.exceptions.length === 0 ? (
-                        <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                            <Calendar className="mx-auto text-slate-300 mb-2" size={32} />
-                            <p className="text-slate-500 text-sm">No hay excepciones configuradas.</p>
-                        </div>
-                        ) : (
-                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                            {selectedPro.exceptions.map((exc) => {
-                            const style = getExceptionLabel(exc.type);
-                            return (
-                                <div key={exc.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center group">
-                                <div className="flex items-start gap-3">
-                                    <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
-                                    <Calendar size={20} />
-                                    </div>
-                                    <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${style.color}`}>
-                                        {style.label}
-                                        </span>
-                                        {exc.description && <span className="text-sm font-medium text-slate-800">- {exc.description}</span>}
-                                    </div>
-                                    <p className="text-sm text-slate-500">
-                                        {new Date(exc.startDate).toLocaleDateString()} <span className="text-slate-300 mx-1">➜</span> {new Date(exc.endDate).toLocaleDateString()}
-                                    </p>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => removeException(exc.id)}
-                                    disabled={saving}
-                                    className="text-slate-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                <div className="p-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                      <div className="lg:col-span-5">
+                          <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">Nueva Excepción</h3>
+                          <form onSubmit={handleAddException} className="space-y-6 bg-white/5 p-8 rounded-[2.5rem] border border-white/5">
+                            <div>
+                                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Categoría de Ausencia</label>
+                                <select 
+                                  className="w-full p-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37]"
+                                  value={newException.type}
+                                  onChange={(e) => setNewException({...newException, type: e.target.value as ExceptionType})}
                                 >
-                                    <Trash2 size={18} />
-                                </button>
-                                </div>
-                            );
-                            })}
-                        </div>
-                        )}
-                    </div>
+                                  <option value="UNAVAILABLE">Bloqueo Horario</option>
+                                  <option value="VACATION">Vacaciones</option>
+                                  <option value="HOLIDAY">Día Festivo</option>
+                                </select>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Desde</label>
+                                  <input 
+                                    type="date"
+                                    required
+                                    className="w-full p-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37]"
+                                    value={newException.startDate}
+                                    onChange={(e) => setNewException({...newException, startDate: e.target.value})}
+                                  />
+                              </div>
+                              
+                              <div>
+                                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Hasta</label>
+                                  <input 
+                                    type="date"
+                                    required
+                                    className="w-full p-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37]"
+                                    value={newException.endDate}
+                                    onChange={(e) => setNewException({...newException, endDate: e.target.value})}
+                                  />
+                              </div>
+                            </div>
 
+                            <div>
+                                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Motivación Estratégica</label>
+                                <input 
+                                  type="text"
+                                  placeholder="Ej: Congreso de Micropigmentación"
+                                  className="w-full p-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37]"
+                                  value={newException.description}
+                                  onChange={(e) => setNewException({...newException, description: e.target.value})}
+                                />
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={saving}
+                                className="w-full bg-white/5 text-slate-400 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#D4AF37] hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                            >
+                                {saving ? <Loader2 className="animate-spin" size={16} /> : <ShieldAlert size={16} />} 
+                                Registrar Bloqueo
+                            </button>
+                          </form>
+                      </div>
+
+                      <div className="lg:col-span-7">
+                          <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8">Ausencias Planificadas</h3>
+                          
+                          {selectedPro.exceptions.length === 0 ? (
+                            <div className="py-24 border border-dashed border-white/10 rounded-[3rem] text-center opacity-40">
+                                <Calendar className="mx-auto text-slate-800 mb-6" size={48} />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Sin excepciones detectadas</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
+                                {selectedPro.exceptions.map((exc) => {
+                                  const style = getExceptionLabel(exc.type);
+                                  return (
+                                      <div key={exc.id} className="bg-white/5 p-6 rounded-[2rem] border border-white/5 flex justify-between items-center group hover:border-white/10 transition-all">
+                                        <div className="flex items-start gap-5">
+                                            <div className="p-3 bg-black/40 rounded-2xl text-slate-500 group-hover:text-[#D4AF37] transition-colors">
+                                              <Calendar size={20} />
+                                            </div>
+                                            <div>
+                                              <div className="flex items-center gap-3 mb-2">
+                                                  <span className={`text-[8px] font-black px-3 py-1 rounded-full border ${style.color}`}>
+                                                    {style.label}
+                                                  </span>
+                                                  {exc.description && <span className="text-xs font-black text-white uppercase tracking-tight">{exc.description}</span>}
+                                              </div>
+                                              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                                  {new Date(exc.startDate).toLocaleDateString()} <span className="text-slate-800 mx-2">➜</span> {new Date(exc.endDate).toLocaleDateString()}
+                                              </p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => removeException(exc.id)}
+                                            disabled={saving}
+                                            className="w-10 h-10 rounded-xl bg-white/5 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 transition-all flex items-center justify-center"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                      </div>
                     </div>
                 </div>
                 )}
-
             </div>
           )}
         </div>
       </div>
 
-      {isEditProModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-scale-in">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                      <h3 className="font-bold text-slate-800">Editar Profesional</h3>
-                      <button onClick={() => setIsEditProModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                          <X size={20} />
+      {/* MODAL UNIFICADO: CREACIÓN / EDICIÓN */}
+      {(isEditProModalOpen || isCreateProModalOpen) && (
+          <div className="fixed inset-0 bg-[#050505]/90 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+              <div className="glass-card w-full max-w-xl rounded-[3.5rem] overflow-hidden border-[#D4AF37]/20 animate-scale-in">
+                  <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+                      <div className="flex items-center gap-4">
+                        <Sparkles className="text-[#D4AF37]" size={24} />
+                        <h3 className="font-black text-xl text-white tracking-tighter uppercase">
+                          {isCreateProModalOpen ? 'Integrar Nodo Maestro' : 'Editar Especialista'}
+                        </h3>
+                      </div>
+                      <button onClick={() => { setIsEditProModalOpen(false); setIsCreateProModalOpen(false); }} className="p-3 text-slate-500 hover:text-white transition-colors">
+                          <X size={24} />
                       </button>
                   </div>
-                  <form onSubmit={handleSaveProData} className="p-6 space-y-4">
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-                          <input 
-                              required
-                              type="text"
-                              value={proFormData.name || ''}
-                              onChange={(e) => setProFormData({...proFormData, name: e.target.value})}
-                              className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
+                  <form onSubmit={handleSaveProData} className="p-10 space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Nombre Completo</label>
+                            <div className="relative">
+                              <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-700" size={18} />
+                              <input 
+                                  required
+                                  type="text"
+                                  placeholder="Elena Valery"
+                                  value={proFormData.name || ''}
+                                  onChange={(e) => setProFormData({...proFormData, name: e.target.value})}
+                                  className="w-full pl-14 pr-6 py-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
+                              />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Rol / Especialidad</label>
+                            <div className="relative">
+                              <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-700" size={18} />
+                              <input 
+                                  required
+                                  type="text"
+                                  placeholder="Master Artist"
+                                  value={proFormData.role || ''}
+                                  onChange={(e) => setProFormData({...proFormData, role: e.target.value})}
+                                  className="w-full pl-14 pr-6 py-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
+                              />
+                            </div>
+                        </div>
                       </div>
+                      
                       <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Rol / Especialidad</label>
-                          <input 
-                              required
-                              type="text"
-                              value={proFormData.role || ''}
-                              onChange={(e) => setProFormData({...proFormData, role: e.target.value})}
-                              className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
+                          <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Correo Institucional</label>
+                          <div className="relative">
+                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-700" size={18} />
+                            <input 
+                                type="email"
+                                placeholder="elena@aurum.mx"
+                                value={proFormData.email || ''}
+                                onChange={(e) => setProFormData({...proFormData, email: e.target.value})}
+                                className="w-full pl-14 pr-6 py-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
+                            />
+                          </div>
                       </div>
+
                       <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                          <input 
-                              type="email"
-                              value={proFormData.email || ''}
-                              onChange={(e) => setProFormData({...proFormData, email: e.target.value})}
-                              className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
+                          <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Fecha de Nacimiento</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-700" size={18} />
+                            <input 
+                                type="date"
+                                value={proFormData.birthDate || ''}
+                                onChange={(e) => setProFormData({...proFormData, birthDate: e.target.value})}
+                                className="w-full pl-14 pr-6 py-4 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
+                            />
+                          </div>
                       </div>
-                      <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento</label>
-                          <input 
-                              type="date"
-                              value={proFormData.birthDate || ''}
-                              onChange={(e) => setProFormData({...proFormData, birthDate: e.target.value})}
-                              className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                          <p className="text-[10px] text-slate-400 mt-1">Para enviar felicitaciones de cumpleaños.</p>
-                      </div>
-                      <div className="flex justify-end gap-2 pt-4">
+
+                      <div className="flex justify-end gap-6 pt-10 border-t border-white/5">
                           <button 
                             type="button" 
-                            onClick={() => setIsEditProModalOpen(false)}
-                            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                            onClick={() => { setIsEditProModalOpen(false); setIsCreateProModalOpen(false); }}
+                            className="text-[10px] font-black uppercase text-slate-500 hover:text-white transition-colors"
                           >
-                              Cancelar
+                              Abortar Operación
                           </button>
                           <button 
                             type="submit" 
                             disabled={saving}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center gap-2"
+                            className="gold-btn text-black px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 disabled:opacity-50"
                           >
-                              {saving && <Loader2 className="animate-spin" size={16} />}
-                              Guardar Cambios
+                              {saving ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                              Confirmar Identidad
                           </button>
                       </div>
                   </form>

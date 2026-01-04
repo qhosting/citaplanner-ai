@@ -5,28 +5,7 @@ import { Appointment, NotificationPreferences, Campaign, AutomationRule } from "
 const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
 
 /**
- * 148721091 - Materialization: WAHA Integration Real
- * Sends data to backend which acts as a secure proxy to the WAHA Docker container.
- */
-export const triggerWAHA = async (phone: string, message: string) => {
-  try {
-    const response = await fetch(`${API_URL}/integrations/waha/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message })
-    });
-
-    if (!response.ok) throw new Error('Error al conectar con el Gateway WAHA');
-    return await response.json();
-  } catch (error) {
-    console.error("WAHA Trigger Error", error);
-    // Silent fail for UI continuity, but logged in backend
-    return { success: false };
-  }
-};
-
-/**
- * Trigger genérico para flujos de N8N (Legacy/External)
+ * Trigger genérico para flujos de N8N (WhatsApp, SMS, Email Marketing)
  */
 export const triggerN8NWorkflow = async (action: string, appointment: Appointment) => {
   try {
@@ -50,11 +29,7 @@ export const triggerN8NWorkflow = async (action: string, appointment: Appointmen
 export const sendWhatsAppConfirmation = async (appointment: Appointment, preferences?: NotificationPreferences) => {
   if (preferences && !preferences.whatsapp) return { skipped: true };
   if (!appointment.clientPhone) throw new Error("No phone number available");
-  
-  // 520 - Flow: Real WhatsApp Sending via WAHA
-  const message = `✨ Hola ${appointment.clientName || 'Cliente'}, tu cita en *${'Aurum CitaPlanner'}* está confirmada para el *${new Date(appointment.startDateTime).toLocaleString()}*. Tratamiento: ${appointment.title}. Te esperamos.`;
-  
-  return triggerWAHA(appointment.clientPhone, message);
+  return triggerN8NWorkflow('SEND_WHATSAPP', appointment);
 };
 
 export const sendSMSReminder = async (appointment: Appointment, preferences?: NotificationPreferences) => {

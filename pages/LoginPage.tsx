@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Phone, ArrowRight, Loader2, Sparkles, ShieldCheck, Globe, Mail } from 'lucide-react';
@@ -9,8 +8,18 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, isAuthenticated } = useAuth(); // Importamos user e isAuthenticated
   const navigate = useNavigate();
+
+  // EFECTO DE REDIRECCIÓN AUTOMÁTICA
+  useEffect(() => {
+    if (isAuthenticated && user) {
+        if(user.role === 'ADMIN') navigate('/admin');
+        else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
+        else if(user.role === 'CLIENT') navigate('/client-portal');
+        else navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,16 +28,8 @@ export const LoginPage: React.FC = () => {
 
     try {
       const success = await login(phone, password);
-      if (success) {
-        const userStr = localStorage.getItem('citaPlannerUser');
-        if(userStr) {
-            const u = JSON.parse(userStr);
-            if(u.role === 'ADMIN') navigate('/admin');
-            else if(u.role === 'PROFESSIONAL') navigate('/professional-dashboard');
-            else if(u.role === 'CLIENT') navigate('/client-portal');
-            else navigate('/');
-        }
-      } else {
+      // Ya no navegamos aquí manualmente. El useEffect se encarga.
+      if (!success) {
         setError('Acceso denegado. Credenciales no autorizadas.');
       }
     } catch (err) {
@@ -55,7 +56,6 @@ export const LoginPage: React.FC = () => {
             }}
            >
              <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full shadow-[0_0_15px_rgba(212,175,55,0.8)]" />
-             {/* Subtle line connections simulated by faint radial gradients around nodes */}
              <div className="absolute -inset-10 bg-[radial-gradient(circle,rgba(212,175,55,0.03)_0%,transparent_70%)] rounded-full" />
            </div>
          ))}
@@ -64,7 +64,6 @@ export const LoginPage: React.FC = () => {
       <div className="w-full max-w-lg z-10 animate-fade-in-up">
         <div className="glass-card p-10 md:p-14 rounded-[3.5rem] relative">
           
-          {/* Brand Identity Header */}
           <div className="flex flex-col items-center mb-12">
             <div className="mb-4">
                <div className="w-20 h-20 rounded-[2rem] border-2 border-[#D4AF37]/30 flex items-center justify-center bg-black/40 shadow-2xl relative group overflow-hidden">
@@ -135,14 +134,14 @@ export const LoginPage: React.FC = () => {
                 )}
               </button>
 
-              {/* Endorsement of Hierarchy */}
-              <p className="aurum-endorsement-41948871">
-                A strategic solution by <a href="https://aurumcapital.mx" target="_blank" rel="noopener noreferrer"><b>Aurum Capital</b></a>
-              </p>
+              <div className="mt-8 text-center">
+                <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+                  A strategic solution by <a href="https://aurumcapital.mx" target="_blank" rel="noopener noreferrer" className="text-[#D4AF37] hover:underline">Aurum Capital</a>
+                </p>
+              </div>
             </div>
           </form>
 
-          {/* Infrastructure Security Footer */}
           <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
              <div className="flex items-center gap-2 px-5 py-2 bg-white/5 rounded-full border border-white/5 shadow-inner">
                 <ShieldCheck className="text-[#D4AF37]" size={14} />

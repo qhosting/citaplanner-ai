@@ -6,286 +6,274 @@ const API_URL = '/api';
 export const SOLUTION_TIMEOUT = 1000;
 export const ERROR_PROTECTION_CODE = 'AURUM-777';
 
-const DEFAULT_LANDING_SETTINGS: LandingSettings = {
-  businessName: 'CitaPlanner Elite',
-  primaryColor: '#630E14',
-  secondaryColor: '#C5A028',
-  templateId: 'citaplanner',
-  slogan: 'Gestión de Lujo Simplificada',
-  aboutText: 'Plataforma líder en gestión de citas y negocios de belleza.',
-  address: 'Av. Principal 123, CDMX',
-  contactPhone: '+52 55 1234 5678'
-};
-
-const getHeaders = () => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const branchId = localStorage.getItem('aurum_branch_id');
-    if (branchId) {
-        headers['x-branch-id'] = branchId;
-    }
-    return headers;
-};
-
-// Safe Fetch with Timeout
-const safeFetch = async (url: string, options: RequestInit = {}) => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 8000); // 8 seconds limit
-    try {
-        const response = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(id);
-        return response;
-    } catch (error) {
-        clearTimeout(id);
-        console.warn(`Fetch timeout or error for ${url}`);
-        throw error;
-    }
+const DEFAULT_SETTINGS: LandingSettings = {
+  businessName: 'Aurum Beauty Studio',
+  primaryColor: '#C5A028',
+  secondaryColor: '#1A1A1A',
+  templateId: 'beauty',
+  slogan: 'Redefiniendo la Estética de Ultra-Lujo',
+  aboutText: 'Santuario de belleza líder en alta tecnología. Fusionamos arte y ciencia para crear resultados naturales.',
+  address: 'Presidente Masaryk 450, Polanco, CDMX',
+  contactPhone: '+52 55 7142 7321',
+  heroImageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=2000'
 };
 
 export const api = {
-  getBranches: async (): Promise<Branch[]> => {
-    try {
-        const res = await safeFetch(`${API_URL}/branches`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
-    } catch { return []; }
-  },
-  
-  getClients: async (): Promise<User[]> => {
-    try {
-        const res = await safeFetch(`${API_URL}/clients`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
-    } catch { return []; }
-  },
-
-  createClient: async (client: Partial<User>): Promise<User | null> => {
-    try {
-        const res = await safeFetch(`${API_URL}/clients`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(client)
-        });
-        return res.ok ? res.json() : null;
-    } catch { return null; }
-  },
-
-  getProducts: async (): Promise<any[]> => {
-    try {
-        const res = await safeFetch(`${API_URL}/products`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
-    } catch { return []; }
-  },
-
-  createProduct: async (product: Partial<Product>) => {
-    try {
-        const res = await safeFetch(`${API_URL}/products`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify(product)
-        });
-        return res.ok;
-    } catch { return false; }
-  },
-
-  updateProduct: async (product: Product) => {
-    try {
-        const res = await safeFetch(`${API_URL}/products/${product.id}`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            body: JSON.stringify(product)
-        });
-        return res.ok;
-    } catch { return false; }
-  },
-
   getLandingSettings: async (): Promise<LandingSettings> => {
     try {
-        const res = await safeFetch(`${API_URL}/settings/landing`, { headers: getHeaders() });
-        if (res.ok) {
-            const data = await res.json();
-            const merged = { ...DEFAULT_LANDING_SETTINGS, ...data };
-            if (!merged.businessName) merged.businessName = DEFAULT_LANDING_SETTINGS.businessName;
-            if (!merged.primaryColor) merged.primaryColor = DEFAULT_LANDING_SETTINGS.primaryColor;
-            return merged;
-        }
-        return DEFAULT_LANDING_SETTINGS;
-    } catch (e) {
-        return DEFAULT_LANDING_SETTINGS;
+        const res = await fetch(`${API_URL}/settings/landing`);
+        if (!res.ok) return DEFAULT_SETTINGS;
+        const data = await res.json();
+        return { ...DEFAULT_SETTINGS, ...data };
+    } catch {
+        return DEFAULT_SETTINGS;
     }
   },
 
-  updateLandingSettings: async (settings: LandingSettings): Promise<boolean> => {
+  updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
     try {
-        const res = await safeFetch(`${API_URL}/settings/landing`, {
-        method: 'POST', 
-        headers: getHeaders(),
-        body: JSON.stringify(settings)
-        });
-        return res.ok;
+      const res = await fetch(`${API_URL}/settings/landing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(s)
+      });
+      return res.ok;
     } catch { return false; }
-  },
-
-  getBusinessStats: async () => {
-    try {
-        const res = await safeFetch(`${API_URL}/stats/business`, { headers: getHeaders() });
-        return res.ok ? res.json() : { revenueThisMonth: 0, appointmentsCompleted: 0, newClientsThisMonth: 0, occupationRate: 0 };
-    } catch { return { revenueThisMonth: 0, appointmentsCompleted: 0, newClientsThisMonth: 0, occupationRate: 0 }; }
-  },
-
-  getIntegrationStatus: async () => {
-    try {
-        const res = await safeFetch(`${API_URL}/integrations/status`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
-    } catch { return []; }
-  },
-
-  login: async (phone: string, pass: string): Promise<User | null> => {
-    try {
-        const res = await safeFetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ phone, password: pass })
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.success ? data.user : null;
-    } catch { return null; }
   },
 
   getServices: async (): Promise<Service[]> => {
     try {
-        const res = await safeFetch(`${API_URL}/services`, { headers: getHeaders() });
+        const res = await fetch(`${API_URL}/services`);
         return res.ok ? res.json() : [];
-    } catch { return []; }
+    } catch {
+        return [];
+    }
   },
 
-  createService: async (service: Omit<Service, 'id'>): Promise<Service | null> => {
-    try {
-        const res = await safeFetch(`${API_URL}/services`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(service)
-        });
-        return res.ok ? res.json() : null;
-    } catch { return null; }
+  createService: async (s: Omit<Service, 'id'>): Promise<Service> => {
+    const res = await fetch(`${API_URL}/services`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s)
+    });
+    return res.json();
   },
 
-  updateService: async (service: Service): Promise<boolean> => {
+  updateService: async (s: Service): Promise<boolean> => {
     try {
-        const res = await safeFetch(`${API_URL}/services/${service.id}`, {
+      const res = await fetch(`${API_URL}/services/${s.id}`, {
         method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(service)
-        });
-        return res.ok;
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(s)
+      });
+      return res.ok;
     } catch { return false; }
   },
 
   deleteService: async (id: string): Promise<boolean> => {
     try {
-        const res = await safeFetch(`${API_URL}/services/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-        });
-        return res.ok;
+      const res = await fetch(`${API_URL}/services/${id}`, { method: 'DELETE' });
+      return res.ok;
     } catch { return false; }
   },
 
-  getProfessionals: async (): Promise<Professional[]> => {
+  login: async (phone: string, pass: string): Promise<User | null> => {
     try {
-        const res = await safeFetch(`${API_URL}/professionals`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
+        const res = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, password: pass })
+        });
+        
+        if (!res.ok) {
+            console.warn("Login attempt failed with status:", res.status);
+            return null;
+        }
+
+        const data = await res.json();
+        return data.success ? data.user : null;
+    } catch (e) { 
+        console.error("Critical login network error:", e);
+        return null; 
+    }
+  },
+
+  getClients: async (): Promise<Client[]> => {
+    try {
+      const res = await fetch(`${API_URL}/clients`);
+      return res.ok ? res.json() : [];
     } catch { return []; }
   },
 
-  createProfessional: async (pro: Omit<Professional, 'id'>): Promise<{success: boolean, id?: string}> => {
-    try {
-        const res = await safeFetch(`${API_URL}/professionals`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(pro)
-        });
-        if (!res.ok) return { success: false };
-        const data = await res.json();
-        return { success: true, id: data.id };
-    } catch { return { success: false }; }
-  },
-
-  updateProfessional: async (pro: Professional): Promise<boolean> => {
-    try {
-        const res = await safeFetch(`${API_URL}/professionals/${pro.id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(pro)
-        });
-        return res.ok;
-    } catch { return false; }
+  createClient: async (c: Partial<User>): Promise<any> => {
+    const res = await fetch(`${API_URL}/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(c)
+    });
+    return res.json();
   },
 
   getAppointments: async (): Promise<Appointment[]> => {
     try {
-        const res = await safeFetch(`${API_URL}/appointments`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
-    } catch { return []; }
-  },
-
-  getProfessionalAppointments: async (proId: string): Promise<Appointment[]> => {
-    try {
-        const res = await safeFetch(`${API_URL}/professionals/${proId}/appointments`, { headers: getHeaders() });
-        return res.ok ? res.json() : [];
+      const res = await fetch(`${API_URL}/appointments`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((a: any) => ({
+        id: a.id?.toString(),
+        title: a.title,
+        startDateTime: a.start_datetime || a.startDateTime,
+        endDateTime: a.end_datetime || a.endDateTime,
+        clientName: a.client_name || a.clientName,
+        clientPhone: a.client_phone || a.clientPhone,
+        status: a.status,
+        professionalId: a.professional_id?.toString() || a.professionalId?.toString(),
+        serviceId: a.service_id?.toString() || a.serviceId?.toString(),
+        description: a.notes || a.description,
+        branchId: a.branch_id?.toString() || a.branchId?.toString()
+      }));
     } catch { return []; }
   },
 
   createAppointment: async (a: Omit<Appointment, 'id'>) => {
-    try {
-        const res = await safeFetch(`${API_URL}/appointments`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(a)
-        });
-        return res.json();
-    } catch { return null; }
+    const res = await fetch(`${API_URL}/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(a)
+    });
+    return res.json();
   },
 
-  completeAppointment: async (id: string, notes: string): Promise<boolean> => {
-    try {
-        const res = await safeFetch(`${API_URL}/appointments/${id}/complete`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ notes })
-        });
-        return res.ok;
-    } catch { return false; }
+  cancelAppointment: async (id: string) => {
+    const res = await fetch(`${API_URL}/appointments/${id}/cancel`, { method: 'POST' });
+    return res.json();
   },
 
-  cancelAppointment: async (id: string): Promise<boolean> => {
+  getProducts: async (): Promise<Product[]> => {
     try {
-        const res = await safeFetch(`${API_URL}/appointments/${id}/cancel`, {
-        method: 'POST',
-        headers: getHeaders()
-        });
-        return res.ok;
-    } catch { return false; }
+      const res = await fetch(`${API_URL}/products`);
+      return res.ok ? res.json() : [];
+    } catch { return []; }
   },
 
-  updatePreferences: async (userId: string, preferences: NotificationPreferences): Promise<boolean> => {
+  createProduct: async (p: Product): Promise<any> => {
+    const res = await fetch(`${API_URL}/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p)
+    });
+    return res.json();
+  },
+
+  updateProduct: async (p: Product): Promise<any> => {
+    const res = await fetch(`${API_URL}/products/${p.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p)
+    });
+    return res.json();
+  },
+
+  getProfessionals: async (): Promise<Professional[]> => {
     try {
-        const res = await safeFetch(`${API_URL}/users/${userId}/preferences`, {
+      const res = await fetch(`${API_URL}/professionals`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((p: any) => ({
+        id: p.id.toString(),
+        name: p.name,
+        role: p.role,
+        email: p.email,
+        serviceIds: p.service_ids || [],
+        weeklySchedule: p.weekly_schedule || [],
+        exceptions: p.exceptions || [],
+        birthDate: p.birth_date || p.birthDate
+      }));
+    } catch { return []; }
+  },
+
+  createProfessional: async (p: Omit<Professional, 'id'>): Promise<{success: boolean, id?: string}> => {
+    const res = await fetch(`${API_URL}/professionals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p)
+    });
+    const data = await res.json();
+    return { success: data.success, id: data.id?.toString() };
+  },
+
+  updateProfessional: async (p: Professional): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/professionals/${p.id}`, {
         method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify({ preferences })
-        });
-        return res.ok;
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  getProfessionalAppointments: async (proId: string): Promise<Appointment[]> => {
+    try {
+      const res = await fetch(`${API_URL}/professionals/${proId}/appointments`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map((a: any) => ({
+        id: a.id.toString(),
+        title: a.title,
+        startDateTime: a.start_datetime || a.startDateTime,
+        endDateTime: a.end_datetime || a.endDateTime,
+        clientName: a.client_name || a.clientName,
+        clientPhone: a.client_phone || a.clientPhone,
+        status: a.status,
+        professionalId: a.professional_id?.toString() || a.professionalId?.toString(),
+        serviceId: a.service_id?.toString() || a.serviceId?.toString(),
+        description: a.notes || a.description,
+        branchId: a.branch_id?.toString() || a.branchId?.toString()
+      }));
+    } catch { return []; }
+  },
+
+  completeAppointment: async (id: string, notes: string): Promise<any> => {
+    const res = await fetch(`${API_URL}/appointments/${id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes })
+    });
+    return res.json();
+  },
+
+  updatePreferences: async (userId: string, prefs: NotificationPreferences): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/users/${userId}/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prefs)
+      });
+      return res.ok;
     } catch { return false; }
   },
 
   processSale: async (saleData: any): Promise<{success: boolean, saleId?: string, date?: string}> => {
+    const res = await fetch(`${API_URL}/sales`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saleData)
+    });
+    return res.json();
+  },
+
+  getBusinessStats: async (): Promise<any> => {
     try {
-        const res = await safeFetch(`${API_URL}/sales`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(saleData)
-        });
-        if (!res.ok) return { success: false };
-        return res.json();
-    } catch { return { success: false }; }
+      const res = await fetch(`${API_URL}/analytics/stats`);
+      return res.ok ? res.json() : { revenueThisMonth: 0, appointmentsCompleted: 0, newClientsThisMonth: 0, occupationRate: 0 };
+    } catch { return { revenueThisMonth: 0, appointmentsCompleted: 0, newClientsThisMonth: 0, occupationRate: 0 }; }
+  },
+
+  getBranches: async (): Promise<Branch[]> => {
+    try {
+      const res = await fetch(`${API_URL}/branches`);
+      return res.ok ? res.json() : [];
+    } catch { return []; }
   }
 };

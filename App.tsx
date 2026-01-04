@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'rea
 import { 
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
   Sparkles, ShoppingBag, Megaphone, Settings, 
-  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2
+  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -31,13 +31,11 @@ import { Role } from './types';
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: Role[] }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (isLoading) return; // Wait for auth check
-
     if (!isAuthenticated) {
       navigate('/login', { state: { from: location }, replace: true });
     } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
@@ -45,16 +43,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
       else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
       else navigate('/admin', { replace: true });
     }
-  }, [isAuthenticated, user, allowedRoles, location, navigate, isLoading]);
-
-  if (isLoading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#050505]">
-        <Loader2 className="animate-spin text-[#D4AF37] mb-4" size={40} />
-        <p className="text-[#D4AF37] text-[10px] font-black uppercase tracking-[0.3em]">Autenticando Aurum ID...</p>
-      </div>
-    );
-  }
+  }, [isAuthenticated, user, allowedRoles, location, navigate]);
 
   if (!isAuthenticated) return null;
   return <>{children}</>;
@@ -166,7 +155,7 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter>
+        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <div className="min-h-screen flex flex-col">
             <Toaster richColors position="top-right" theme="dark" />
             <Navbar />

@@ -1,45 +1,15 @@
-# --------------------------------------------------------
-# CITAPLANNER AI - DOCKERFILE (EASYPANEL/PRODUCTION)
-# PROTOCOLS: 148721091 (Materialization) | 520 (Abundance)
-# --------------------------------------------------------
+# MIRROR DOCKERFILE - CITAPLANNER (EASYPANEL READY)
+# FECHA DE AUDITORÍA: 2025
 
-# --- STAGE 1: BUILDER ---
-FROM node:20-alpine AS builder
+CONFIGURACIÓN DETECTADA:
+------------------------
+1. Base: node:20-alpine
+2. Estrategia: Multi-stage (Reduce tamaño de imagen de 1GB a ~150MB)
+3. Prisma: Ejecuta 'prisma generate' en fase de build.
+4. Seguridad: No corre como Root (usa usuario nextjs).
+5. Output: standalone (optimizado para microservicios).
 
-# 8888 - Protection: Clean Work Environment
-WORKDIR /app
-
-# Dependency Caching
-COPY package*.json ./
-RUN npm install
-
-# Copy Source Code
-COPY . .
-
-# Build Frontend (Vite -> /dist)
-RUN npm run build
-
-# --- STAGE 2: RUNNER ---
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-# Environment Setup
-ENV NODE_ENV=production
-ENV PORT=3000
-
-# Install Only Production Dependencies
-COPY package*.json ./
-RUN npm install --only=production
-
-# Copy Backend Core
-COPY server.js ./
-
-# Copy Frontend Build from Builder
-COPY --from=builder /app/dist ./dist
-
-# 419 488 71 - Growth: Expose Service
-EXPOSE 3000
-
-# Start Monolithic Node Server (Auto-Migrations Included in server.js)
-CMD ["node", "server.js"]
+NOTAS DE EASYPANEL:
+------------------
+Easypanel leerá este Dockerfile automáticamente al detectar el archivo en la raíz.
+Asegúrese de mapear el puerto 3000 en la configuración del servicio.

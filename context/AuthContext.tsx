@@ -9,7 +9,6 @@ interface AuthContextType {
   logout: () => void;
   updatePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
   isAuthenticated: boolean;
-  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,16 +18,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initSession = async () => {
+    const initAuth = () => {
       try {
         const storedUser = localStorage.getItem('citaPlannerUser');
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          // Ensure branch ID is available for API calls immediately
-          if (parsedUser.branchId) {
-             localStorage.setItem('aurum_branch_id', parsedUser.branchId);
-          }
+          setUser(JSON.parse(storedUser));
         }
       } catch (e) {
         console.warn('LocalStorage access restricted:', e);
@@ -36,33 +30,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
       }
     };
-    initSession();
+    initAuth();
   }, []);
 
   const login = async (phone: string, pass: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const apiUser = await api.login(phone, pass);
-      
-      if (apiUser) {
-        setUser(apiUser);
-        localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
-        if (apiUser.branchId) {
-            localStorage.setItem('aurum_branch_id', apiUser.branchId);
-        }
-        return true;
-      }
-      return false;
-    } finally {
-      setIsLoading(false);
+    const apiUser = await api.login(phone, pass);
+    
+    if (apiUser) {
+      setUser(apiUser);
+      localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
+      return true;
     }
+
+    return false;
   };
 
   const logout = () => {
     setUser(null);
     try {
       localStorage.removeItem('citaPlannerUser');
-      localStorage.removeItem('aurum_branch_id');
     } catch (e) {
       console.warn('LocalStorage access restricted:', e);
     }
@@ -75,8 +61,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  const value = {
+    user,
+    login,
+    logout,
+    updatePassword,
+    isAuthenticated: !!user
+  };
+
+  if (isLoading) {
+    return null; // O un spinner de carga global
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updatePassword, isAuthenticated: !!user, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

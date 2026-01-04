@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Calendar as CalendarIcon, Clock, User, Plus, Mic, Activity, 
   Sparkles, Send, DollarSign, Users, TrendingUp, MapPin, Loader2, Globe, Link2, MessageSquare,
-  Zap, BrainCircuit, RefreshCw
+  Zap, BrainCircuit
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,19 +22,21 @@ export const Dashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
-  // Agenda Real with low retry to fail fast
-  const { data: appointments = [], isLoading, isError, refetch } = useQuery({
+  // Agenda Real
+  const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments,
-    retry: 1, 
   });
 
   // Monitor de Integraciones Real
   const { data: integrationStatus = [] } = useQuery({
     queryKey: ['integrationStatus'],
-    queryFn: api.getIntegrationStatus,
-    refetchInterval: 10000,
-    retry: 1
+    queryFn: async () => {
+      const res = await fetch('/api/integrations/status');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 10000
   });
 
   const createMutation = useMutation({
@@ -46,16 +48,10 @@ export const Dashboard: React.FC = () => {
     }
   });
 
-  const safeDate = (dateStr: string) => {
-      const d = new Date(dateStr);
-      return isNaN(d.getTime()) ? new Date() : d;
-  };
-
   const filteredAppointments = useMemo(() => {
-    if (!Array.isArray(appointments)) return [];
     return [...appointments]
       .filter(a => a.status !== AppointmentStatus.CANCELLED)
-      .sort((a,b) => safeDate(a.startDateTime).getTime() - safeDate(b.startDateTime).getTime())
+      .sort((a,b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
       .slice(0, 5);
   }, [appointments]);
 
@@ -104,24 +100,16 @@ export const Dashboard: React.FC = () => {
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
                   <CalendarIcon className="text-[#D4AF37]" size={28} /> Agenda de Operaciones
                 </h2>
-                <div className="flex gap-4">
-                    <button onClick={() => refetch()} className="p-2 text-slate-500 hover:text-[#D4AF37] transition-colors"><RefreshCw size={14} /></button>
-                    <button onClick={() => navigate('/schedules')} className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-[#D4AF37] transition-all">Ver Matriz Completa</button>
-                </div>
+                <button onClick={() => navigate('/schedules')} className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-[#D4AF37] transition-all">Ver Matriz Completa</button>
             </div>
 
             {isLoading ? (
                <div className="space-y-6"><Skeleton className="h-32 w-full rounded-[3rem]" /><Skeleton className="h-32 w-full rounded-[3rem]" /></div>
-            ) : isError ? (
-                <div className="text-center py-20 bg-red-900/10 rounded-[3.5rem] border border-red-500/20">
-                    <p className="text-red-400 font-bold uppercase tracking-widest text-xs mb-4">Error de Sincronización</p>
-                    <button onClick={() => refetch()} className="px-6 py-3 bg-red-500/20 text-red-400 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500/30 transition-all">Reintentar Conexión</button>
-                </div>
             ) : (
               <div className="space-y-6">
                 {filteredAppointments.length === 0 ? (
                   <div className="text-center py-24 glass-card rounded-[3.5rem] border-dashed border-white/10">
-                    <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">Agenda despejada. Esperando sincronización...</p>
+                    <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">Esperando sincronización de datos...</p>
                   </div>
                 ) : (
                   filteredAppointments.map((apt) => (
@@ -132,7 +120,7 @@ export const Dashboard: React.FC = () => {
                         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">{apt.clientName}</p>
                       </div>
                       <div className="text-right">
-                         <p className="text-sm font-black text-[#D4AF37]">{safeDate(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                         <p className="text-sm font-black text-[#D4AF37]">{new Date(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
                     </div>
                   ))
