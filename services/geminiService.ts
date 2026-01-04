@@ -2,9 +2,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIParsedAppointment, Service } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Removed top-level initialization to prevent app crash on load if env is missing
+// const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const parseAppointmentRequest = async (input: string): Promise<AIParsedAppointment | null> => {
+  // Initialize AI Client on demand
+  if (!process.env.API_KEY) {
+      console.warn("Gemini API Key missing");
+      return null;
+  }
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   const now = new Date().toISOString();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -55,6 +63,9 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
  * Nueva función para responder dudas de clientes basadas en el catálogo real.
  */
 export const answerServiceQuery = async (customerMessage: string, catalog: Service[]): Promise<string> => {
+  if (!process.env.API_KEY) return "Servicio de IA no configurado.";
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   const catalogContext = catalog.map(s => `- ${s.name}: $${s.price} (Duración: ${s.duration} min). Desc: ${s.description}`).join('\n');
 
   const systemInstruction = `

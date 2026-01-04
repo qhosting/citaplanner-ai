@@ -2,22 +2,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, 
-  Receipt, ScanLine, Tag, X, Printer, Package, BriefcaseMedical, CheckCircle2 
+  Receipt, ScanLine, Tag, X, Printer, Package, BriefcaseMedical, CheckCircle2, Loader2 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product, Service, CartItem, PaymentMethod } from '../types';
 import { api } from '../services/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const POSPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([
-    { id: '1', name: 'Shampoo Reparador', sku: 'SHM-001', category: 'Cabello', price: 25.00, cost: 12.50, stock: 45, minStock: 10, status: 'ACTIVE', usage: 'RETAIL' },
-    { id: '2', name: 'Crema Facial', sku: 'CRM-204', category: 'Rostro', price: 45.00, cost: 20.00, stock: 8, minStock: 15, status: 'ACTIVE', usage: 'RETAIL' },
-    { id: '3', name: 'Gel Fijador', sku: 'GEL-103', category: 'Cabello', price: 15.00, cost: 5.00, stock: 120, minStock: 20, status: 'ACTIVE', usage: 'RETAIL' }
-  ]);
-  const [services] = useState<Service[]>([
-    { id: 's1', name: 'Consulta General', duration: 30, price: 50.00, category: 'General', status: 'ACTIVE' },
-    { id: 's2', name: 'Limpieza Dental', duration: 45, price: 80.00, category: 'Odontología', status: 'ACTIVE' },
-  ]);
+  const queryClient = useQueryClient();
+  
+  // Real Data Fetching
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: api.getProducts
+  });
+
+  const { data: services = [], isLoading: isLoadingServices } = useQuery({
+    queryKey: ['services'],
+    queryFn: api.getServices
+  });
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,10 +41,10 @@ export const POSPage: React.FC = () => {
     
     if (activeTab === 'ALL' || activeTab === 'PRODUCTS') {
       // IMPORTANTE: Solo mostramos productos de Venta (RETAIL)
-      items = [...items, ...products.filter(p => p.status === 'ACTIVE' && p.usage === 'RETAIL')];
+      items = [...items, ...products.filter((p: Product) => p.status === 'ACTIVE' && p.usage === 'RETAIL')];
     }
     if (activeTab === 'ALL' || activeTab === 'SERVICES') {
-      items = [...items, ...services.filter(s => s.status === 'ACTIVE')];
+      items = [...items, ...services.filter((s: Service) => s.status === 'ACTIVE')];
     }
 
     return items.filter(item => 
@@ -83,8 +87,10 @@ export const POSPage: React.FC = () => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
-        const productDef = products.find(p => p.id === id);
+        // Verificar stock si es producto
+        const productDef = products.find((p: Product) => p.id === id);
         if (productDef && newQty > productDef.stock) {
+           toast.error(`Solo hay ${productDef.stock} unidades disponibles.`);
            return item;
         }
         return { ...item, quantity: newQty };
@@ -139,13 +145,8 @@ export const POSPage: React.FC = () => {
     const result = await api.processSale(saleData);
 
     if (result.success) {
-      setProducts(prev => prev.map(p => {
-        const cartItem = cart.find(c => c.id === p.id);
-        if (cartItem) {
-          return { ...p, stock: p.stock - cartItem.quantity };
-        }
-        return p;
-      }));
+      // Invalidar queries para actualizar stock en otras vistas
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       setLastSale({
         id: result.saleId || 'Unknown',
@@ -167,8 +168,10 @@ export const POSPage: React.FC = () => {
     }
   };
 
+  const isLoading = isLoadingProducts || isLoadingServices;
+
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-100">
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-100 animate-entrance">
       <div className="flex-1 flex flex-col p-4 pr-2">
         <div className="bg-white p-4 rounded-xl shadow-sm mb-4">
           <div className="relative mb-4">
@@ -185,10 +188,14 @@ export const POSPage: React.FC = () => {
             <button onClick={() => setActiveTab('SERVICES')} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${activeTab === 'SERVICES' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'}`}><BriefcaseMedical size={16} /> Servicios</button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-          {filteredItems.map(item => {
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 custom-scrollbar">
+          {isLoading ? (
+            <div className="col-span-full flex items-center justify-center h-64">
+               <Loader2 className="animate-spin text-indigo-600" size={40} />
+            </div>
+          ) : filteredItems.map(item => {
             const isProduct = 'stock' in item;
-            const hasStock = !isProduct || item.stock > 0;
+            const hasStock = !isProduct || (item as Product).stock > 0;
             return (
               <button
                 key={item.id} onClick={() => hasStock && addToCart(item)} disabled={!hasStock}
@@ -197,14 +204,14 @@ export const POSPage: React.FC = () => {
                 <div>
                    <div className="flex justify-between items-start mb-2">
                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${isProduct ? 'bg-indigo-100 text-indigo-700' : 'bg-purple-100 text-purple-700'}`}>{isProduct ? 'PROD' : 'SERV'}</span>
-                     {'sku' in item && <span className="text-[10px] text-slate-400 font-mono">{item.sku}</span>}
+                     {'sku' in item && <span className="text-[10px] text-slate-400 font-mono">{(item as Product).sku}</span>}
                    </div>
                    <h3 className="font-semibold text-slate-800 leading-tight mb-1">{item.name}</h3>
                 </div>
                 <div className="mt-4 flex justify-between items-end">
                    <div>
                      <span className="block text-lg font-bold text-slate-900">${item.price.toFixed(2)}</span>
-                     {isProduct && <span className={`text-xs ${item.stock <= item.minStock ? 'text-red-500 font-bold' : 'text-slate-400'}`}>Stock: {item.stock}</span>}
+                     {isProduct && <span className={`text-xs ${(item as Product).stock <= (item as Product).minStock ? 'text-red-500 font-bold' : 'text-slate-400'}`}>Stock: {(item as Product).stock}</span>}
                    </div>
                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><Plus size={18} /></div>
                 </div>
@@ -218,7 +225,7 @@ export const POSPage: React.FC = () => {
           <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2"><ShoppingCart size={20} className="text-indigo-600"/> Ticket Actual</h2>
           <button onClick={() => setCart([])} disabled={cart.length === 0} className="text-slate-400 hover:text-red-500 disabled:opacity-30" title="Vaciar Carrito"><Trash2 size={18} /></button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60"><ScanLine size={48} className="mb-2" /><p>Escanea o selecciona productos</p></div>
           ) : (

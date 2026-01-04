@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -87,7 +88,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="admin@citaplanner.ai"
+                  placeholder="admin / dev"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/5 rounded-2xl outline-none transition-all font-medium text-white gold-focus placeholder-slate-700"

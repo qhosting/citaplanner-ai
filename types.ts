@@ -1,4 +1,5 @@
 
+
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   COMPLETED = 'COMPLETED',
@@ -38,6 +39,7 @@ export interface User {
   relatedId?: string;
   avatar?: string;
   preferences?: NotificationPreferences;
+  branchId?: string;
 }
 
 export interface Service {
