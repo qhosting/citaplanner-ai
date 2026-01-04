@@ -1,14 +1,34 @@
+
 import { Appointment, NotificationPreferences, Campaign, AutomationRule } from "../types";
 
-// URL base de nuestro propio backend
-const API_URL = 'http://localhost:3000/api';
+// URL base dinámica que detecta si estamos en el contenedor o local
+const API_URL = typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api';
 
 /**
- * Trigger genérico para flujos de N8N (WhatsApp, SMS, Email Marketing)
+ * 148721091 - Materialization: WAHA Integration Real
+ * Sends data to backend which acts as a secure proxy to the WAHA Docker container.
+ */
+export const triggerWAHA = async (phone: string, message: string) => {
+  try {
+    const response = await fetch(`${API_URL}/integrations/waha/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message })
+    });
+
+    if (!response.ok) throw new Error('Error al conectar con el Gateway WAHA');
+    return await response.json();
+  } catch (error) {
+    console.error("WAHA Trigger Error", error);
+    // Silent fail for UI continuity, but logged in backend
+    return { success: false };
+  }
+};
+
+/**
+ * Trigger genérico para flujos de N8N (Legacy/External)
  */
 export const triggerN8NWorkflow = async (action: string, appointment: Appointment) => {
-  console.log(`[Frontend Integration] Solicitando acción N8N: ${action}`);
-  
   try {
     const response = await fetch(`${API_URL}/integrations/n8n`, {
       method: 'POST',
@@ -27,37 +47,23 @@ export const triggerN8NWorkflow = async (action: string, appointment: Appointmen
   }
 };
 
-/**
- * Integración WAHA (WhatsApp) vía Backend -> N8N
- */
 export const sendWhatsAppConfirmation = async (appointment: Appointment, preferences?: NotificationPreferences) => {
-  if (preferences && !preferences.whatsapp) {
-    console.log('[Integration] Notificación WhatsApp omitida por preferencias del usuario.');
-    return { skipped: true, message: 'Usuario tiene desactivado WhatsApp' };
-  }
-  
+  if (preferences && !preferences.whatsapp) return { skipped: true };
   if (!appointment.clientPhone) throw new Error("No phone number available");
-  return triggerN8NWorkflow('SEND_WHATSAPP', appointment);
+  
+  // 520 - Flow: Real WhatsApp Sending via WAHA
+  const message = `✨ Hola ${appointment.clientName || 'Cliente'}, tu cita en *${'Aurum CitaPlanner'}* está confirmada para el *${new Date(appointment.startDateTime).toLocaleString()}*. Tratamiento: ${appointment.title}. Te esperamos.`;
+  
+  return triggerWAHA(appointment.clientPhone, message);
 };
 
-/**
- * Integración LabsMobile (SMS) vía Backend -> N8N
- */
 export const sendSMSReminder = async (appointment: Appointment, preferences?: NotificationPreferences) => {
-  if (preferences && !preferences.sms) {
-    console.log('[Integration] Notificación SMS omitida por preferencias del usuario.');
-    return { skipped: true, message: 'Usuario tiene desactivado SMS' };
-  }
-
+  if (preferences && !preferences.sms) return { skipped: true };
   if (!appointment.clientPhone) throw new Error("No phone number available");
   return triggerN8NWorkflow('SEND_SMS', appointment);
 };
 
-/**
- * MARKETING: Lanzar Campaña Masiva
- */
 export const launchCampaign = async (campaign: Campaign) => {
-  console.log(`[Frontend Integration] Lanzando campaña: ${campaign.name}`);
   try {
     const response = await fetch(`${API_URL}/marketing/campaigns/send`, {
       method: 'POST',
@@ -71,9 +77,6 @@ export const launchCampaign = async (campaign: Campaign) => {
   }
 };
 
-/**
- * MARKETING: Guardar configuración de automatización
- */
 export const saveAutomationRule = async (rule: AutomationRule) => {
   try {
     const response = await fetch(`${API_URL}/marketing/automations`, {
@@ -88,56 +91,16 @@ export const saveAutomationRule = async (rule: AutomationRule) => {
   }
 };
 
-/**
- * Sincronización Odoo (Inventario/Contactos)
- * Se usa cuando se crea un cliente o se actualiza una cita que afecta facturación.
- */
-export const syncOdoo = async (entity: 'CONTACT' | 'ORDER', operation: 'CREATE' | 'UPDATE', data: any) => {
-  console.log(`[Frontend Integration] Sincronizando Odoo...`);
-  try {
-    const response = await fetch(`${API_URL}/integrations/odoo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entity, operation, data })
-    });
-    return await response.json();
-  } catch (error) {
-    console.error("Odoo Sync Error", error);
-    throw error;
-  }
-};
-
-/**
- * Sincronización Chatwoot (CRM)
- * Llama al endpoint dedicado en el backend que maneja la lógica compleja de Chatwoot.
- */
 export const syncToChatwoot = async (appointment: Appointment) => {
-  console.log(`[Chatwoot] Iniciando sincronización segura desde servidor...`);
-
-  if (!appointment.clientPhone) {
-    console.warn("[Chatwoot] Falta teléfono, abortando sync automática.");
-    return { success: false, message: 'Falta teléfono' };
-  }
-
+  if (!appointment.clientPhone) return { success: false, message: 'Falta teléfono' };
   try {
     const response = await fetch(`${API_URL}/integrations/chatwoot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appointment)
     });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Error en servidor');
-    }
-
-    const data = await response.json();
-    console.log(`[Chatwoot] Sincronización exitosa. ID Conversación: ${data.conversationId}`);
-    return data;
-
+    return await response.json();
   } catch (error) {
-    console.error("[Chatwoot] Falló la integración.", error);
-    // Opcional: Fallback a N8N si falla la API directa
     return triggerN8NWorkflow('SYNC_CRM_FALLBACK', appointment);
   }
 };

@@ -1,6 +1,5 @@
-
-// COPIA DE SEGURIDAD - SCHEMA PRISMA CITAPLANNER
-// FECHA: 2025-05-24
+// COPIA DE SEGURIDAD - SCHEMA PRISMA CITAPLANNER (MIRROR)
+// ECOSISTEMA: AURUM CAPITAL TECHNOLOGY
 
 generator client {
   provider = "prisma-client-js"
@@ -11,6 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelos: User, Business, Client, Service, Appointment
-// Relaciones: Business es el Tenant principal.
-// Persistencia: Garantizada vía cuid() y PostgreSQL.
+// Estructura Multitenant detectada:
+// - Business: Contenedor principal de marca y configuración.
+// - User/Client/Service: Entidades vinculadas por businessId.
+// - Appointment: Nodo de unión con validación de estados.

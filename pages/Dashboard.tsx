@@ -22,18 +22,21 @@ export const Dashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
+  // Agenda Real
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments,
   });
 
+  // Monitor de Integraciones Real
   const { data: integrationStatus = [] } = useQuery({
     queryKey: ['integrationStatus'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:3000/api/integrations/status');
+      const res = await fetch('/api/integrations/status');
+      if (!res.ok) return [];
       return res.json();
     },
-    refetchInterval: 5000
+    refetchInterval: 10000
   });
 
   const createMutation = useMutation({
@@ -128,14 +131,14 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-1 space-y-10">
-           {/* Integrations Monitor */}
+           {/* Integrations Monitor Real */}
            <div className="glass-card rounded-[3.5rem] p-10 relative overflow-hidden group border border-emerald-500/10 h-full">
               <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-[80px]" />
               <h3 className="font-black text-white text-[10px] uppercase tracking-[0.5em] mb-10 flex items-center gap-3">
                 <Link2 size={20} className="text-emerald-500" /> Monitor de Integraciones
               </h3>
               <div className="space-y-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-                {integrationStatus.map((log, idx) => (
+                {integrationStatus.map((log: any, idx: number) => (
                     <div key={idx} className="p-5 bg-white/5 rounded-[2rem] border border-white/5 group-hover:border-white/10 transition-all">
                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
@@ -145,15 +148,13 @@ export const Dashboard: React.FC = () => {
                           <span className="text-[8px] text-slate-600 font-bold">{new Date(log.created_at).toLocaleTimeString()}</span>
                        </div>
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-2">{log.event_type.replace(/_/g, ' ')}</p>
-                       {log.response && (
-                         <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-                            <p className="text-[10px] text-slate-300 italic leading-relaxed">"{JSON.parse(log.response).aiResponse || 'Sincronización OK'}"</p>
-                         </div>
-                       )}
+                       <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                          <p className="text-[10px] text-slate-300 italic leading-relaxed">"{log.response || 'Sincronización OK'}"</p>
+                       </div>
                     </div>
                 ))}
                 {integrationStatus.length === 0 && (
-                  <p className="text-center text-slate-600 text-[10px] font-black uppercase py-20">No hay actividad en la red</p>
+                  <p className="text-center text-slate-600 text-[10px] font-black uppercase py-20">Escaneando red de integraciones...</p>
                 )}
               </div>
            </div>

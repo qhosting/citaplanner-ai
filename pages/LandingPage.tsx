@@ -4,14 +4,26 @@ import { Link } from 'react-router-dom';
 import { 
   ArrowRight, Sparkles, Wand2, Scissors, 
   Loader2, Award, Star, Clock, MapPin, Instagram, Facebook,
-  ShieldCheck, CalendarDays, Zap, Globe, Shield, Phone, Heart, BriefcaseMedical, User
+  ShieldCheck, CalendarDays, Zap, Globe, Shield, Phone, Heart, BriefcaseMedical, ImageIcon
 } from 'lucide-react';
 import { api } from '../services/api';
 import { LandingSettings, Service, TemplateId } from '../types';
 
+// Fallback constants to ensure page ALWAYS renders
+const DEFAULT_SETTINGS: LandingSettings = {
+  businessName: 'CitaPlanner Elite',
+  primaryColor: '#630E14',
+  secondaryColor: '#C5A028',
+  templateId: 'citaplanner',
+  slogan: 'Gestión de Lujo Simplificada',
+  aboutText: 'Plataforma líder en gestión de citas y negocios de belleza.',
+  address: 'Av. Principal 123, CDMX',
+  contactPhone: '+52 55 1234 5678'
+};
+
 export const LogoCitaplanner = ({ size = 20, color = "#630E14" }: { size?: number, color?: string }) => (
   <div className="flex items-center gap-3 group">
-    <div className="p-2 rounded-xl text-white group-hover:scale-110 transition-transform relative" style={{ background: `linear-gradient(135deg, ${color} 0%, #111 100%)` }}>
+    <div className="p-2 rounded-xl text-white group-hover:scale-110 transition-transform relative" style={{ background: `linear-gradient(135deg, ${color || '#630E14'} 0%, #111 100%)` }}>
       <CalendarDays size={size} />
       <div className="absolute -top-1 -right-1 text-[#C5A028]">
         <Sparkles size={12} fill="currentColor" />
@@ -19,7 +31,7 @@ export const LogoCitaplanner = ({ size = 20, color = "#630E14" }: { size?: numbe
     </div>
     <div className="flex flex-col">
       <div className="flex items-center">
-        <span className="font-black text-2xl tracking-tighter leading-none" style={{ color: color }}>Cita</span>
+        <span className="font-black text-2xl tracking-tighter leading-none" style={{ color: color || '#630E14' }}>Cita</span>
         <span className="font-black text-2xl tracking-tighter brand-text-gold leading-none" style={{ color: '#C5A028' }}>Planner</span>
       </div>
       <span className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.4em]">Business Suite</span>
@@ -28,30 +40,38 @@ export const LogoCitaplanner = ({ size = 20, color = "#630E14" }: { size?: numbe
 );
 
 export const LandingPage: React.FC = () => {
-  const [settings, setSettings] = useState<LandingSettings | null>(null);
+  const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const init = async () => {
       try {
+        // Attempt to fetch data, but don't block render indefinitely if it fails
         const [s, sv] = await Promise.all([
-          api.getLandingSettings(),
-          api.getServices()
+          api.getLandingSettings().catch(() => DEFAULT_SETTINGS),
+          api.getServices().catch(() => [])
         ]);
-        setSettings(s);
-        setServices(sv || []);
+        
+        if (isMounted) {
+          // Merge with defaults to ensure no missing keys
+          setSettings(prev => ({ ...prev, ...(s || DEFAULT_SETTINGS) }));
+          setServices(sv || []);
+        }
       } catch (error) {
-        console.error("Error cargando la Landing Page:", error);
+        console.error("Error cargando la Landing Page, usando defaults:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     init();
+    return () => { isMounted = false; };
   }, []);
 
-  if (loading || !settings) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-[#630E14]" size={40} /></div>;
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-[#630E14]" size={40} /></div>;
 
+  // Use current settings (which includes defaults)
   const { templateId, primaryColor, businessName, slogan, aboutText, address, contactPhone } = settings;
 
   const getThemeStyles = (tid: TemplateId) => {
@@ -91,7 +111,13 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  const theme = getThemeStyles(templateId);
+  const theme = getThemeStyles(templateId || 'citaplanner');
+
+  // Safe split for business name with fallback
+  const safeName = businessName || 'CitaPlanner Elite';
+  const nameParts = safeName.split(' ');
+  const firstName = nameParts[0];
+  const secondName = nameParts.slice(1).join(' ') || 'Studio';
 
   return (
     <div className="min-h-screen bg-white font-inter selection:bg-slate-900 selection:text-white scroll-smooth">
@@ -105,7 +131,7 @@ export const LandingPage: React.FC = () => {
                <div style={{ backgroundColor: primaryColor }} className="p-3 rounded-2xl text-white shadow-xl">
                   {theme.icon}
                </div>
-               <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">{businessName}</h1>
+               <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase">{safeName}</h1>
             </div>
           )}
           
@@ -133,8 +159,8 @@ export const LandingPage: React.FC = () => {
                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">Membresía Exclusiva</span>
             </div>
             <h1 className="text-7xl lg:text-[90px] font-black text-slate-900 leading-[0.85] tracking-tighter mb-10">
-              {businessName.split(' ')[0]} <br/>
-              <span className="italic font-light" style={{ color: '#C5A028' }}>{businessName.split(' ')[1] || 'Studio'}</span>
+              {firstName} <br/>
+              <span className="italic font-light" style={{ color: '#C5A028' }}>{secondName}</span>
             </h1>
             <p className="text-xl text-slate-500 leading-relaxed max-w-lg font-medium">
               {slogan}. Bienvenidos a un estándar superior de cuidado y distinción.
@@ -159,7 +185,14 @@ export const LandingPage: React.FC = () => {
           <div className="relative group animate-fade-in-up delay-200">
              <div className="absolute -top-10 -right-10 w-48 h-48 border border-[#C5A028]/20 rounded-full animate-pulse"></div>
              <div className="aspect-[4/5] bg-slate-900 rounded-[4rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.3)] border-[12px] border-white relative">
-                <img src={settings.heroImageUrl} className="w-full h-full object-cover opacity-70 grayscale-[20%]" alt={businessName} />
+                {settings.heroImageUrl && (
+                  <img src={settings.heroImageUrl} className="w-full h-full object-cover opacity-70 grayscale-[20%]" alt={safeName} />
+                )}
+                {!settings.heroImageUrl && (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-600">
+                    <ImageIcon size={64} />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
                 <div className="absolute bottom-10 left-10 text-white">
                    <p className="text-xs font-black uppercase tracking-[0.4em] text-[#C5A028] mb-2">Petición Abierta</p>
@@ -257,7 +290,7 @@ export const LandingPage: React.FC = () => {
                     <LogoCitaplanner size={32} color="#FFF" />
                   ) : (
                     <div className="flex flex-col gap-4">
-                       <h1 className="text-4xl font-black tracking-tighter uppercase">{businessName}</h1>
+                       <h1 className="text-4xl font-black tracking-tighter uppercase">{safeName}</h1>
                        <p className="text-slate-500 font-medium max-w-xs">{slogan}</p>
                     </div>
                   )}
@@ -272,7 +305,7 @@ export const LandingPage: React.FC = () => {
                </div>
             </div>
             <div className="mt-20 pt-10 border-t border-white/5 text-center">
-               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-600">© 2025 {businessName}. Miembro del CitaPlanner Business Network.</p>
+               <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-600">© 2025 {safeName}. Miembro del CitaPlanner Business Network.</p>
             </div>
          </div>
       </footer>

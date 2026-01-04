@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -20,6 +21,7 @@ export const ClientPortal: React.FC = () => {
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [loadingAdvice, setLoadingAdvice] = useState(false);
 
+  // Queries Reales
   const { data: allAppointments = [], isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments
@@ -43,15 +45,17 @@ export const ClientPortal: React.FC = () => {
     .sort((a,b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime())
   , [myAppointments]);
 
+  // IA con contexto real del negocio
   useEffect(() => {
     const getBeautyAdvice = async () => {
-        if (!user || myAppointments.length === 0 || loadingAdvice) return;
+        if (!user || myAppointments.length === 0 || loadingAdvice || !settings) return;
         setLoadingAdvice(true);
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         try {
-          const lastApt = history[0];
-          const prompt = `Como concierge experto de "Shula Studio" de ultra-lujo, analiza la última cita de ${user.name}: "${lastApt?.title || 'Tratamiento Elite'}". Sugiere un consejo de mantenimiento sofisticado. Sé elegante y breve. Máximo 20 palabras.`;
+          const lastApt = history.find(a => a.status === AppointmentStatus.COMPLETED);
+          const bizName = settings.businessName || 'nuestro estudio';
+          const prompt = `Como concierge experto de "${bizName}" de ultra-lujo, analiza la última visita de ${user.name}: "${lastApt?.title || 'Tratamiento Elite'}". Sugiere un consejo de mantenimiento sofisticado para su tipo de piel. Sé elegante y breve. Máximo 20 palabras.`;
           
           const result = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
@@ -60,18 +64,21 @@ export const ClientPortal: React.FC = () => {
           setAiAdvice(result.text);
         } catch (e) { console.error(e); } finally { setLoadingAdvice(false); }
     };
-    if (history.length > 0) getBeautyAdvice();
-  }, [history, user, loadingAdvice, myAppointments.length]);
+    if (history.length > 0 && settings) getBeautyAdvice();
+  }, [history, user, loadingAdvice, myAppointments.length, settings]);
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => api.cancelAppointment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      toast.success("Experiencia cancelada");
+      toast.success("Tu cita ha sido cancelada exitosamente.");
+    },
+    onError: () => {
+      toast.error("No se pudo procesar la cancelación. Contacta al soporte.");
     }
   });
 
-  if (isLoading || !settings) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
+  if (isLoading || !settings) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-16 animate-entrance">
@@ -131,7 +138,7 @@ export const ClientPortal: React.FC = () => {
                 </div>
             </div>
 
-            {/* Loyalty Points */}
+            {/* Loyalty Points Reales */}
             <div className="glass-card rounded-[3.5rem] p-12 border-[#D4AF37]/5 bg-gradient-to-tr from-[#050505] to-[#0a0a0a]">
                 <div className="flex justify-between items-center mb-10">
                   <h3 className="font-black text-white text-[10px] uppercase tracking-[0.4em] flex items-center gap-3">
@@ -140,29 +147,32 @@ export const ClientPortal: React.FC = () => {
                 </div>
                 <div className="space-y-8">
                     <div className="flex justify-between items-end">
-                        <span className="text-6xl font-black text-white tracking-tighter">1,250</span>
+                        <span className="text-6xl font-black text-white tracking-tighter">{(user as any)?.loyalty_points || '0'}</span>
                         <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest mb-3">Créditos de Belleza</span>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div style={{ width: '75%' }} className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F1C40F] shadow-[0_0_20px_rgba(212,175,55,0.4)]" />
+                        <div style={{ width: `${Math.min(100, (((user as any)?.loyalty_points || 0) / 2000) * 100)}%` }} className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F1C40F] shadow-[0_0_20px_rgba(212,175,55,0.4)]" />
                     </div>
-                    <p className="text-[8px] text-slate-600 font-black uppercase tracking-[0.3em] text-center">Faltan 250 créditos para su beneficio Platinum</p>
+                    <p className="text-[8px] text-slate-600 font-black uppercase tracking-[0.3em] text-center">Próximo beneficio: Platinum (2,000 pts)</p>
                 </div>
             </div>
 
-            {/* Node Info */}
+            {/* Node Info Dinámico */}
             <div className="glass-card rounded-[3.5rem] p-12">
                 <div className="space-y-10">
                     <div className="flex gap-6 items-start">
                         <div className="p-4 bg-white/5 rounded-3xl text-[#D4AF37] border border-white/5"><MapPin size={24} /></div>
                         <div>
                             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Master Node</p>
-                            <span className="text-sm text-slate-400 font-medium leading-relaxed block max-w-[200px]">Av. Paseo de la Reforma 250, Polanco.</span>
+                            <span className="text-sm text-slate-400 font-medium leading-relaxed block max-w-[200px]">{settings.address || 'Ubicación central'}</span>
                         </div>
                     </div>
                     <div className="pt-6 border-t border-white/5">
-                        <button className="flex items-center justify-center gap-3 w-full bg-white/5 text-slate-400 py-4 rounded-[2rem] font-black text-[9px] uppercase tracking-[0.4em] hover:bg-white/10 transition-all border border-white/5">
-                           <MessageSquare size={16} /> WhatsApp Personal
+                        <button 
+                          onClick={() => window.open(`https://wa.me/${settings.contactPhone?.replace(/\D/g,'')}`)}
+                          className="flex items-center justify-center gap-3 w-full bg-white/5 text-slate-400 py-4 rounded-[2rem] font-black text-[9px] uppercase tracking-[0.4em] hover:bg-white/10 transition-all border border-white/5"
+                        >
+                           <MessageSquare size={16} /> WhatsApp Directo
                         </button>
                     </div>
                 </div>
@@ -171,7 +181,6 @@ export const ClientPortal: React.FC = () => {
 
         {/* Right Column (Appointments) */}
         <div className="lg:col-span-8 space-y-20">
-            {/* Upcoming Section */}
             <section>
                 <div className="flex justify-between items-end mb-12">
                   <h2 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-4">
@@ -182,7 +191,7 @@ export const ClientPortal: React.FC = () => {
                 
                 {upcoming.length === 0 ? (
                     <div className="glass-card p-24 rounded-[4rem] border-dashed border-white/10 text-center group">
-                        <p className="text-slate-600 font-black uppercase tracking-[0.4em] text-[10px] mb-10">Sin actividad de red activa</p>
+                        <p className="text-slate-600 font-black uppercase tracking-[0.4em] text-[10px] mb-10">No tienes citas programadas</p>
                         <button onClick={() => navigate('/book')} className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] border border-[#D4AF37]/30 px-10 py-5 rounded-[2rem] hover:bg-[#D4AF37] hover:text-black transition-all group-hover:scale-105">Solicitar acceso a agenda</button>
                     </div>
                 ) : (
@@ -203,21 +212,18 @@ export const ClientPortal: React.FC = () => {
                                             </div>
                                             <div className="flex flex-wrap gap-12 text-[12px] font-bold text-slate-500 uppercase tracking-[0.2em]">
                                                 <span className="flex items-center gap-3"><Clock size={18} className="text-slate-700" /> {new Date(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span className="flex items-center gap-3"><Globe size={18} className="text-slate-700" /> Shula Polanco Node</span>
+                                                <span className="flex items-center gap-3"><Globe size={18} className="text-slate-700" /> {settings.businessName} Node</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-8 border-t md:border-t-0 md:border-l border-white/5 pt-10 md:pt-0 md:pl-12">
                                         <button 
+                                            disabled={cancelMutation.isPending}
                                             onClick={() => window.confirm("¿Confirmar cancelación estratégica?") && cancelMutation.mutate(apt.id)}
                                             className="w-14 h-14 bg-white/5 text-slate-700 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all flex items-center justify-center border border-white/5"
                                         >
-                                            <XCircle size={28} />
+                                            {cancelMutation.isPending ? <Loader2 size={24} className="animate-spin" /> : <XCircle size={28} />}
                                         </button>
-                                        <div className="hidden lg:block">
-                                          <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Status Red</p>
-                                          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Sincronizado</p>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -226,10 +232,10 @@ export const ClientPortal: React.FC = () => {
                 )}
             </section>
 
-            {/* History Section */}
+            {/* History Section Real */}
             <section>
                 <h2 className="text-xl font-black text-slate-700 uppercase tracking-[0.5em] mb-12 flex items-center gap-4">
-                    <History size={24} /> Registro Histórico Master
+                    <History size={24} /> Registro Histórico de Belleza
                 </h2>
                 <div className="glass-card rounded-[3.5rem] overflow-hidden border-white/5 shadow-2xl">
                     <table className="w-full text-left">
@@ -237,12 +243,12 @@ export const ClientPortal: React.FC = () => {
                             <tr>
                                 <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em]">Fecha de Operación</th>
                                 <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em]">Experiencia</th>
-                                <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em] text-center">Frecuencia</th>
+                                <th className="px-12 py-6 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em] text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {history.length === 0 ? (
-                                <tr><td colSpan={3} className="px-12 py-24 text-center text-slate-700 italic uppercase tracking-[0.3em] text-[10px]">Base de datos histórica vacía</td></tr>
+                                <tr><td colSpan={3} className="px-12 py-24 text-center text-slate-700 italic uppercase tracking-[0.3em] text-[10px]">Sin visitas anteriores registradas</td></tr>
                             ) : (
                                 history.map(apt => (
                                     <tr key={apt.id} className="hover:bg-white/5 transition-colors group">
@@ -251,10 +257,13 @@ export const ClientPortal: React.FC = () => {
                                         </td>
                                         <td className="px-12 py-8">
                                             <p className="font-black text-white text-lg uppercase tracking-tight group-hover:text-[#D4AF37] transition-colors">{apt.title}</p>
+                                            {apt.description && <p className="text-[10px] text-slate-500 font-medium truncate max-w-xs italic">"{apt.description}"</p>}
                                         </td>
                                         <td className="px-12 py-8 text-center">
                                             <span className={`text-[9px] font-black px-5 py-2 rounded-full uppercase tracking-widest ${
-                                                apt.status === AppointmentStatus.COMPLETED ? 'text-[#D4AF37] border border-[#D4AF37]/30' : 'text-slate-600 border border-white/5'
+                                                apt.status === AppointmentStatus.COMPLETED ? 'text-[#D4AF37] border border-[#D4AF37]/30' : 
+                                                apt.status === AppointmentStatus.CANCELLED ? 'text-red-500 border border-red-500/20' :
+                                                'text-slate-600 border border-white/5'
                                             }`}>
                                                 {apt.status}
                                             </span>
