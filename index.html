@@ -1,17 +1,11 @@
 
-<!-- [CITAPLANNER] - Hierarchy: Product of Aurum Capital Technology Ecosystem | https://aurumcapital.mx -->
+<!-- [CITAPLANNER] - Hierarchy: Product of Aurum Capital Technology Ecosystem -->
 <!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CitaPlanner | Luxury Business Suite</title>
-    <!-- Energy Alignment Metadata -->
-    <meta name="project-foundation" content="319817318">
-    <meta name="security-layer" content="8888">
-    <meta name="financial-flow" content="520 71427321893">
-    <meta name="client-growth" content="419 488 71">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
     
@@ -24,7 +18,7 @@
 
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #050505; /* Unificado a Dark Theme */
+        background-color: #050505;
         color: #FFFFFF;
         margin: 0;
         overflow-x: hidden;
@@ -32,9 +26,10 @@
 
       .font-playfair { font-family: 'Playfair Display', serif; }
 
+      /* Botón Dorado con soporte para color dinámico vía JS si se requiere */
       .gold-btn {
-        background: linear-gradient(135deg, #C5A028 0%, #8C6F1B 100%);
-        color: #000; /* Mejor contraste en botones dorados */
+        background: linear-gradient(135deg, var(--primary-gold) 0%, #8C6F1B 100%);
+        color: #000;
         font-weight: 800;
         transition: var(--transition-fluid);
       }
@@ -44,62 +39,31 @@
         box-shadow: 0 40px 80px -20px rgba(197, 160, 40, 0.5);
       }
 
+      .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .gold-text-gradient {
+        background: linear-gradient(135deg, var(--primary-gold) 0%, #B8860B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
       @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(50px); }
         to { opacity: 1; transform: translateY(0); }
       }
 
-      @keyframes scale-in {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-      }
-
-      @keyframes slide-up {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .animate-fade-in-up { animation: fade-in-up 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .animate-scale-in { animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-      .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-      }
-
-      .glass-card-hover:hover {
-        background: rgba(255, 255, 255, 0.07);
-        border-color: rgba(212, 175, 55, 0.3);
-      }
-
-      /* Custom Scrollbar Premium */
+      .animate-entrance { animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: #050505; }
-      ::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb { background: var(--primary-gold); border-radius: 10px; }
       
-      html { scroll-behavior: smooth; }
-
-      .gold-text-gradient {
-        background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-
-      .animate-entrance {
-        animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-
-      /* File Input Hide */
-      .input-file-hidden {
-        width: 0.1px;
-        height: 0.1px;
-        opacity: 0;
-        overflow: hidden;
-        position: absolute;
-        z-index: -1;
-      }
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
     </style>
     <script type="importmap">
 {
@@ -116,17 +80,17 @@
     "react-hook-form": "https://esm.sh/react-hook-form@7.54.1?deps=react@19.0.0",
     "zod": "https://esm.sh/zod@3.24.1",
     "@hookform/resolvers/zod": "https://esm.sh/@hookform/resolvers@3.9.1/zod?deps=react-hook-form@7.54.1,zod@3.24.1",
-    "@hookform/resolvers/": "https://esm.sh/@hookform/resolvers@3.9.1/",
-    "express": "https://esm.sh/express@^5.2.1",
-    "cors": "https://esm.sh/cors@^2.8.5",
-    "path": "https://esm.sh/path@^0.12.7",
-    "pg": "https://esm.sh/pg@^8.16.3",
     "axios": "https://esm.sh/axios@^1.13.2",
+    "@hookform/resolvers/": "https://esm.sh/@hookform/resolvers@^5.2.2/",
+    "express": "https://esm.sh/express@^5.2.1",
+    "pg": "https://esm.sh/pg@^8.16.3",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "multer": "https://esm.sh/multer@^2.0.2",
+    "path": "https://esm.sh/path@^0.12.7",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
     "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "multer": "https://esm.sh/multer@^1.4.5-lts.1",
-    "fs": "https://esm.sh/fs@^0.0.1-security"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>

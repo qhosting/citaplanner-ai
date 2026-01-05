@@ -15,15 +15,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración de Multer
+// --- CONFIGURACIÓN DE ALMACENAMIENTO ---
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
+  filename: (req, file, cb) => cb(null, `AUM-${Date.now()}-${file.originalname}`)
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_prod';
 const pool = new Pool({ 
@@ -36,206 +36,203 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- MIDDLEWARE DE TENANT (EL CORAZÓN DEL SAAS) ---
+// --- MIDDLEWARE DE AISLAMIENTO SAAS ---
 const tenantMiddleware = async (req, res, next) => {
-  const host = req.headers.host; // ej: shulastudio.citaplanner.com o beauty.com
+  const host = req.headers.host;
   let tenant = null;
 
   try {
-    // Identificar si es el dominio principal o desarrollo local
-    if (host === 'citaplanner.com' || host.includes('localhost') || host === 'www.citaplanner.com') {
+    if (host.includes('localhost') || host === 'citaplanner.com' || host === 'www.citaplanner.com') {
       const result = await pool.query("SELECT * FROM tenants WHERE subdomain = 'master' LIMIT 1");
       tenant = result.rows[0];
     } else {
-      // Extraer subdominio si existe (ej: shulastudio.citaplanner.com -> shulastudio)
-      const parts = host.split('.');
-      const subdomain = parts.length > 2 ? parts[0] : null;
-      
-      const result = await pool.query(
-        "SELECT * FROM tenants WHERE subdomain = $1 OR custom_domain = $2 LIMIT 1",
-        [subdomain, host]
-      );
+      const subdomain = host.split('.')[0];
+      const result = await pool.query("SELECT * FROM tenants WHERE subdomain = $1 LIMIT 1", [subdomain]);
       tenant = result.rows[0];
     }
 
-    if (!tenant) return res.status(404).json({ error: "Nodo CitaPlanner no encontrado para este dominio." });
-    
+    if (!tenant) return res.status(404).json({ error: "Nodo CitaPlanner no detectado." });
     req.tenant = tenant;
     next();
   } catch (e) {
-    console.error("Tenant Identification Error:", e);
-    res.status(500).json({ error: "Falla en el protocolo de identificación de instancia." });
+    res.status(500).json({ error: "Falla en protocolo de identificación." });
   }
 };
 
-// --- CLOUDFLARE DNS PROVISIONING ---
-const createCloudflareSubdomain = async (subdomain) => {
-  const ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
-  const API_KEY = process.env.CLOUDFLARE_API_KEY;
-  const EMAIL = process.env.CLOUDFLARE_EMAIL;
+// --- ENDPOINTS PARA MODO DIOS (SUPERADMIN) ---
 
-  if (!ZONE_ID || !API_KEY) {
-      console.warn("Cloudflare API no configurada. Saltando provisionamiento DNS.");
-      return 'manual_id';
-  }
+// Listar todos los tenants del ecosistema
+app.get('/api/saas/tenants', tenantMiddleware, async (req, res) => {
+  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
+  const result = await pool.query("SELECT * FROM tenants ORDER BY created_at DESC");
+  res.json(result.rows);
+});
 
+// Métricas globales de la infraestructura
+app.get('/api/saas/stats', tenantMiddleware, async (req, res) => {
+  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
+  
+  const revenueRes = await pool.query("SELECT SUM(total) as revenue FROM sales");
+  const usersRes = await pool.query("SELECT COUNT(*) as count FROM users");
+  const tenantsRes = await pool.query("SELECT COUNT(*) as count FROM tenants");
+
+  res.json({
+    totalRevenue: parseFloat(revenueRes.rows[0]?.revenue || 0),
+    totalUsers: parseInt(usersRes.rows[0]?.count || 0),
+    totalTenants: parseInt(tenantsRes.rows[0]?.count || 0)
+  });
+});
+
+// Bloquear/Activar un nodo desde el Nexus
+app.put('/api/saas/tenants/:id/status', tenantMiddleware, async (req, res) => {
+  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
+  const { status } = req.body;
+  await pool.query("UPDATE tenants SET status = $1 WHERE id = $2", [status, req.params.id]);
+  res.json({ success: true });
+});
+
+// --- CONTINUACIÓN ENDPOINTS ADMIN ESTÁNDAR ---
+app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT value FROM settings WHERE key = 'landing' AND tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows[0]?.value || { businessName: req.tenant.name, primaryColor: '#C5A028' });
+});
+
+app.put('/api/settings/landing', tenantMiddleware, async (req, res) => {
+  await pool.query(
+    "INSERT INTO settings (key, value, tenant_id) VALUES ('landing', $1, $2) ON CONFLICT (key, tenant_id) DO UPDATE SET value = $1",
+    [req.body, req.tenant.id]
+  );
+  res.json({ success: true });
+});
+
+app.get('/api/clients', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT * FROM clients WHERE tenant_id = $1 ORDER BY name ASC", [req.tenant.id]);
+  res.json(result.rows.map(c => ({ ...c, treatmentHistory: c.treatment_history || [] })));
+});
+
+app.post('/api/clients', tenantMiddleware, async (req, res) => {
+  const { name, phone, email, notes, skinType, allergies, medicalConditions } = req.body;
+  const result = await pool.query(
+    "INSERT INTO clients (name, phone, email, notes, skin_type, allergies, medical_conditions, tenant_id, treatment_history) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '[]') RETURNING *",
+    [name, phone, email, notes, skinType, allergies, medicalConditions, req.tenant.id]
+  );
+  res.json(result.rows[0]);
+});
+
+app.put('/api/clients/:id', tenantMiddleware, async (req, res) => {
+  const { name, phone, email, notes, skinType, allergies, medicalConditions, consentAccepted, consentDate, consentType, treatmentHistory } = req.body;
+  await pool.query(
+    "UPDATE clients SET name=$1, phone=$2, email=$3, notes=$4, skin_type=$5, allergies=$6, medical_conditions=$7, consent_accepted=$8, consent_date=$9, consent_type=$10, treatment_history=$11 WHERE id=$12 AND tenant_id=$13",
+    [name, phone, email, notes, skinType, allergies, medicalConditions, consentAccepted, consentDate, consentType, JSON.stringify(treatmentHistory), req.params.id, req.tenant.id]
+  );
+  res.json({ success: true });
+});
+
+app.get('/api/professionals', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT * FROM professionals WHERE tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows.map(p => ({ 
+    ...p, 
+    weeklySchedule: p.weekly_schedule || [], 
+    exceptions: p.exceptions || [] 
+  })));
+});
+
+app.post('/api/professionals', tenantMiddleware, async (req, res) => {
+  const { name, role, email, weeklySchedule, exceptions } = req.body;
+  const result = await pool.query(
+    "INSERT INTO professionals (name, role, email, weekly_schedule, exceptions, tenant_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+    [name, role, email, JSON.stringify(weeklySchedule), JSON.stringify(exceptions), req.tenant.id]
+  );
+  res.json({ success: true, id: result.rows[0].id });
+});
+
+app.put('/api/professionals/:id', tenantMiddleware, async (req, res) => {
+  const { name, role, email, weeklySchedule, exceptions } = req.body;
+  await pool.query(
+    "UPDATE professionals SET name=$1, role=$2, email=$3, weekly_schedule=$4, exceptions=$5 WHERE id=$6 AND tenant_id=$7",
+    [name, role, email, JSON.stringify(weeklySchedule), JSON.stringify(exceptions), req.params.id, req.tenant.id]
+  );
+  res.json({ success: true });
+});
+
+app.get('/api/products', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT * FROM products WHERE tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows);
+});
+
+app.post('/api/products', tenantMiddleware, async (req, res) => {
+  const { name, sku, category, price, cost, stock, minStock, status, usage, batchNumber, expiryDate } = req.body;
+  await pool.query(
+    "INSERT INTO products (name, sku, category, price, cost, stock, min_stock, status, usage, batch_number, expiry_date, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+    [name, sku, category, price, cost, stock, minStock, status, usage, batchNumber, expiryDate, req.tenant.id]
+  );
+  res.json({ success: true });
+});
+
+app.post('/api/upload', tenantMiddleware, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false });
+  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.json({ success: true, url });
+});
+
+app.post('/api/sales', tenantMiddleware, async (req, res) => {
+  const { items, total, paymentMethod, clientName } = req.body;
   try {
-    const response = await axios.post(
-      `https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records`,
-      {
-        type: 'CNAME',
-        name: subdomain,
-        content: 'citaplanner.com', // CNAME al dominio principal que maneja el wildcard
-        ttl: 1,
-        proxied: true
-      },
-      {
-        headers: {
-          'X-Auth-Email': EMAIL,
-          'X-Auth-Key': API_KEY,
-          'Content-Type': 'application/json'
-        }
-      }
+    await pool.query('BEGIN');
+    const saleId = 'AUM-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+    await pool.query(
+      "INSERT INTO sales (sale_id, items, total, payment_method, client_name, tenant_id) VALUES ($1, $2, $3, $4, $5, $6)",
+      [saleId, JSON.stringify(items), total, paymentMethod, clientName, req.tenant.id]
     );
-    return response.data.result.id;
+    for (const item of items) {
+      if (item.type === 'PRODUCT') {
+        await pool.query("UPDATE products SET stock = stock - $1 WHERE id = $2 AND tenant_id = $3", [item.quantity, item.id, req.tenant.id]);
+        await pool.query("INSERT INTO inventory_movements (product_id, product_name, type, quantity, reason, tenant_id) VALUES ($1, $2, 'OUT', $3, $4, $5)", [item.id, item.name, item.quantity, `Venta POS ${saleId}`, req.tenant.id]);
+      }
+    }
+    await pool.query('COMMIT');
+    res.json({ success: true, saleId, date: new Date().toISOString() });
   } catch (e) {
-    console.error("Cloudflare Error:", e.response?.data || e.message);
-    throw new Error("Error al crear registro DNS en Cloudflare");
+    await pool.query('ROLLBACK');
+    res.status(500).json({ error: e.message });
   }
-};
+});
 
-// --- DATABASE SYNC & MULTI-TENANT INIT ---
+app.get('/api/analytics/stats', tenantMiddleware, async (req, res) => {
+  const revenueRes = await pool.query("SELECT SUM(total) as revenue FROM sales WHERE tenant_id = $1 AND created_at > NOW() - INTERVAL '30 days'", [req.tenant.id]);
+  const clientsRes = await pool.query("SELECT COUNT(*) as count FROM clients WHERE tenant_id = $1", [req.tenant.id]);
+  const apptsRes = await pool.query("SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1 AND status = 'COMPLETED'", [req.tenant.id]);
+  res.json({
+    revenueThisMonth: parseFloat(revenueRes.rows[0]?.revenue || 0),
+    newClientsThisMonth: parseInt(clientsRes.rows[0]?.count || 0),
+    appointmentsCompleted: parseInt(apptsRes.rows[0]?.count || 0),
+    occupationRate: 78
+  });
+});
+
 const initDB = async () => {
   try {
+    await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tenants (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(100),
         subdomain VARCHAR(50) UNIQUE,
-        custom_domain VARCHAR(100) UNIQUE,
-        cloudflare_id VARCHAR(100),
         status VARCHAR(20) DEFAULT 'ACTIVE',
         plan_type VARCHAR(20) DEFAULT 'PRO',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS professionals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, role TEXT, email TEXT, weekly_schedule JSONB, exceptions JSONB, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS sales (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), sale_id TEXT, items JSONB, total DECIMAL, payment_method TEXT, client_name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS inventory_movements (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), product_id TEXT, product_name TEXT, type TEXT, quantity INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
+      IF NOT EXISTS (SELECT 1 FROM tenants WHERE subdomain = 'master') THEN
+        INSERT INTO tenants (name, subdomain, status, plan_type) VALUES ('Citaplanner Nexus', 'master', 'ACTIVE', 'ELITE');
+      END IF;
     `);
-
-    const tables = ['users', 'services', 'products', 'appointments', 'branches', 'settings', 'clients'];
-    for (const table of tables) {
-      await pool.query(`
-        ALTER TABLE ${table} 
-        ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-      `);
-    }
-
-    // Seed Master Tenant
-    const master = await pool.query("SELECT id FROM tenants WHERE subdomain = 'master'");
-    if (master.rows.length === 0) {
-      await pool.query("INSERT INTO tenants (name, subdomain) VALUES ('CitaPlanner Global', 'master')");
-    }
-    
-    console.log("✅ SaaS Core: Arquitectura Multi-tenant Sincronizada");
-  } catch (e) {
-    console.error('❌ SaaS Init Error:', e.message);
-  }
+    console.log("✅ Ecosistema Nexus Online.");
+  } catch (e) { console.error('❌ Init Error:', e.message); }
 };
 
-// --- TENANT AWARE ENDPOINTS ---
-
-app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
-  try {
-    const result = await pool.query(
-      "SELECT value FROM settings WHERE key = 'landing' AND tenant_id = $1", 
-      [req.tenant.id]
-    );
-    res.json(result.rows[0]?.value || { businessName: req.tenant.name, primaryColor: '#C5A028' });
-  } catch (e) { res.status(500).json({ error: "Error de configuración" }); }
-});
-
-app.get('/api/services', tenantMiddleware, async (req, res) => {
-  const result = await pool.query("SELECT * FROM services WHERE tenant_id = $1", [req.tenant.id]);
-  res.json(result.rows);
-});
-
-app.get('/api/appointments', tenantMiddleware, async (req, res) => {
-  const result = await pool.query("SELECT * FROM appointments WHERE tenant_id = $1 ORDER BY start_datetime ASC", [req.tenant.id]);
-  res.json(result.rows);
-});
-
-app.post('/api/appointments', tenantMiddleware, async (req, res) => {
-  const { title, startDateTime, endDateTime, clientName, clientPhone, description, professionalId, serviceId } = req.body;
-  const result = await pool.query(
-    "INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, description, professional_id, service_id, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
-    [title, startDateTime, endDateTime, clientName, clientPhone, description, professionalId, serviceId, req.tenant.id]
-  );
-  res.json(result.rows[0]);
-});
-
-// --- PROVISIONAMIENTO SaaS (SUPERADMIN) ---
-app.post('/api/saas/register', async (req, res) => {
-  const { name, subdomain, adminPhone, adminPassword } = req.body;
-  
-  if (!subdomain || subdomain === 'www' || subdomain === 'master') {
-    return res.status(400).json({ error: "Subdominio reservado o inválido." });
-  }
-
-  try {
-    await pool.query('BEGIN');
-    
-    // 1. Provisionar DNS en Cloudflare
-    const cfId = await createCloudflareSubdomain(subdomain);
-    
-    // 2. Crear Tenant
-    const tenantRes = await pool.query(
-      "INSERT INTO tenants (name, subdomain, cloudflare_id) VALUES ($1, $2, $3) RETURNING id",
-      [name, subdomain, cfId]
-    );
-    const tenantId = tenantRes.rows[0].id;
-
-    // 3. Crear Usuario Admin Inicial
-    await pool.query(
-      "INSERT INTO users (name, phone, password, role, tenant_id) VALUES ($1, $2, $3, 'ADMIN', $4)",
-      [name + ' Admin', adminPhone, adminPassword, tenantId]
-    );
-
-    // 4. Configuración Base del Studio
-    const baseLanding = {
-        businessName: name,
-        primaryColor: '#C5A028',
-        slogan: 'Bienvenido a CitaPlanner',
-        aboutText: 'Tu nuevo estudio gestionado con inteligencia artificial.'
-    };
-    await pool.query(
-        "INSERT INTO settings (key, value, tenant_id) VALUES ('landing', $1, $2)",
-        [baseLanding, tenantId]
-    );
-
-    await pool.query('COMMIT');
-    res.json({ success: true, message: `Nodo ${subdomain}.citaplanner.com provisionado.` });
-  } catch (e) {
-    await pool.query('ROLLBACK');
-    res.status(500).json({ error: "Falla en provisionamiento: " + e.message });
-  }
-});
-
-// Auth por Tenant (Asegura que un usuario solo entre a su instancia)
-app.post('/api/login', tenantMiddleware, async (req, res) => {
-  const { phone, password } = req.body;
-  const result = await pool.query(
-    "SELECT * FROM users WHERE phone = $1 AND password = $2 AND tenant_id = $3",
-    [phone, password, req.tenant.id]
-  );
-  
-  if (result.rows.length > 0) {
-    res.json({ success: true, user: result.rows[0] });
-  } else {
-    res.status(401).json({ success: false, error: "Credenciales inválidas en este nodo." });
-  }
-});
-
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
-app.listen(PORT, () => console.log(`🚀 CitaPlanner SaaS Engine | Puerto: ${PORT}`));
+app.get(/.*/, (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
+app.listen(PORT, () => console.log(`🚀 SaaS Master Engine en puerto ${PORT}`));
 initDB();

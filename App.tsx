@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
   Sparkles, ShoppingBag, Megaphone, Settings, 
   ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2,
-  ShieldCheck, Activity, Cpu, Cloud
+  ShieldCheck, Activity, Cpu, Cloud, ShieldAlert
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,6 +26,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 
@@ -42,7 +43,8 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
         if (!isAuthenticated) {
           navigate('/login', { state: { from: location }, replace: true });
         } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-          if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
+          if (user.role === 'SUPERADMIN') navigate('/nexus', { replace: true });
+          else if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
           else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
           else navigate('/admin', { replace: true });
         }
@@ -71,20 +73,14 @@ const Navbar = () => {
   if (location.pathname === '/login') return null;
   if (location.pathname === '/' && !user) return null;
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   const NavLink = ({ to, children }: { to: string, children?: React.ReactNode }) => (
     <Link to={to} className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] transition-all flex items-center gap-2 ${
-      isActive(to) 
-        ? 'text-[#D4AF37]' 
-        : 'text-zinc-300 hover:text-white hover:bg-white/5'
+      isActive(to) ? 'text-[#D4AF37]' : 'text-zinc-300 hover:text-white hover:bg-white/5'
     }`}>
       {children}
-      {isActive(to) && (
-        <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#D4AF37] rounded-full shadow-[0_0_10px_#D4AF37]" />
-      )}
+      {isActive(to) && <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#D4AF37] rounded-full shadow-[0_0_10px_#D4AF37]" />}
     </Link>
   );
 
@@ -92,20 +88,21 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 w-full bg-black/90 backdrop-blur-2xl border-b border-white/10 h-20 shadow-2xl">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to={user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'PROFESSIONAL' ? '/professional-dashboard' : '/admin'}>
+          <Link to={user?.role === 'SUPERADMIN' ? '/nexus' : user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'PROFESSIONAL' ? '/professional-dashboard' : '/admin'}>
             <div className="flex items-center gap-3 group">
               <div className="p-2.5 rounded-xl bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30 group-hover:border-[#D4AF37]/60 transition-all shadow-lg">
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-xl tracking-tighter text-white uppercase leading-none">Cita<span className="gold-text-gradient">Planner</span></span>
-                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">Aurum Ecosystem</span>
+                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'SUPERADMIN' ? 'Nexus Infrastructure' : 'Aurum Ecosystem'}</span>
               </div>
             </div>
           </Link>
           
-          {user && user.role === 'ADMIN' && (
+          {user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
             <div className="hidden xl:flex items-center gap-1">
+              {user.role === 'SUPERADMIN' && <NavLink to="/nexus"><ShieldAlert size={14} className="text-red-500" /> Nexus God Mode</NavLink>}
               <NavLink to="/admin">Consola</NavLink>
               <NavLink to="/pos">Ventas & POS</NavLink>
               <NavLink to="/analytics">Reportes</NavLink>
@@ -165,7 +162,6 @@ const InternalFooter = () => {
   return (
     <footer className="w-full bg-[#050505] border-t border-white/5 py-8 px-10">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-10">
-        {/* Left: Infrastructure Info */}
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-3">
             <Cpu size={16} className="text-zinc-700" />
@@ -180,22 +176,14 @@ const InternalFooter = () => {
             <span className="text-[8px] font-black uppercase tracking-[0.4em] text-emerald-900">Quantum Secured</span>
           </div>
         </div>
-
-        {/* Center: Legal/Copyright */}
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 text-center">
-          © 2026 CitaPlanner Global Infrastructure • Product of Aurum Capital
-        </p>
-
-        {/* Right: Powered by with logos/icons style */}
+        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 text-center">© 2026 CitaPlanner Global Infrastructure • Product of Aurum Capital</p>
         <div className="flex items-center gap-12 text-[8px] font-black uppercase tracking-[0.3em]">
           <a href="https://aurumcapital.mx" target="_blank" className="flex items-center gap-2 text-zinc-600 hover:text-[#D4AF37] transition-all group">
-            <span>Powered by</span>
-            <span className="text-zinc-400 group-hover:text-white">Aurum Capital</span>
+            <span>Powered by</span><span className="text-zinc-400 group-hover:text-white">Aurum Capital</span>
           </a>
           <div className="w-1 h-1 rounded-full bg-white/10" />
           <a href="https://qhosting.com.mx" target="_blank" className="flex items-center gap-2 text-zinc-600 hover:text-white transition-all group">
-             <span>Infra</span>
-             <span className="text-zinc-400 group-hover:text-white">QHosting</span>
+             <span>Infra</span><span className="text-zinc-400 group-hover:text-white">QHosting</span>
           </a>
         </div>
       </div>
@@ -216,19 +204,20 @@ const App: React.FC = () => {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/book" element={<BookingPage />} /> 
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-                <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
-                <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
-                <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN']}><BranchesPage /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN']}><ServicesPage /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><InventoryPage /></ProtectedRoute>} />
-                <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN']}><SchedulesPage /></ProtectedRoute>} />
-                <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN']}><InsightsPage /></ProtectedRoute>} />
-                <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
-                <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN']}><ClientPortal /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
+                <Route path="/nexus" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><POSPage /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+                <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ClientsPage /></ProtectedRoute>} />
+                <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><MarketingPage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SettingsPage /></ProtectedRoute>} />
+                <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><BranchesPage /></ProtectedRoute>} />
+                <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ServicesPage /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InventoryPage /></ProtectedRoute>} />
+                <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SchedulesPage /></ProtectedRoute>} />
+                <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InsightsPage /></ProtectedRoute>} />
+                <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN', 'SUPERADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
+                <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN', 'SUPERADMIN']}><ClientPortal /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               </Routes>
             </div>

@@ -1,30 +1,35 @@
 # [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
-# REVISIÓN: 2026.10.12
+# REVISIÓN: 2026.10.15
 # STATUS: PRODUCTION DEPLOYMENT READY
 # INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
 # --- FASE 1: BUILDER (Arquitectura de Compilación) ---
 FROM node:20-alpine AS builder
 
-# Dependencias de sistema optimizadas para libc
+# Dependencias de sistema para compilación de binarios nativos
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Inyección de manifiestos y dependencias
+# Optimización de Capas: Instalación de dependencias primero
 COPY package*.json ./
 RUN npm install --frozen-lockfile
 
-# Inyección total del código fuente
+# Inyección total del código fuente para transpilación
 COPY . .
 
 # Generación del bundle de alta disponibilidad (Vite -> Dist)
-# Se asume que las variables de compilación están en el entorno
+# El build inyecta las variables de entorno necesarias para el cliente
+ENV NODE_ENV=production
 RUN npm run build
 
 # --- FASE 2: RUNNER (Nodo de Operación Master) ---
 FROM node:20-alpine AS runner
+
+LABEL maintainer="Aurum Capital Technology"
+LABEL version="4.6.0"
+LABEL environment="production"
 
 WORKDIR /app
 
@@ -45,13 +50,17 @@ COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package*.json ./
 
 # Instalación de dependencias de runtime (excluyendo dev-tools)
-RUN npm install --omit=dev
+RUN npm install --omit=dev && npm cache clean --force
 
 # Sellado de permisos de infraestructura
 RUN chown -R citaplanner:nodejs /app
 
 # Switch a modo de operación seguro
 USER citaplanner
+
+# Protocolo de Salud: Monitoreo de disponibilidad del Nodo SaaS
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/api/settings/landing').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
 # Apertura de puertos de red
 EXPOSE 3000
