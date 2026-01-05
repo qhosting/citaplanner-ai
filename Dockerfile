@@ -1,0 +1,68 @@
+# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION
+# PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE
+# REVISIÓN: 2026.4.1
+# STATUS: PRODUCTION READY
+
+# --- FASE 1: BUILDER ---
+FROM node:20-alpine AS builder
+
+# Instalación de dependencias del sistema necesarias
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copia de manifiestos de dependencias
+COPY package*.json ./
+
+# Instalación de todas las dependencias (incluyendo devDeps para el build de Vite)
+RUN npm install
+
+# Copia del código fuente completo
+COPY . .
+
+# Construcción de los activos del frontend (Vite)
+# Genera la carpeta /app/dist
+RUN npm run build
+
+# --- FASE 2: RUNNER ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Variables de entorno de producción
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Seguridad: Creación de usuario de sistema para ejecución segura
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 citaplanner
+
+# Configuración del directorio de persistencia (Imágenes, Documentos)
+# Este directorio debe ser montado como volumen en producción
+RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
+
+# Copia selectiva de artefactos de la fase builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/package*.json ./
+
+# Instalación limpia de dependencias de producción
+RUN npm install --omit=dev
+
+# Ajuste de permisos final para el usuario seguro
+RUN chown -R citaplanner:nodejs /app
+
+# Cambio a contexto de usuario no-root
+USER citaplanner
+
+# Exposición del puerto de servicio
+EXPOSE 3000
+
+# Punto de entrada de la aplicación
+# Se asume "type": "module" en package.json para soporte ESM
+CMD ["node", "server.js"]
+
+# --- DOCUMENTACIÓN DE DESPLIEGUE ---
+# 1. Persistencia: Montar /app/uploads (Recomendado: Volume en Docker o Bind Mount).
+# 2. Infraestructura: El servidor espera DATABASE_URL (PostgreSQL) y API_KEY (Google Gemini).
+# 3. Salud: Se recomienda configurar un healthcheck externo al puerto 3000.
