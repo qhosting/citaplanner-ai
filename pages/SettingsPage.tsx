@@ -31,13 +31,17 @@ export const SettingsPage: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const landing = await api.getLandingSettings();
-    // Aseguramos que showWhatsappButton tenga un valor booleano explícito
-    setLandingSettings({
-      ...landing,
-      showWhatsappButton: landing.showWhatsappButton ?? true
-    });
-    setLoading(false);
+    try {
+      const landing = await api.getLandingSettings();
+      setLandingSettings({
+        ...landing,
+        showWhatsappButton: landing.showWhatsappButton ?? true
+      });
+    } catch (e) {
+      toast.error("Error al conectar con el servidor de configuración.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveAll = async () => {
@@ -46,6 +50,7 @@ export const SettingsPage: React.FC = () => {
     const success = await api.updateLandingSettings(landingSettings);
     setSaving(false);
     if (success) toast.success("Infraestructura del sistema sincronizada correctamente.");
+    else toast.error("Error al guardar cambios en el servidor.");
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,7 +338,7 @@ export const SettingsPage: React.FC = () => {
                              </div>
                           </div>
                           <div>
-                             <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 block ml-1">Google Maps Master URL</label>
+                             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 block ml-1">Google Maps Master URL</label>
                              <div className="relative">
                                 <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
                                 <input 
