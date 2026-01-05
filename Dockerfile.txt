@@ -1,27 +1,28 @@
-# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION
+# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE
-# REVISIÓN: 2026.4.1
-# STATUS: PRODUCTION READY
+# REVISIÓN: 2026.4.5
+# STATUS: PRODUCTION DEPLOYMENT READY
+# INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
 # --- FASE 1: BUILDER ---
 FROM node:20-alpine AS builder
 
-# Instalación de dependencias del sistema necesarias
+# Instalación de dependencias de sistema críticas para entornos Alpine
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copia de manifiestos de dependencias
+# Sincronización de manifiestos de dependencias
 COPY package*.json ./
 
-# Instalación de todas las dependencias (incluyendo devDeps para el build de Vite)
+# Instalación de dependencias (incluye devDeps para la compilación de Vite)
 RUN npm install
 
-# Copia del código fuente completo
+# Inyección del código fuente maestro
 COPY . .
 
-# Construcción de los activos del frontend (Vite)
-# Genera la carpeta /app/dist
+# Generación del bundle de producción (Frontend)
+# Genera el directorio /app/dist
 RUN npm run build
 
 # --- FASE 2: RUNNER ---
@@ -29,40 +30,41 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Variables de entorno de producción
+# Definición de variables de entorno de infraestructura
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Seguridad: Creación de usuario de sistema para ejecución segura
+# Seguridad: Aislamiento mediante usuario de sistema no-privilegiado
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 citaplanner
 
-# Configuración del directorio de persistencia (Imágenes, Documentos)
-# Este directorio debe ser montado como volumen en producción
+# Configuración de persistencia para el Nodo de Carga (Multimedia/Documentos)
+# Importante: Este directorio debe vincularse a un volumen externo en el orquestador
 RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
 
-# Copia selectiva de artefactos de la fase builder
+# Transferencia selectiva de activos compilados desde la fase builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package*.json ./
 
-# Instalación limpia de dependencias de producción
+# Instalación limpia de dependencias de runtime (excluye devDeps)
 RUN npm install --omit=dev
 
-# Ajuste de permisos final para el usuario seguro
+# Aplicación final de permisos de seguridad sobre el nodo de ejecución
 RUN chown -R citaplanner:nodejs /app
 
-# Cambio a contexto de usuario no-root
+# Cambio de contexto al usuario seguro
 USER citaplanner
 
-# Exposición del puerto de servicio
+# Exposición del puerto de servicio de la API / Web App
 EXPOSE 3000
 
-# Punto de entrada de la aplicación
-# Se asume "type": "module" en package.json para soporte ESM
+# Punto de entrada del protocolo CitaPlanner
+# Se asume soporte nativo ESM en server.js
 CMD ["node", "server.js"]
 
-# --- DOCUMENTACIÓN DE DESPLIEGUE ---
-# 1. Persistencia: Montar /app/uploads (Recomendado: Volume en Docker o Bind Mount).
-# 2. Infraestructura: El servidor espera DATABASE_URL (PostgreSQL) y API_KEY (Google Gemini).
-# 3. Salud: Se recomienda configurar un healthcheck externo al puerto 3000.
+# --- PROTOCOLOS DE DESPLIEGUE (DOCKER-COMPOSE COMPATIBLE) ---
+# 1. PERSISTENCIA: Montar /app/uploads como volumen persistente.
+# 2. RED: Conectar al nodo citaplanner-db vía DATABASE_URL.
+# 3. SEGURIDAD: Inyectar API_KEY (Gemini) vía variables de entorno seguras.
+# 4. SALUD: El sistema responde en el puerto 3000.
