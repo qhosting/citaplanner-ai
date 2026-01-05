@@ -108,8 +108,9 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Fix para Express 5.x: las rutas comodín '*' ahora requieren una expresión regular o nombre de parámetro
-app.get('(.*)', (req, res) => {
+// En Express 5.x (usando path-to-regexp v6+), los grupos de captura y comodines deben ser nombrados.
+// Usamos '/:path*' para capturar todas las rutas y servir el index.html (SPA fallback).
+app.get('/:path*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
