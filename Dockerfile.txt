@@ -1,25 +1,26 @@
 # [AURUM PROTOCOL] - DOCKERFILE PRODUCTION
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE
-# REVISIÓN: 2026.4
+# REVISIÓN: 2026.4.1
 # STATUS: PRODUCTION READY
 
 # --- FASE 1: BUILDER ---
 FROM node:20-alpine AS builder
 
-# Instalación de dependencias del sistema para compilación
+# Instalación de dependencias del sistema necesarias
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Copia de archivos de dependencias
+# Copia de manifiestos de dependencias
 COPY package*.json ./
-# Instalamos todas las dependencias incluyendo devDeps para el build de Vite
+
+# Instalación de todas las dependencias (incluyendo devDeps para el build de Vite)
 RUN npm install
 
-# Copia del código fuente
+# Copia del código fuente completo
 COPY . .
 
-# Build del Frontend (Vite)
+# Construcción de los activos del frontend (Vite)
 # Genera la carpeta /app/dist
 RUN npm run build
 
@@ -28,41 +29,40 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Variables de entorno críticas
+# Variables de entorno de producción
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Seguridad: Creación de usuario no-root para ejecución segura
+# Seguridad: Creación de usuario de sistema para ejecución segura
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 citaplanner
 
-# Directorio de persistencia para imágenes cargadas (Logos, Fotos de servicios)
+# Configuración del directorio de persistencia (Imágenes, Documentos)
+# Este directorio debe ser montado como volumen en producción
 RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
 
-# Copia de artefactos de construcción desde la fase builder
+# Copia selectiva de artefactos de la fase builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package*.json ./
 
-# Instalación exclusiva de dependencias de producción para minimizar tamaño de imagen
+# Instalación limpia de dependencias de producción
 RUN npm install --omit=dev
 
-# Ajuste final de permisos para el usuario citaplanner en todo el directorio /app
+# Ajuste de permisos final para el usuario seguro
 RUN chown -R citaplanner:nodejs /app
 
-# Cambio a usuario seguro
+# Cambio a contexto de usuario no-root
 USER citaplanner
 
-# Exposición del puerto del nodo Aurum (3000)
+# Exposición del puerto de servicio
 EXPOSE 3000
 
-# Punto de entrada: Ejecución del servidor Node.js
-# Se usa 'node server.js' asumiendo que package.json tiene "type": "module"
+# Punto de entrada de la aplicación
+# Se asume "type": "module" en package.json para soporte ESM
 CMD ["node", "server.js"]
 
-# NOTAS PARA DESPLIEGUE EN EASYPANEL:
-# 1. Montar Volumen: /app/uploads (Tipo: Volume o Bind) para persistencia de archivos.
-# 2. Variables Requeridas: 
-#    - DATABASE_URL: URL de conexión a PostgreSQL.
-#    - API_KEY: Clave de Google Gemini para las funciones de IA.
-#    - NEXTAUTH_SECRET: Token de seguridad para cifrado de sesiones.
+# --- DOCUMENTACIÓN DE DESPLIEGUE ---
+# 1. Persistencia: Montar /app/uploads (Recomendado: Volume en Docker o Bind Mount).
+# 2. Infraestructura: El servidor espera DATABASE_URL (PostgreSQL) y API_KEY (Google Gemini).
+# 3. Salud: Se recomienda configurar un healthcheck externo al puerto 3000.

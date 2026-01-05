@@ -80,6 +80,20 @@ const initDB = async () => {
           value JSONB DEFAULT '{}'
         );`);
 
+        // Seed inicial para la landing page si no existe
+        const checkSettings = await client.query("SELECT key FROM settings WHERE key = 'landing'");
+        if (checkSettings.rows.length === 0) {
+          const defaultLanding = {
+            businessName: 'Aurum Beauty Studio',
+            primaryColor: '#C5A028',
+            showWhatsappButton: true,
+            contactPhone: '+52 55 7142 7321',
+            slogan: 'Redefiniendo la Estética de Ultra-Lujo',
+            aboutText: 'Santuario de belleza líder en alta tecnología.'
+          };
+          await client.query("INSERT INTO settings (key, value) VALUES ('landing', $1)", [defaultLanding]);
+        }
+
         await client.query('COMMIT');
         console.log("✅ Aurum Protocol: Database Schema Synchronized");
     }

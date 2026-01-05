@@ -32,7 +32,11 @@ export const SettingsPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     const landing = await api.getLandingSettings();
-    setLandingSettings(landing);
+    // Aseguramos que showWhatsappButton tenga un valor booleano explícito
+    setLandingSettings({
+      ...landing,
+      showWhatsappButton: landing.showWhatsappButton ?? true
+    });
     setLoading(false);
   };
 
@@ -208,7 +212,7 @@ export const SettingsPage: React.FC = () => {
                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8 flex items-center gap-3"><Sparkles size={20} className="text-[#D4AF37]" /> Identidad Visual</h3>
                    <div className="flex flex-col items-center gap-8">
                       <div onClick={() => logoInputRef.current?.click()} className="w-48 h-48 rounded-[3rem] bg-black border-2 border-dashed border-white/10 flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/50 transition-all overflow-hidden group relative">
-                         {landingSettings.logoUrl ? <img src={landingSettings.logoUrl} className="w-full h-full object-contain p-4" /> : <Upload size={32} className="text-zinc-700" />}
+                         {landingSettings.logoUrl ? <img src={landingSettings.logoUrl} className="w-full h-full object-contain p-4" alt="Logo" /> : <Upload size={32} className="text-zinc-700" />}
                          {isLogoUploading && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="animate-spin text-[#D4AF37]" /></div>}
                       </div>
                       <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest text-center">Logo Maestro (PNG/SVG Transparente)</p>
@@ -227,7 +231,11 @@ export const SettingsPage: React.FC = () => {
                                <p className="text-[9px] text-zinc-500 font-bold uppercase mt-0.5">Botón de WhatsApp en Landing</p>
                             </div>
                          </div>
-                         <button onClick={() => setLandingSettings({...landingSettings, showWhatsappButton: !landingSettings.showWhatsappButton})} className={`w-14 h-7 rounded-full transition-all relative ${landingSettings.showWhatsappButton ? 'bg-[#D4AF37]' : 'bg-zinc-800'}`}>
+                         <button 
+                            type="button"
+                            onClick={() => setLandingSettings(prev => prev ? ({ ...prev, showWhatsappButton: !prev.showWhatsappButton }) : null)} 
+                            className={`w-14 h-7 rounded-full transition-all relative ${landingSettings.showWhatsappButton ? 'bg-[#C5A028]' : 'bg-zinc-800'}`}
+                         >
                             <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${landingSettings.showWhatsappButton ? 'left-8' : 'left-1'}`} />
                          </button>
                       </div>
@@ -359,7 +367,7 @@ export const SettingsPage: React.FC = () => {
                       <div key={i} className="glass-card p-10 rounded-[3.5rem] border-white/5 flex flex-col lg:flex-row gap-10 group relative hover:border-[#D4AF37]/30 transition-all">
                          <button onClick={() => removeSlide(i)} className="absolute top-8 right-8 p-3 text-zinc-600 hover:text-red-500 transition-colors"><Trash2 size={20}/></button>
                          <div className="w-full lg:w-80 h-64 rounded-[2.5rem] overflow-hidden border border-white/10 shrink-0 relative group/img">
-                            <img src={slide.image} className="w-full h-full object-cover group-hover/img:scale-110 transition-all opacity-60" />
+                            <img src={slide.image} className="w-full h-full object-cover group-hover/img:scale-110 transition-all opacity-60" alt="Slide" />
                             <button onClick={() => triggerUpload(i)} className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity">
                                {uploadingIndex === i ? <Loader2 className="animate-spin text-[#D4AF37]" size={32} /> : <Upload className="text-white" size={32} />}
                                <span className="text-[8px] font-black text-white uppercase tracking-widest mt-2">Cargar Media</span>

@@ -117,7 +117,7 @@ export const LandingPage: React.FC = () => {
             
             {/* Botón Principal */}
             <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 hover:shadow-[0_35px_80px_-20px_rgba(197,160,40,0.7)] transition-all duration-500 active:scale-95">
-               <MessageCircle size={32} className="md:size-40" />
+               <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
                <div className="absolute -right-1 -top-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-black" />
             </div>
 

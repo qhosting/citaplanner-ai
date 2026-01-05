@@ -14,7 +14,7 @@ const DEFAULT_LANDING_DATA: LandingSettings = {
   slogan: 'Redefiniendo la Estética de Ultra-Lujo',
   aboutText: 'Santuario de belleza líder en alta tecnología.',
   address: 'Dirección no configurada',
-  contactPhone: '',
+  contactPhone: '+52 55 7142 7321',
   heroSlides: [],
   stats: [],
   testimonials: [],
