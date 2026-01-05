@@ -1,0 +1,70 @@
+# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
+# PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE
+# REVISIÓN: 2026.4.5
+# STATUS: PRODUCTION DEPLOYMENT READY
+# INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
+
+# --- FASE 1: BUILDER ---
+FROM node:20-alpine AS builder
+
+# Instalación de dependencias de sistema críticas para entornos Alpine
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Sincronización de manifiestos de dependencias
+COPY package*.json ./
+
+# Instalación de dependencias (incluye devDeps para la compilación de Vite)
+RUN npm install
+
+# Inyección del código fuente maestro
+COPY . .
+
+# Generación del bundle de producción (Frontend)
+# Genera el directorio /app/dist
+RUN npm run build
+
+# --- FASE 2: RUNNER ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Definición de variables de entorno de infraestructura
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Seguridad: Aislamiento mediante usuario de sistema no-privilegiado
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 citaplanner
+
+# Configuración de persistencia para el Nodo de Carga (Multimedia/Documentos)
+# Importante: Este directorio debe vincularse a un volumen externo en el orquestador
+RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
+
+# Transferencia selectiva de activos compilados desde la fase builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/package*.json ./
+
+# Instalación limpia de dependencias de runtime (excluye devDeps)
+RUN npm install --omit=dev
+
+# Aplicación final de permisos de seguridad sobre el nodo de ejecución
+RUN chown -R citaplanner:nodejs /app
+
+# Cambio de contexto al usuario seguro
+USER citaplanner
+
+# Exposición del puerto de servicio de la API / Web App
+EXPOSE 3000
+
+# Punto de entrada del protocolo CitaPlanner
+# Se asume soporte nativo ESM en server.js
+CMD ["node", "server.js"]
+
+# --- PROTOCOLOS DE DESPLIEGUE (DOCKER-COMPOSE COMPATIBLE) ---
+# 1. PERSISTENCIA: Montar /app/uploads como volumen persistente.
+# 2. RED: Conectar al nodo citaplanner-db vía DATABASE_URL.
+# 3. SEGURIDAD: Inyectar API_KEY (Gemini) vía variables de entorno seguras.
+# 4. SALUD: El sistema responde en el puerto 3000.
