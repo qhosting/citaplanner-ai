@@ -74,6 +74,12 @@ const initDB = async () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`);
 
+        // Tabla para configuraciones globales (Landing, IA, etc.)
+        await client.query(`CREATE TABLE IF NOT EXISTS settings (
+          key VARCHAR(50) PRIMARY KEY,
+          value JSONB DEFAULT '{}'
+        );`);
+
         await client.query('COMMIT');
         console.log("✅ Aurum Protocol: Database Schema Synchronized");
     }
@@ -84,6 +90,32 @@ const initDB = async () => {
     if (client) client.release();
   }
 };
+
+// --- ENDPOINTS DE CONFIGURACIÓN ---
+app.get('/api/settings/landing', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'landing'");
+    if (result.rows.length > 0) {
+      res.json(result.rows[0].value);
+    } else {
+      res.json({});
+    }
+  } catch (e) {
+    res.status(500).json({ error: "Error al obtener configuración" });
+  }
+});
+
+app.put('/api/settings/landing', async (req, res) => {
+  try {
+    await pool.query(
+      "INSERT INTO settings (key, value) VALUES ('landing', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+      [req.body]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Error al guardar configuración" });
+  }
+});
 
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) {
@@ -108,8 +140,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// En Express 5.x (usando path-to-regexp v6+), los grupos de captura y comodines deben ser nombrados.
-// Usamos '/:path*' para capturar todas las rutas y servir el index.html (SPA fallback).
+// SPA Fallback para Express 5.x
 app.get('/:path*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });

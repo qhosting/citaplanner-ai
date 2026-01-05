@@ -79,8 +79,8 @@ export const LandingPage: React.FC = () => {
           api.getLandingSettings(),
           api.getServices()
         ]);
-        if (s) setSettings(s);
-        const activeServices = sv.filter(s => s.status === 'ACTIVE').slice(0, 3);
+        if (s) setSettings({ ...DEFAULT_SETTINGS, ...s });
+        const activeServices = sv.filter(svItem => svItem.status === 'ACTIVE').slice(0, 3);
         setServices(activeServices.length > 0 ? activeServices : sv.slice(0, 3));
       } catch (error) {
         console.error("Error loading landing:", error);
@@ -102,22 +102,31 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] font-inter selection:bg-[#C5A028] selection:text-white overflow-x-hidden scroll-smooth">
       
-      {/* Floating WhatsApp Concierge - Restored & Fixed */}
+      {/* Floating WhatsApp Concierge - Ultra Luxury UI */}
       {settings.showWhatsappButton && settings.contactPhone && (
         <a 
           href={whatsappLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-10 right-10 z-[200] group"
+          className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group"
         >
           <div className="relative">
-            <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-ping opacity-20" />
-            <div className="relative w-16 h-16 rounded-full gold-btn flex items-center justify-center text-black shadow-[0_20px_50px_rgba(197,160,40,0.4)] hover:scale-110 transition-transform duration-500">
-               <MessageCircle size={32} />
-               <div className="absolute right-0 top-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black" />
+            {/* Animación de pulso áurico */}
+            <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-ping opacity-25 scale-125" />
+            <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-pulse opacity-10 scale-150" />
+            
+            {/* Botón Principal */}
+            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 hover:shadow-[0_35px_80px_-20px_rgba(197,160,40,0.7)] transition-all duration-500 active:scale-95">
+               <MessageCircle size={32} className="md:size-40" />
+               <div className="absolute -right-1 -top-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-black" />
             </div>
-            <div className="absolute right-20 top-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-               <p className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Hablar con Concierge</p>
+
+            {/* Tooltip Sophistiqué */}
+            <div className="absolute right-24 md:right-28 top-1/2 -translate-y-1/2 bg-black/90 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-[2rem] whitespace-nowrap opacity-0 group-hover:opacity-100 translate-x-10 group-hover:translate-x-0 transition-all duration-500 pointer-events-none shadow-2xl">
+               <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10px] font-black text-white uppercase tracking-[0.4em]">Concierge Elite Online</p>
+               </div>
             </div>
           </div>
         </a>
@@ -246,7 +255,7 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer Elite Columnar - Final Fixes */}
+      {/* Footer */}
       <footer className="bg-[#050505] pt-48 pb-20 border-t border-white/5 relative overflow-hidden">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-[#C5A028]/40 to-transparent" />
          <div className="max-w-7xl mx-auto px-8 relative z-10">
