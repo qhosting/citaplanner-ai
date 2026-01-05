@@ -38,11 +38,17 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- MIDDLEWARE DE AISLAMIENTO SAAS ---
 const tenantMiddleware = async (req, res, next) => {
-  const host = req.headers.host;
+  const host = req.headers.host || '';
   let tenant = null;
 
   try {
-    if (host.includes('localhost') || host === 'citaplanner.com' || host === 'www.citaplanner.com') {
+    // Soporte para localhost con o sin puerto, y dominios raíz
+    const isRoot = host.startsWith('localhost') || 
+                   host === 'citaplanner.com' || 
+                   host === 'www.citaplanner.com' ||
+                   host.includes('127.0.0.1');
+
+    if (isRoot) {
       const result = await pool.query("SELECT * FROM tenants WHERE subdomain = 'master' LIMIT 1");
       tenant = result.rows[0];
     } else {
@@ -51,11 +57,12 @@ const tenantMiddleware = async (req, res, next) => {
       tenant = result.rows[0];
     }
 
-    if (!tenant) return res.status(404).json({ error: "Nodo CitaPlanner no detectado." });
+    if (!tenant) return res.status(404).json({ error: "Nodo CitaPlanner no detectado para el host: " + host });
     req.tenant = tenant;
     next();
   } catch (e) {
-    res.status(500).json({ error: "Falla en protocolo de identificación." });
+    console.error('Tenant Identification Error:', e);
+    res.status(500).json({ error: "Falla en protocolo de identificación de infraestructura." });
   }
 };
 
@@ -225,14 +232,18 @@ const initDB = async () => {
       CREATE TABLE IF NOT EXISTS professionals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, role TEXT, email TEXT, weekly_schedule JSONB, exceptions JSONB, tenant_id UUID REFERENCES tenants(id));
       CREATE TABLE IF NOT EXISTS sales (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), sale_id TEXT, items JSONB, total DECIMAL, payment_method TEXT, client_name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
       CREATE TABLE IF NOT EXISTS inventory_movements (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), product_id TEXT, product_name TEXT, type TEXT, quantity INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
-      IF NOT EXISTS (SELECT 1 FROM tenants WHERE subdomain = 'master') THEN
-        INSERT INTO tenants (name, subdomain, status, plan_type) VALUES ('Citaplanner Nexus', 'master', 'ACTIVE', 'ELITE');
-      END IF;
+      
+      -- Asegurar existencia del nodo master
+      INSERT INTO tenants (name, subdomain, status, plan_type) 
+      VALUES ('Citaplanner Nexus', 'master', 'ACTIVE', 'ELITE')
+      ON CONFLICT (subdomain) DO NOTHING;
     `);
-    console.log("✅ Ecosistema Nexus Online.");
+    console.log("✅ Ecosistema Nexus Online & DB Initialized.");
   } catch (e) { console.error('❌ Init Error:', e.message); }
 };
 
 app.get(/.*/, (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
-app.listen(PORT, () => console.log(`🚀 SaaS Master Engine en puerto ${PORT}`));
-initDB();
+
+initDB().then(() => {
+  app.listen(PORT, () => console.log(`🚀 SaaS Master Engine en puerto ${PORT}`));
+});
