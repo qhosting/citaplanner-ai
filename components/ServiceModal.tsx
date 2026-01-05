@@ -4,6 +4,7 @@ import { X, BriefcaseMedical, Clock, DollarSign, Tag, FileText, ImageIcon, Spark
 import { Service } from '../types';
 import { api } from '../services/api';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const { user } = useAuth();
   const [formData, setFormData] = useState<Partial<Service>>({
     name: '',
     duration: 30,
@@ -66,6 +68,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Fixed: Included tenantId in serviceToSave
     const serviceToSave: Service = {
       id: initialData?.id || (Date.now().toString(36) + Math.random().toString(36).substring(2)),
       name: formData.name || 'Nuevo Servicio',
@@ -74,7 +77,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       description: formData.description || '',
       category: formData.category || 'General',
       status: formData.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE',
-      imageUrl: formData.imageUrl || ''
+      imageUrl: formData.imageUrl || '',
+      tenantId: user?.tenantId || '',
     };
 
     onSave(serviceToSave);

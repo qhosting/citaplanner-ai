@@ -7,6 +7,8 @@ import {
 import { toast } from 'sonner';
 import { Professional, ScheduleException, ExceptionType } from '../types';
 import { api } from '../services/api';
+// Added missing useAuth import to retrieve user context
+import { useAuth } from '../context/AuthContext';
 
 const DAYS_OF_WEEK = [
   { id: 1, name: 'Lunes' },
@@ -19,6 +21,8 @@ const DAYS_OF_WEEK = [
 ];
 
 export const SchedulesPage: React.FC = () => {
+  // Added useAuth hook
+  const { user } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,6 +89,7 @@ export const SchedulesPage: React.FC = () => {
     setSaving(true);
     
     if (isCreateProModalOpen) {
+      // Added missing tenantId to satisfy Omit<Professional, 'id'> requirement
       const newPro: Omit<Professional, 'id'> = {
         name: proFormData.name || '',
         role: proFormData.role || '',
@@ -95,7 +100,8 @@ export const SchedulesPage: React.FC = () => {
           isEnabled: d.id !== 0 && d.id !== 6,
           slots: [{ start: '09:00', end: '18:00' }]
         })),
-        exceptions: []
+        exceptions: [],
+        tenantId: user?.tenantId || ''
       };
       
       const res = await api.createProfessional(newPro);

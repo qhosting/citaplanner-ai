@@ -1,12 +1,24 @@
 
+
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED'
 }
 
-export type Role = 'ADMIN' | 'PROFESSIONAL' | 'CLIENT';
+export type Role = 'ADMIN' | 'PROFESSIONAL' | 'CLIENT' | 'SUPERADMIN';
 export type TemplateId = 'citaplanner' | 'beauty' | 'dentist' | 'barber';
+
+export interface Tenant {
+  id: string;
+  name: string;
+  subdomain: string;
+  customDomain?: string;
+  cloudflareId?: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  planType: 'FREE' | 'PRO' | 'ELITE';
+  createdAt: string;
+}
 
 export interface OperatingHours {
   day: string;
@@ -49,31 +61,6 @@ export interface SocialLinks {
   whatsapp?: string;
 }
 
-// --- INFRAESTRUCTURA DE ECOSISTEMA ---
-export interface WahaConfig {
-  serverUrl: string;
-  sessionId: string;
-  apiToken: string;
-}
-
-export interface N8NConfig {
-  webhookUrl: string;
-  apiKey: string;
-}
-
-export interface OdooConfig {
-  host: string;
-  db: string;
-  username: string;
-  apiKey: string;
-}
-
-export interface AiCoreConfig {
-  model: string;
-  creativity: number;
-  tone: 'sophisticated' | 'friendly' | 'minimalist';
-}
-
 export interface LandingSettings {
   businessName: string;
   logoUrl?: string;
@@ -89,17 +76,11 @@ export interface LandingSettings {
   businessRules?: BusinessRule[];
   heroSlides?: HeroSlide[];
   stats?: LandingStat[];
-  waha?: WahaConfig;
-  n8n?: N8NConfig;
-  odoo?: OdooConfig;
-  aiCore?: AiCoreConfig;
   maintenanceMode?: boolean;
   showWhatsappButton?: boolean;
-  // Nuevos campos
   socialLinks?: SocialLinks;
   testimonials?: Testimonial[];
   gallery?: string[];
-  // SEO & GEO
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
@@ -114,6 +95,7 @@ export interface User {
   phone: string;
   email?: string;
   role: Role;
+  tenantId: string;
   relatedId?: string;
   avatar?: string;
   preferences?: NotificationPreferences;
@@ -128,6 +110,7 @@ export interface Service {
   category: string;
   status: 'ACTIVE' | 'INACTIVE';
   imageUrl?: string;
+  tenantId: string;
 }
 
 export interface Appointment {
@@ -142,17 +125,60 @@ export interface Appointment {
   serviceId?: string;
   description?: string;
   branchId?: string;
+  tenantId: string;
 }
 
-export interface Professional {
+export interface Product {
   id: string;
   name: string;
-  role: string;
-  email: string;
-  serviceIds?: string[];
-  weeklySchedule: any[];
-  exceptions: ScheduleException[];
-  birthDate?: string;
+  sku: string;
+  category: string;
+  price: number;
+  cost: number;
+  stock: number;
+  minStock: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  usage: 'RETAIL' | 'INTERNAL';
+  tenantId: string;
+  batchNumber?: string;
+  expiryDate?: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  manager: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  tenantId: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  date: string;
+  type: 'IN' | 'OUT' | 'ADJUSTMENT';
+  quantity: number;
+  reason: string;
+  user: string;
+  tenantId: string;
+}
+
+export interface NotificationPreferences {
+  whatsapp: boolean;
+  sms: boolean;
+  email: boolean;
+}
+
+export interface AIParsedAppointment {
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+  clientName?: string;
+  clientPhone?: string;
+  description?: string;
 }
 
 export interface TreatmentRecord {
@@ -169,24 +195,53 @@ export interface TreatmentRecord {
 export interface Client {
   id: string;
   name: string;
-  email: string;
   phone: string;
-  notes?: string;
+  email?: string;
   birthDate?: string;
   skinType?: string;
   allergies?: string;
   medicalConditions?: string;
-  treatmentHistory: TreatmentRecord[];
-  // Campos de Consentimiento
+  notes?: string;
   consentAccepted?: boolean;
   consentDate?: string;
-  consentType?: string; 
+  consentType?: string;
+  treatmentHistory: TreatmentRecord[];
+  tenantId: string;
 }
 
-export interface NotificationPreferences {
-  whatsapp: boolean;
-  sms: boolean;
-  email: boolean;
+export interface Professional {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  birthDate?: string;
+  serviceIds?: string[];
+  weeklySchedule: ProfessionalScheduleDay[];
+  exceptions: ScheduleException[];
+  tenantId: string;
+}
+
+export interface ProfessionalScheduleDay {
+  dayOfWeek: number;
+  isEnabled: boolean;
+  slots: ScheduleSlot[];
+}
+
+export interface ScheduleSlot {
+  start: string;
+  end: string;
+}
+
+// Added ExceptionType export to fix error in SchedulesPage.tsx
+export type ExceptionType = 'VACATION' | 'HOLIDAY' | 'UNAVAILABLE';
+
+export interface ScheduleException {
+  id: string;
+  startDate: string;
+  endDate: string;
+  // Updated type to use the exported ExceptionType
+  type: ExceptionType;
+  description?: string;
 }
 
 export type MarketingChannel = 'EMAIL' | 'WHATSAPP' | 'SMS';
@@ -212,40 +267,6 @@ export interface AutomationRule {
   templateMessage: string;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  price: number;
-  cost: number;
-  stock: number;
-  minStock: number;
-  status: 'ACTIVE' | 'INACTIVE';
-  usage: 'RETAIL' | 'INTERNAL';
-  batchNumber?: string;
-  expiryDate?: string;
-}
-
-export type ExceptionType = 'VACATION' | 'HOLIDAY' | 'UNAVAILABLE';
-
-export interface ScheduleException {
-  id: string;
-  startDate: string;
-  endDate: string;
-  type: ExceptionType;
-  description?: string;
-}
-
-export interface Branch {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  manager: string;
-  status: 'ACTIVE' | 'INACTIVE';
-}
-
 export interface CartItem {
   id: string;
   name: string;
@@ -256,34 +277,4 @@ export interface CartItem {
   sku?: string;
 }
 
-export type PaymentMethod = 'CASH' | 'SPEI';
-
-export interface Transaction {
-  id: string;
-  date: string;
-  clientName: string;
-  total: number;
-  paymentMethod: PaymentMethod;
-  items: CartItem[];
-  status: 'PAID' | 'REFUNDED';
-}
-
-export interface InventoryMovement {
-  id: string;
-  productId: string;
-  productName: string;
-  date: string;
-  type: 'IN' | 'OUT' | 'ADJUSTMENT';
-  quantity: number;
-  reason: string;
-  user: string;
-}
-
-export interface AIParsedAppointment {
-  title: string;
-  startDateTime: string;
-  endDateTime: string;
-  clientName?: string;
-  clientPhone?: string;
-  description?: string;
-}
+export type PaymentMethod = 'CASH' | 'SPEI' | 'CARD';

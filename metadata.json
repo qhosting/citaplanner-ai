@@ -1,7 +1,8 @@
 {
-  "name": "Citaplanner AI",
-  "description": "Plataforma de gestión de ultra-lujo para micropigmentación y estética avanzada, potenciada por Gemini AI.",
+  "name": "CitaPlanner SaaS Ecosystem",
+  "description": "Plataforma de gestión de ultra-lujo multi-instancia para estética avanzada, con provisión automática de subdominios y dominios personalizados.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera"
   ]
 }

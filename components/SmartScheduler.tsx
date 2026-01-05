@@ -4,6 +4,7 @@ import { Sparkles, ArrowRight, Loader2, CalendarPlus, Wand2, AlertTriangle } fro
 import { parseAppointmentRequest } from '../services/geminiService';
 import { AIParsedAppointment, Appointment, AppointmentStatus } from '../types';
 import { SOLUTION_TIMEOUT } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface SmartSchedulerProps {
   onAddAppointment: (apt: Appointment) => void;
@@ -13,6 +14,7 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +30,7 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
       ]);
 
       if (parsed) {
+        // Fixed: Included tenantId in newAppointment
         const newAppointment: Appointment = {
           id: Date.now().toString(36) + Math.random().toString(36).substring(2),
           title: parsed.title,
@@ -37,6 +40,7 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
           clientPhone: parsed.clientPhone || '',
           description: parsed.description || 'Experiencia solicitada vía Shula AI',
           status: AppointmentStatus.SCHEDULED,
+          tenantId: user?.tenantId || '',
         };
         
         try {

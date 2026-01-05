@@ -15,29 +15,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración de Multer para persistencia de activos
+// Configuración de Multer
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
 });
-
 const upload = multer({ storage: storage });
 
-const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
-
+const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_prod';
 const pool = new Pool({ 
-  connectionString: connectionString,
-  ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
-  connectionTimeoutMillis: 5000, 
-  statement_timeout: 10000 
+  connectionString,
+  ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
 app.use(cors());
@@ -45,105 +36,206 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const initDB = async () => {
-  let client;
-  try {
-    if (process.env.DATABASE_URL) {
-        client = await pool.connect();
-        await client.query('BEGIN');
-        await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
-        
-        // Infraestructura de Tablas
-        await client.query(`CREATE TABLE IF NOT EXISTS branches (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100), address TEXT, phone VARCHAR(20), manager VARCHAR(100), status VARCHAR(20) DEFAULT 'ACTIVE', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`);
-        await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100), phone VARCHAR(20) UNIQUE, email VARCHAR(100), password VARCHAR(100), role VARCHAR(20), avatar TEXT, branch_id UUID, preferences JSONB DEFAULT '{}', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`);
-        await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100), category VARCHAR(50), duration INTEGER, price DECIMAL, description TEXT, status VARCHAR(20) DEFAULT 'ACTIVE', image_url TEXT);`);
-        await client.query(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(100), sku VARCHAR(50) UNIQUE, category VARCHAR(50), price DECIMAL, cost DECIMAL, stock INTEGER, min_stock INTEGER, status VARCHAR(20) DEFAULT 'ACTIVE', usage VARCHAR(20));`);
-        await client.query(`CREATE TABLE IF NOT EXISTS appointments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), title VARCHAR(150), start_datetime TIMESTAMP, end_datetime TIMESTAMP, client_name VARCHAR(100), client_phone VARCHAR(20), status VARCHAR(20), branch_id UUID, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`);
-        await client.query(`CREATE TABLE IF NOT EXISTS settings (key VARCHAR(50) PRIMARY KEY, value JSONB DEFAULT '{}');`);
-        
-        // Seed Inicial
-        const checkSettings = await client.query("SELECT key FROM settings WHERE key = 'landing'");
-        if (checkSettings.rows.length === 0) {
-          const defaultLanding = { businessName: 'Aurum Beauty Studio', primaryColor: '#C5A028', showWhatsappButton: true, contactPhone: '+52 55 7142 7321', slogan: 'Redefiniendo el Lujo', aboutText: 'Santuario de belleza elite.' };
-          await client.query("INSERT INTO settings (key, value) VALUES ('landing', $1)", [defaultLanding]);
-        }
+// --- MIDDLEWARE DE TENANT (EL CORAZÓN DEL SAAS) ---
+const tenantMiddleware = async (req, res, next) => {
+  const host = req.headers.host; // ej: shulastudio.citaplanner.com o beauty.com
+  let tenant = null;
 
-        await client.query('COMMIT');
-        console.log("✅ Aurum Protocol: Database Schema Synchronized");
+  try {
+    // Identificar si es el dominio principal o desarrollo local
+    if (host === 'citaplanner.com' || host.includes('localhost') || host === 'www.citaplanner.com') {
+      const result = await pool.query("SELECT * FROM tenants WHERE subdomain = 'master' LIMIT 1");
+      tenant = result.rows[0];
+    } else {
+      // Extraer subdominio si existe (ej: shulastudio.citaplanner.com -> shulastudio)
+      const parts = host.split('.');
+      const subdomain = parts.length > 2 ? parts[0] : null;
+      
+      const result = await pool.query(
+        "SELECT * FROM tenants WHERE subdomain = $1 OR custom_domain = $2 LIMIT 1",
+        [subdomain, host]
+      );
+      tenant = result.rows[0];
     }
+
+    if (!tenant) return res.status(404).json({ error: "Nodo CitaPlanner no encontrado para este dominio." });
+    
+    req.tenant = tenant;
+    next();
   } catch (e) {
-    if (client) await client.query('ROLLBACK');
-    console.error('❌ DB Init Error:', e.message);
-  } finally {
-    if (client) client.release();
+    console.error("Tenant Identification Error:", e);
+    res.status(500).json({ error: "Falla en el protocolo de identificación de instancia." });
   }
 };
 
-// --- API ENDPOINTS ---
+// --- CLOUDFLARE DNS PROVISIONING ---
+const createCloudflareSubdomain = async (subdomain) => {
+  const ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
+  const API_KEY = process.env.CLOUDFLARE_API_KEY;
+  const EMAIL = process.env.CLOUDFLARE_EMAIL;
 
-// Configuración Landing
-app.get('/api/settings/landing', async (req, res) => {
+  if (!ZONE_ID || !API_KEY) {
+      console.warn("Cloudflare API no configurada. Saltando provisionamiento DNS.");
+      return 'manual_id';
+  }
+
   try {
-    const result = await pool.query("SELECT value FROM settings WHERE key = 'landing'");
-    res.json(result.rows[0]?.value || {});
+    const response = await axios.post(
+      `https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records`,
+      {
+        type: 'CNAME',
+        name: subdomain,
+        content: 'citaplanner.com', // CNAME al dominio principal que maneja el wildcard
+        ttl: 1,
+        proxied: true
+      },
+      {
+        headers: {
+          'X-Auth-Email': EMAIL,
+          'X-Auth-Key': API_KEY,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data.result.id;
+  } catch (e) {
+    console.error("Cloudflare Error:", e.response?.data || e.message);
+    throw new Error("Error al crear registro DNS en Cloudflare");
+  }
+};
+
+// --- DATABASE SYNC & MULTI-TENANT INIT ---
+const initDB = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100),
+        subdomain VARCHAR(50) UNIQUE,
+        custom_domain VARCHAR(100) UNIQUE,
+        cloudflare_id VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'ACTIVE',
+        plan_type VARCHAR(20) DEFAULT 'PRO',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    const tables = ['users', 'services', 'products', 'appointments', 'branches', 'settings', 'clients'];
+    for (const table of tables) {
+      await pool.query(`
+        ALTER TABLE ${table} 
+        ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+      `);
+    }
+
+    // Seed Master Tenant
+    const master = await pool.query("SELECT id FROM tenants WHERE subdomain = 'master'");
+    if (master.rows.length === 0) {
+      await pool.query("INSERT INTO tenants (name, subdomain) VALUES ('CitaPlanner Global', 'master')");
+    }
+    
+    console.log("✅ SaaS Core: Arquitectura Multi-tenant Sincronizada");
+  } catch (e) {
+    console.error('❌ SaaS Init Error:', e.message);
+  }
+};
+
+// --- TENANT AWARE ENDPOINTS ---
+
+app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT value FROM settings WHERE key = 'landing' AND tenant_id = $1", 
+      [req.tenant.id]
+    );
+    res.json(result.rows[0]?.value || { businessName: req.tenant.name, primaryColor: '#C5A028' });
   } catch (e) { res.status(500).json({ error: "Error de configuración" }); }
 });
 
-app.put('/api/settings/landing', async (req, res) => {
+app.get('/api/services', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT * FROM services WHERE tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows);
+});
+
+app.get('/api/appointments', tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT * FROM appointments WHERE tenant_id = $1 ORDER BY start_datetime ASC", [req.tenant.id]);
+  res.json(result.rows);
+});
+
+app.post('/api/appointments', tenantMiddleware, async (req, res) => {
+  const { title, startDateTime, endDateTime, clientName, clientPhone, description, professionalId, serviceId } = req.body;
+  const result = await pool.query(
+    "INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, description, professional_id, service_id, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+    [title, startDateTime, endDateTime, clientName, clientPhone, description, professionalId, serviceId, req.tenant.id]
+  );
+  res.json(result.rows[0]);
+});
+
+// --- PROVISIONAMIENTO SaaS (SUPERADMIN) ---
+app.post('/api/saas/register', async (req, res) => {
+  const { name, subdomain, adminPhone, adminPassword } = req.body;
+  
+  if (!subdomain || subdomain === 'www' || subdomain === 'master') {
+    return res.status(400).json({ error: "Subdominio reservado o inválido." });
+  }
+
   try {
-    await pool.query("INSERT INTO settings (key, value) VALUES ('landing', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [req.body]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: "Error al guardar" }); }
+    await pool.query('BEGIN');
+    
+    // 1. Provisionar DNS en Cloudflare
+    const cfId = await createCloudflareSubdomain(subdomain);
+    
+    // 2. Crear Tenant
+    const tenantRes = await pool.query(
+      "INSERT INTO tenants (name, subdomain, cloudflare_id) VALUES ($1, $2, $3) RETURNING id",
+      [name, subdomain, cfId]
+    );
+    const tenantId = tenantRes.rows[0].id;
+
+    // 3. Crear Usuario Admin Inicial
+    await pool.query(
+      "INSERT INTO users (name, phone, password, role, tenant_id) VALUES ($1, $2, $3, 'ADMIN', $4)",
+      [name + ' Admin', adminPhone, adminPassword, tenantId]
+    );
+
+    // 4. Configuración Base del Studio
+    const baseLanding = {
+        businessName: name,
+        primaryColor: '#C5A028',
+        slogan: 'Bienvenido a CitaPlanner',
+        aboutText: 'Tu nuevo estudio gestionado con inteligencia artificial.'
+    };
+    await pool.query(
+        "INSERT INTO settings (key, value, tenant_id) VALUES ('landing', $1, $2)",
+        [baseLanding, tenantId]
+    );
+
+    await pool.query('COMMIT');
+    res.json({ success: true, message: `Nodo ${subdomain}.citaplanner.com provisionado.` });
+  } catch (e) {
+    await pool.query('ROLLBACK');
+    res.status(500).json({ error: "Falla en provisionamiento: " + e.message });
+  }
 });
 
-// Servicios (Requerido por Landing)
-app.get('/api/services', async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM services WHERE status = 'ACTIVE'");
-    res.json(result.rows);
-  } catch (e) { res.json([]); }
+// Auth por Tenant (Asegura que un usuario solo entre a su instancia)
+app.post('/api/login', tenantMiddleware, async (req, res) => {
+  const { phone, password } = req.body;
+  const result = await pool.query(
+    "SELECT * FROM users WHERE phone = $1 AND password = $2 AND tenant_id = $3",
+    [phone, password, req.tenant.id]
+  );
+  
+  if (result.rows.length > 0) {
+    res.json({ success: true, user: result.rows[0] });
+  } else {
+    res.status(401).json({ success: false, error: "Credenciales inválidas en este nodo." });
+  }
 });
 
-// Citas (Requerido por Dashboard)
-app.get('/api/appointments', async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM appointments ORDER BY start_datetime ASC");
-    res.json(result.rows);
-  } catch (e) { res.json([]); }
-});
-
-// Estadísticas (Requerido por Analytics e IA)
-app.get('/api/analytics/stats', async (req, res) => {
-  try {
-    const result = { revenueThisMonth: 125000, appointmentsCompleted: 48, newClientsThisMonth: 12, occupationRate: 85 };
-    res.json(result);
-  } catch (e) { res.json({ revenueThisMonth: 0, appointmentsCompleted: 0 }); }
-});
-
-// Login
-app.post('/api/login', async (req, res) => {
-    const { phone, password } = req.body;
-    if (phone === 'dev' && password === 'dev') {
-        return res.json({ success: true, user: { id: 'dev', name: 'Dev Admin', phone: 'dev', role: 'ADMIN' } });
-    }
-    try {
-        const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2", [phone, password]);
-        if (result.rows.length > 0) res.json({ success: true, user: result.rows[0] });
-        else res.status(401).json({ success: false, message: 'Credenciales inválidas' });
-    } catch (e) { res.status(500).json({ error: "Error de servidor" }); }
-});
-
-// Subida de Archivos
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false });
-  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  res.json({ success: true, url: fileUrl });
-});
-
-// --- SPA FALLBACK (EXPRESS 5 COMPATIBLE) ---
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`🚀 AURUM NODE ACTIVE | Port: ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 CitaPlanner SaaS Engine | Puerto: ${PORT}`));
 initDB();

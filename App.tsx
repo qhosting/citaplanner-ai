@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
   Sparkles, ShoppingBag, Megaphone, Settings, 
-  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2
+  ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2,
+  ShieldCheck, Activity, Cpu, Cloud
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -142,7 +143,7 @@ const Navbar = () => {
                 </div>
               </div>
               <Link to="/profile" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#333] to-[#111] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 hover:border-[#D4AF37] transition-all overflow-hidden shadow-xl">
-                {user.avatar || user.name.charAt(0)}
+                {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.charAt(0)}
               </Link>
               <button onClick={logout} className="p-2.5 text-zinc-500 hover:text-[#D4AF37] hover:bg-white/5 rounded-xl transition-all">
                 <LogOut size={18} />
@@ -162,14 +163,41 @@ const InternalFooter = () => {
   if (location.pathname === '/' || location.pathname === '/login') return null;
 
   return (
-    <footer className="w-full bg-[#050505] border-t border-white/5 py-12 px-10">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-zinc-600">
-        <p>© 2026 CitaPlanner Global Infrastructure • Secure Node</p>
-        <p className="flex items-center gap-8">
-          <span>Powered by <a href="https://aurumcapital.mx" target="_blank" className="text-zinc-500 hover:text-[#D4AF37] transition-colors">Aurum Capital</a></span>
-          <span className="w-1 h-1 rounded-full bg-white/10" />
-          <span>Infrastructure by <a href="https://qhosting.com.mx" target="_blank" className="text-zinc-500 hover:text-white transition-colors">QHosting</a></span>
+    <footer className="w-full bg-[#050505] border-t border-white/5 py-8 px-10">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-10">
+        {/* Left: Infrastructure Info */}
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-3">
+            <Cpu size={16} className="text-zinc-700" />
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">Core Node v4.6.0</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Cloud size={16} className="text-zinc-700" />
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">SaaS Sync Active</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <ShieldCheck size={16} className="text-emerald-900" />
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-emerald-900">Quantum Secured</span>
+          </div>
+        </div>
+
+        {/* Center: Legal/Copyright */}
+        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-700 text-center">
+          © 2026 CitaPlanner Global Infrastructure • Product of Aurum Capital
         </p>
+
+        {/* Right: Powered by with logos/icons style */}
+        <div className="flex items-center gap-12 text-[8px] font-black uppercase tracking-[0.3em]">
+          <a href="https://aurumcapital.mx" target="_blank" className="flex items-center gap-2 text-zinc-600 hover:text-[#D4AF37] transition-all group">
+            <span>Powered by</span>
+            <span className="text-zinc-400 group-hover:text-white">Aurum Capital</span>
+          </a>
+          <div className="w-1 h-1 rounded-full bg-white/10" />
+          <a href="https://qhosting.com.mx" target="_blank" className="flex items-center gap-2 text-zinc-600 hover:text-white transition-all group">
+             <span>Infra</span>
+             <span className="text-zinc-400 group-hover:text-white">QHosting</span>
+          </a>
+        </div>
       </div>
     </footer>
   );

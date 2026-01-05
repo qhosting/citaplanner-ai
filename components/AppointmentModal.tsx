@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { X, Calendar, Clock, User, Phone as PhoneIcon, Info } from 'lucide-react';
 import { Appointment, AppointmentStatus } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 const appointmentSchema = z.object({
   title: z.string().min(3, "El título es demasiado corto").max(100),
@@ -23,6 +25,7 @@ interface AppointmentModalProps {
 }
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, onSave }) => {
+  const { user } = useAuth();
   const { 
     register, 
     handleSubmit, 
@@ -42,6 +45,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
     const start = new Date(`${data.date}T${data.time}`);
     const end = new Date(start.getTime() + data.duration * 60000);
 
+    // Fixed: Included tenantId in newAppointment
     const newAppointment: Appointment = {
       id: Date.now().toString(36) + Math.random().toString(36).substring(2),
       title: data.title,
@@ -51,6 +55,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
       endDateTime: end.toISOString(),
       status: AppointmentStatus.SCHEDULED,
       description: 'Agendado manualmente',
+      tenantId: user?.tenantId || '',
     };
 
     onSave(newAppointment);

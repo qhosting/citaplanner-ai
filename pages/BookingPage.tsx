@@ -130,6 +130,7 @@ export const BookingPage: React.FC = () => {
 
     const endDateTime = new Date(startDateTime.getTime() + selectedService.duration * 60000);
 
+    // Fixed: Included tenantId in Omit<Appointment, 'id'>
     const newAppointment: Omit<Appointment, 'id'> = {
       title: selectedService.name,
       startDateTime: startDateTime.toISOString(),
@@ -139,7 +140,8 @@ export const BookingPage: React.FC = () => {
       description: clientDetails.notes || 'Reserva Online Web',
       status: AppointmentStatus.SCHEDULED,
       professionalId: selectedPro.id,
-      serviceId: selectedService.id
+      serviceId: selectedService.id,
+      tenantId: '' // Server handles identification via host
     };
 
     const result = await api.createAppointment(newAppointment);
@@ -469,7 +471,6 @@ export const BookingPage: React.FC = () => {
     </div>
   );
 
-  // Fix: Removed extra closing brace that was prematurely closing the BookingPage component
   const renderStep5 = () => (
     <div className="animate-fade-in-up text-center py-24 max-w-2xl mx-auto">
       <div className="w-32 h-32 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-10 animate-bounce border-2 border-emerald-100 shadow-2xl">
