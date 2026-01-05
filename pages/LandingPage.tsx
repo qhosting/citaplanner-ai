@@ -75,16 +75,23 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const [s, sv] = await Promise.all([
+        const [s, sv] = await Promise.allSettled([
           api.getLandingSettings(),
           api.getServices()
         ]);
-        if (s) setSettings({ ...DEFAULT_SETTINGS, ...s });
-        const activeServices = sv.filter(svItem => svItem.status === 'ACTIVE').slice(0, 3);
-        setServices(activeServices.length > 0 ? activeServices : sv.slice(0, 3));
+        
+        if (s.status === 'fulfilled' && s.value) {
+          setSettings({ ...DEFAULT_SETTINGS, ...s.value });
+        }
+        
+        if (sv.status === 'fulfilled' && sv.value) {
+          const activeServices = sv.value.filter(svItem => svItem.status === 'ACTIVE').slice(0, 3);
+          setServices(activeServices.length > 0 ? activeServices : sv.value.slice(0, 3));
+        }
       } catch (error) {
         console.error("Error loading landing:", error);
       } finally {
+        // Garantizamos que el loader desaparezca independientemente del éxito de la API
         setLoading(false);
       }
     };
@@ -97,7 +104,14 @@ export const LandingPage: React.FC = () => {
 
   const whatsappLink = settings.contactPhone ? `https://wa.me/${settings.contactPhone.replace(/\D/g, '')}` : '#';
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#C5A028]" size={40} /></div>;
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-black">
+        <Loader2 className="animate-spin text-[#D4AF37] mb-6" size={40} />
+        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">Iniciando Protocolo Aurum...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050505] font-inter selection:bg-[#C5A028] selection:text-white overflow-x-hidden scroll-smooth">
@@ -111,17 +125,14 @@ export const LandingPage: React.FC = () => {
           className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group"
         >
           <div className="relative">
-            {/* Animación de pulso áurico */}
             <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-ping opacity-25 scale-125" />
             <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-pulse opacity-10 scale-150" />
             
-            {/* Botón Principal */}
-            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 hover:shadow-[0_35px_80px_-20px_rgba(197,160,40,0.7)] transition-all duration-500 active:scale-95">
+            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 transition-all duration-500">
                <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
                <div className="absolute -right-1 -top-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-black" />
             </div>
 
-            {/* Tooltip Sophistiqué */}
             <div className="absolute right-24 md:right-28 top-1/2 -translate-y-1/2 bg-black/90 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-[2rem] whitespace-nowrap opacity-0 group-hover:opacity-100 translate-x-10 group-hover:translate-x-0 transition-all duration-500 pointer-events-none shadow-2xl">
                <div className="flex items-center gap-4">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -156,9 +167,9 @@ export const LandingPage: React.FC = () => {
             <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
             <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
               <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-                <span className="text-[11px] font-black uppercase tracking-[1em] text-[#C5A028] mb-8 block drop-shadow-lg">Exclusividad • Arte • Precisión</span>
+                <span className="text-[11px] font-black uppercase tracking-[1em] text-[#C5A028] mb-8 block">Exclusividad • Arte • Precisión</span>
                 <h1 className="text-8xl md:text-[140px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
-                  {slide.title} <span className="italic font-light text-[#C5A028] drop-shadow-md">{slide.subtitle}</span>
+                  {slide.title} <span className="italic font-light text-[#C5A028]">{slide.subtitle}</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed mb-14">{slide.text}</p>
                 <Link to="/book" className="gold-btn px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block">Reservar Experiencia</Link>
@@ -166,34 +177,7 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
         ))}
-        {slides.length > 1 && (
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex gap-4">
-             {slides.map((_, i) => (
-               <button key={i} onClick={() => setCurrentSlide(i)} className={`h-1 rounded-full transition-all duration-700 ${i === currentSlide ? 'w-16 bg-[#C5A028]' : 'w-8 bg-white/20'}`} />
-             ))}
-          </div>
-        )}
       </section>
-
-      {/* Luxury Stats Bar */}
-      <div className="bg-[#0a0a0a] py-16 border-b border-white/5 relative z-30">
-        <div className="max-w-7xl mx-auto px-8 flex flex-wrap justify-center md:justify-between items-center gap-16">
-           {(settings.stats || []).length > 0 ? (
-             settings.stats?.map((s, i) => (
-               <div key={i} className="text-center md:text-left">
-                  <p className="text-3xl font-playfair font-black text-white">{s.value}</p>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mt-1">{s.label}</p>
-               </div>
-             ))
-           ) : (
-             <>
-               <div className="text-center md:text-left"><p className="text-3xl font-playfair font-black text-white">12k+</p><p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mt-1">Rituales Exitosos</p></div>
-               <div className="text-center md:text-left"><p className="text-3xl font-playfair font-black text-white">100%</p><p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mt-1">Certificación Médica</p></div>
-               <div className="text-center md:text-left"><p className="text-3xl font-playfair font-black text-white">24/7</p><p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mt-1">Concierge Elite</p></div>
-             </>
-           )}
-        </div>
-      </div>
 
       {/* Services Section */}
       <section id="services" className="py-48 bg-[#050505] relative overflow-hidden">
@@ -209,7 +193,6 @@ export const LandingPage: React.FC = () => {
                 <div key={i} className="group bg-[#0a0a0a] rounded-[4.5rem] border border-white/5 hover:border-[#C5A028]/40 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl">
                    <div className="h-[300px] overflow-hidden relative">
                       <img src={s.imageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9'} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
-                      <div className="absolute top-8 right-8 bg-black/60 backdrop-blur-md px-5 py-2 rounded-full border border-white/10"><span className="text-white font-black text-xl tracking-tighter">${s.price}</span></div>
                    </div>
                    <div className="p-12">
                       <span className="text-[9px] font-black text-[#C5A028] uppercase tracking-[0.4em] mb-6 block">{s.category}</span>
@@ -225,90 +208,24 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about" className="py-56 bg-[#0a0a0a] relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
-           <div className="relative">
-              <div className="aspect-[4/5] bg-zinc-800 rounded-[6rem] overflow-hidden shadow-2xl border border-white/5 group">
-                 <img src="https://images.unsplash.com/photo-1596178065887-1198b6148b2b" className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-[5000ms]" alt="Studio" />
-                 <div className="absolute bottom-20 left-20"><span className="text-[11px] font-black uppercase tracking-[0.6em] text-[#C5A028] mb-6 block">Atmósfera Elite</span><h4 className="text-5xl font-playfair font-bold text-white leading-tight">Privacidad y Resultados <br/> de Clase Mundial.</h4></div>
-              </div>
-           </div>
-           <div className="text-white relative z-10">
-              <span className="text-[11px] font-black uppercase tracking-[0.8em] text-[#C5A028] mb-12 block opacity-80">Nuestra Filosofía</span>
-              <h2 className="text-7xl md:text-[90px] font-playfair font-black tracking-tighter mb-16 leading-[0.9]">
-                {settings.slogan ? (
-                  <>
-                    {settings.slogan.split(' ').slice(0, Math.ceil(settings.slogan.split(' ').length / 2)).join(' ')} <br/>
-                    <span className="italic font-light text-[#C5A028]">{settings.slogan.split(' ').slice(Math.ceil(settings.slogan.split(' ').length / 2)).join(' ')}</span>
-                  </>
-                ) : (
-                  <>Donde el <span className="italic font-light text-[#C5A028]">Arte</span> <br/> encuentra la <span className="text-[#C5A028]">Perfección.</span></>
-                )}
-              </h2>
-              <p className="text-2xl text-zinc-400 font-light leading-relaxed mb-20">{settings.aboutText}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-16">
-                 <div><p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-3">Master Node</p><p className="font-bold text-white text-xl">{settings.address}</p></div>
-                 <div><p className="text-[11px] font-black text-zinc-500 uppercase tracking-widest mb-3">Concierge 24/7</p><p className="font-bold text-white text-xl">{settings.contactPhone}</p></div>
-              </div>
-           </div>
-        </div>
-      </section>
-
       {/* Footer */}
-      <footer className="bg-[#050505] pt-48 pb-20 border-t border-white/5 relative overflow-hidden">
-         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-px bg-gradient-to-r from-transparent via-[#C5A028]/40 to-transparent" />
-         <div className="max-w-7xl mx-auto px-8 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-20 mb-32">
+      <footer className="bg-[#050505] pt-48 pb-20 border-t border-white/5 relative">
+         <div className="max-w-7xl mx-auto px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-20 mb-32">
                <div className="space-y-10">
                   <LogoCitaplanner size={32} color={settings.primaryColor} customUrl={settings.logoUrl} />
-                  <p className="text-zinc-500 text-xs font-medium leading-relaxed max-w-xs uppercase tracking-wider">
-                     {settings.businessName} es un nodo de excelencia estética diseñado bajo los más altos estándares de tecnología internacional.
+                  <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider">
+                     {settings.businessName} es un nodo de excelencia estética bajo estándares internacionales.
                   </p>
                </div>
                <div className="space-y-10">
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">El Ritual</h4>
-                  <ul className="space-y-6">
-                     <li><a href="#services" className="text-zinc-500 hover:text-[#C5A028] text-[10px] font-black uppercase tracking-[0.2em] transition-all">Servicios</a></li>
-                     <li><a href="#about" className="text-zinc-500 hover:text-[#C5A028] text-[10px] font-black uppercase tracking-[0.2em] transition-all">Santuario</a></li>
-                     <li><Link to="/login" className="text-zinc-500 hover:text-[#C5A028] text-[10px] font-black uppercase tracking-[0.2em] transition-all">Staff</Link></li>
-                     <li><Link to="/book" className="text-zinc-500 hover:text-[#C5A028] text-[10px] font-black uppercase tracking-[0.2em] transition-all">Agendar</Link></li>
-                  </ul>
-               </div>
-               <div className="space-y-10">
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Contacto Directo</h4>
-                  <div className="space-y-8">
-                     <div className="flex gap-4"><MapPin size={16} className="text-[#C5A028] shrink-0" /><p className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider leading-relaxed">{settings.address}</p></div>
-                     <div className="flex gap-4"><Phone size={16} className="text-[#C5A028] shrink-0" /><p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{settings.contactPhone}</p></div>
-                     <div className="flex gap-4"><Mail size={16} className="text-[#C5A028] shrink-0" /><p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">concierge@aurum.mx</p></div>
-                  </div>
-               </div>
-               <div className="space-y-10">
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Canales Elite</h4>
-                  <div className="flex flex-wrap gap-5">
-                     {settings.socialLinks?.instagram && (
-                        <a href={settings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all"><Instagram size={20} /></a>
-                     )}
-                     {settings.socialLinks?.facebook && (
-                        <a href={settings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all"><Facebook size={20} /></a>
-                     )}
-                     <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-white transition-all"><MessageCircle size={20} /></a>
-                  </div>
+                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Contacto</h4>
+                  <p className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{settings.contactPhone}</p>
                </div>
             </div>
-            <div className="pt-20 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
-               <div className="flex items-center gap-4">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_15px_#10b981] animate-pulse" />
-                  <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.5em]">Secure Node CDMX-NORTH-01 • Aurum Shield Active</p>
-               </div>
-               <div className="flex items-center gap-10">
-                  <p className="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.6em]">© 2026 {settings.businessName}</p>
-                  <div className="h-4 w-px bg-white/5" />
-                  <a href="https://aurumcapital.mx" target="_blank" className="flex flex-col items-end group">
-                     <span className="text-[7px] font-bold text-zinc-800 uppercase tracking-[0.4em] mb-1">Powered by</span>
-                     <span className="text-[9px] font-black text-zinc-500 group-hover:text-[#C5A028] transition-colors tracking-widest uppercase">Aurum Capital Ecosystem</span>
-                  </a>
-               </div>
+            <div className="pt-20 border-t border-white/5 text-center">
+               <p className="text-[9px] font-black text-zinc-600 uppercase tracking-[0.5em]">Secure Node • Aurum Shield Active • © 2026 {settings.businessName}</p>
             </div>
          </div>
       </footer>
