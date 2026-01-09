@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, Banknote, 
-  Receipt, ScanLine, Tag, X, Printer, Package, BriefcaseMedical, CheckCircle2, Loader2 
+  Receipt, ScanLine, Tag, X, Printer, Package, BriefcaseMedical, CheckCircle2, Loader2, Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product, Service, CartItem, PaymentMethod } from '../types';
@@ -32,6 +32,7 @@ export const POSPage: React.FC = () => {
   
   const [lastSale, setLastSale] = useState<{id: string, date: string, items: CartItem[], total: number, paymentMethod: PaymentMethod, change: number, clientName?: string} | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredItems = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -94,10 +95,6 @@ export const POSPage: React.FC = () => {
     }));
   };
 
-  const removeItem = (id: string) => {
-    setCart(prev => prev.filter(i => i.id !== id));
-  };
-
   const updateDiscount = (id: string, discount: number) => {
     setCart(prev => prev.map(i => i.id === id ? { ...i, discount: Math.min(100, Math.max(0, discount)) } : i));
   };
@@ -123,10 +120,14 @@ export const POSPage: React.FC = () => {
 
   const processPayment = async () => {
     const tendered = Number(amountTendered) || 0;
+    
+    // Validación solo para efectivo
     if (paymentMethod === 'CASH' && tendered < total) {
       toast.error("Monto insuficiente para liquidar ticket.");
       return;
     }
+
+    setIsProcessing(true);
 
     const saleData = {
       items: cart,
@@ -138,10 +139,11 @@ export const POSPage: React.FC = () => {
     };
 
     const result = await api.processSale(saleData);
+    setIsProcessing(false);
 
     if (result.success) {
       setLastSale({
-        id: result.saleId || 'AUM-' + Date.now().toString(36).toUpperCase(),
+        id: result.saleId || 'POS-' + Date.now().toString(36).toUpperCase(),
         date: result.date || new Date().toISOString(),
         items: [...cart],
         total,
@@ -154,9 +156,9 @@ export const POSPage: React.FC = () => {
       setIsPaymentModalOpen(false);
       setIsReceiptModalOpen(true);
       setClientName('');
-      toast.success("Transacción sincronizada en el Libro Maestro.");
+      toast.success("Venta registrada exitosamente.");
     } else {
-      toast.error("Error al procesar la venta.");
+      toast.error("Error al registrar la venta en base de datos.");
     }
   };
 
@@ -167,6 +169,7 @@ export const POSPage: React.FC = () => {
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-[#050505]">
       <div className="flex-1 flex flex-col p-6 pr-3">
+        {/* ... (Search and Filter Logic) ... */}
         <div className="glass-card p-6 rounded-[2.5rem] border-white/5 mb-6">
           <div className="relative mb-6">
              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
@@ -213,6 +216,7 @@ export const POSPage: React.FC = () => {
       </div>
 
       <div className="w-full max-w-md bg-[#0a0a0a] border-l border-white/5 flex flex-col h-full shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+        {/* ... (Cart Logic remains same) ... */}
         <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/40">
           <h2 className="font-black text-[10px] text-white uppercase tracking-[0.4em] flex items-center gap-3"><ShoppingCart size={18} className="text-[#D4AF37]"/> Ticket de Operación</h2>
           <button onClick={() => setCart([])} disabled={cart.length === 0} className="text-slate-700 hover:text-red-500 disabled:opacity-30 transition-colors" title="Abortar Ticket"><Trash2 size={18} /></button>
@@ -258,37 +262,47 @@ export const POSPage: React.FC = () => {
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
           <div className="glass-card rounded-[3.5rem] shadow-2xl max-w-md w-full overflow-hidden animate-scale-in border-white/10">
-             <div className="p-10 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-black text-center"><p className="text-[10px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Sincronización de Fondos</p><p className="text-6xl font-black tracking-tighter">${total.toFixed(2)}</p></div>
+             <div className="p-10 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-black text-center"><p className="text-[10px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Cobro en Mostrador</p><p className="text-6xl font-black tracking-tighter">${total.toFixed(2)}</p></div>
              <div className="p-10 space-y-8">
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Identidad del Cliente</label>
                   <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Ej: Cliente Mostrador VIP" className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold outline-none focus:border-[#D4AF37]" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <button onClick={() => setPaymentMethod('CASH')} className={`p-6 rounded-[2.5rem] border-2 flex flex-col items-center gap-3 transition-all ${paymentMethod === 'CASH' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:border-white/10'}`}><Banknote size={28} /><span className="text-[10px] font-black uppercase tracking-widest">Efectivo</span></button>
-                   <button onClick={() => setPaymentMethod('SPEI')} className={`p-6 rounded-[2.5rem] border-2 flex flex-col items-center gap-3 transition-all ${paymentMethod === 'SPEI' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:border-white/10'}`}><ScanLine size={28} /><span className="text-[10px] font-black uppercase tracking-widest">Transferencia</span></button>
+                
+                <div className="grid grid-cols-3 gap-3">
+                   <button onClick={() => setPaymentMethod('CASH')} className={`p-4 rounded-[2rem] border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'CASH' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:border-white/10'}`}><Banknote size={20} /><span className="text-[8px] font-black uppercase tracking-widest">Efectivo</span></button>
+                   <button onClick={() => setPaymentMethod('SPEI')} className={`p-4 rounded-[2rem] border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'SPEI' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:border-white/10'}`}><Smartphone size={20} /><span className="text-[8px] font-black uppercase tracking-widest">SPEI</span></button>
+                   <button onClick={() => setPaymentMethod('CARD')} className={`p-4 rounded-[2rem] border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'CARD' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:border-white/10'}`}><CreditCard size={20} /><span className="text-[8px] font-black uppercase tracking-widest">Terminal</span></button>
                 </div>
+                
                 {paymentMethod === 'CASH' && (
                   <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Monto Recibido</label>
                      <div className="relative"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-[#D4AF37] text-2xl font-black">$</span><input type="number" autoFocus className="w-full pl-12 pr-6 py-4 text-3xl font-black bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-emerald-500" value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} /></div>
-                     <div className="mt-4 flex justify-between text-[10px] font-black uppercase tracking-widest"><span className="text-slate-500">Cambio Red:</span><span className={`text-sm ${Number(amountTendered) - total < 0 ? 'text-red-500' : 'text-emerald-500'}`}>${Math.max(0, Number(amountTendered) - total).toFixed(2)}</span></div>
+                     <div className="mt-4 flex justify-between text-[10px] font-black uppercase tracking-widest"><span className="text-slate-500">Cambio:</span><span className={`text-sm ${Number(amountTendered) - total < 0 ? 'text-red-500' : 'text-emerald-500'}`}>${Math.max(0, Number(amountTendered) - total).toFixed(2)}</span></div>
                   </div>
                 )}
              </div>
-             <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end gap-6"><button onClick={() => setIsPaymentModalOpen(false)} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Abortar</button><button onClick={processPayment} disabled={paymentMethod === 'CASH' && (Number(amountTendered) < total)} className="gold-btn px-10 py-4 rounded-2xl text-black font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 disabled:opacity-30"><CheckCircle2 size={16} /> Confirmar Venta</button></div>
+             
+             <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end gap-6">
+                <button onClick={() => setIsPaymentModalOpen(false)} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Abortar</button>
+                <button onClick={processPayment} disabled={(paymentMethod === 'CASH' && (Number(amountTendered) < total)) || isProcessing} className="gold-btn px-10 py-4 rounded-2xl text-black font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 disabled:opacity-30">
+                  {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} 
+                  Confirmar Venta
+                </button>
+             </div>
           </div>
         </div>
       )}
 
-      {/* Recibo Modal (Visualmente Master) */}
+      {/* Recibo Modal */}
       {isReceiptModalOpen && lastSale && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[300] flex items-center justify-center p-6">
            <div className="bg-white text-black p-10 rounded-[1rem] shadow-2xl max-w-sm w-full font-mono text-xs uppercase animate-entrance">
               <div className="text-center mb-8 border-b-2 border-dashed border-black pb-8">
-                 <h2 className="text-xl font-black tracking-tighter mb-2">CITAPLANNER MASTER</h2>
-                 <p className="font-bold tracking-widest">Aurum Network Node 01</p>
-                 <p className="text-[8px] opacity-60">Polanco, CDMX • {new Date(lastSale.date).toLocaleString()}</p>
+                 <h2 className="text-xl font-black tracking-tighter mb-2">CITAPLANNER</h2>
+                 <p className="font-bold tracking-widest">Recibo de Venta</p>
+                 <p className="text-[8px] opacity-60">ID: {lastSale.id} • {new Date(lastSale.date).toLocaleString()}</p>
               </div>
               <div className="space-y-4 mb-8">
                  {lastSale.items.map((it, idx) => (
@@ -301,7 +315,7 @@ export const POSPage: React.FC = () => {
                  {lastSale.paymentMethod === 'CASH' && <div className="flex justify-between opacity-60"><span>CAMBIO</span><span>${lastSale.change.toFixed(2)}</span></div>}
               </div>
               <div className="mt-10 text-center border-t border-black/10 pt-10">
-                 <p className="font-black tracking-widest text-[9px] mb-4">GRACIAS POR SU PREFERENCIA ELITE</p>
+                 <p className="font-black tracking-widest text-[9px] mb-4">GRACIAS POR SU PREFERENCIA</p>
                  <div className="w-32 h-1 bg-black mx-auto mb-10" />
                  <button onClick={() => setIsReceiptModalOpen(false)} className="w-full bg-black text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3"><Printer size={16} /> Cerrar & Imprimir</button>
               </div>

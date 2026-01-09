@@ -4,7 +4,7 @@ import {
   Settings, Save, Globe, Zap, Building2, Loader2, 
   ImageIcon, Palette, Layout, Type as TypeIcon, Phone, 
   MapPin, Clock, ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Cpu, Cloud, Plus, Trash2, ArrowUpRight, ShieldAlert,
-  Upload, Wand2, MessageCircle, Instagram, Facebook, Search, Navigation, Target, BarChart
+  Upload, Wand2, MessageCircle, Instagram, Facebook, Search, Navigation, Target, BarChart, Link as LinkIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -21,6 +21,9 @@ export const SettingsPage: React.FC = () => {
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   
   const [landingSettings, setLandingSettings] = useState<LandingSettings | null>(null);
+  const [newCustomDomain, setNewCustomDomain] = useState('');
+  const [isAddingDomain, setIsAddingDomain] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const currentUploadTarget = useRef<number | null>(null);
@@ -51,6 +54,32 @@ export const SettingsPage: React.FC = () => {
     setSaving(false);
     if (success) toast.success("Infraestructura del sistema sincronizada correctamente.");
     else toast.error("Error al guardar cambios en el servidor.");
+  };
+
+  const handleAddDomain = async () => {
+    if (!newCustomDomain) return;
+    setIsAddingDomain(true);
+    const success = await api.addCustomDomain(newCustomDomain);
+    setIsAddingDomain(false);
+    if (success) {
+      setLandingSettings(prev => prev ? { ...prev, customDomain: newCustomDomain } : null);
+      toast.success("Dominio vinculado. Configura tu DNS.");
+    } else {
+      toast.error("Error al vincular el dominio.");
+    }
+  };
+
+  const handleRemoveDomain = async () => {
+    if (!window.confirm("¿Seguro que deseas desvincular el dominio? Tu sitio dejará de ser accesible desde esa URL.")) return;
+    setIsAddingDomain(true);
+    const success = await api.removeCustomDomain();
+    setIsAddingDomain(false);
+    if (success) {
+      setLandingSettings(prev => prev ? { ...prev, customDomain: undefined } : null);
+      toast.success("Dominio desvinculado.");
+    } else {
+      toast.error("Error al desvincular.");
+    }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,7 +225,7 @@ export const SettingsPage: React.FC = () => {
         <div className="w-full md:w-80 bg-black/40 border-r border-white/5 p-8 space-y-3">
           {[
             { id: 'OPERATIONS', label: 'Operaciones', icon: Clock },
-            { id: 'GENERAL', label: 'Perfil de Negocio', icon: Building2 },
+            { id: 'GENERAL', label: 'Perfil & Dominios', icon: Globe },
             { id: 'LANDING', label: 'Constructor Web', icon: Layout },
             { id: 'INTEGRATION', label: 'Ecosistema', icon: Zap },
             { id: 'SECURITY', label: 'Bóveda IA', icon: Key },
@@ -209,6 +238,79 @@ export const SettingsPage: React.FC = () => {
 
         <div className="flex-1 p-12 overflow-y-auto max-h-[850px] custom-scrollbar bg-black/20">
           
+          {/* ... (Existing Tabs) ... */}
+
+          {activeTab === 'GENERAL' && landingSettings && (
+             <div className="space-y-10 animate-entrance">
+                <section>
+                  <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-8 flex items-center gap-4"><Building2 className="text-[#D4AF37]" size={28} /> Perfil Corporativo</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <input type="text" value={landingSettings.businessName} onChange={e => setLandingSettings({...landingSettings, businessName: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white" placeholder="Nombre" />
+                      <input type="text" value={landingSettings.contactPhone || ''} onChange={e => setLandingSettings({...landingSettings, contactPhone: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white" placeholder="WhatsApp Concierge" />
+                    </div>
+                    <textarea rows={6} value={landingSettings.address || ''} onChange={e => setLandingSettings({...landingSettings, address: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white resize-none" placeholder="Ubicación" />
+                  </div>
+                </section>
+
+                <section className="bg-white/5 p-10 rounded-[3rem] border border-white/5">
+                   <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-6 flex items-center gap-3"><LinkIcon size={20} className="text-[#D4AF37]" /> Gestión de Dominio</h3>
+                   
+                   <div className="mb-8">
+                      <p className="text-xs text-zinc-400 mb-2">Subdominio Automático:</p>
+                      <div className="flex items-center gap-2 p-4 bg-black/40 rounded-2xl border border-white/5">
+                         <Globe size={16} className="text-emerald-500" />
+                         <span className="font-mono text-sm text-white">{landingSettings.subdomain || '...'}</span><span className="text-zinc-600">.citaplanner.com</span>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <p className="text-xs text-zinc-400">Dominio Personalizado (Marca Blanca):</p>
+                      {landingSettings.customDomain ? (
+                         <div className="bg-black/40 p-6 rounded-2xl border border-white/5 space-y-4">
+                            <div className="flex justify-between items-center">
+                               <div className="flex items-center gap-3">
+                                  <ShieldCheck size={18} className="text-[#D4AF37]" />
+                                  <span className="font-bold text-white">{landingSettings.customDomain}</span>
+                               </div>
+                               <button onClick={handleRemoveDomain} disabled={isAddingDomain} className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:text-white transition-colors">Desvincular</button>
+                            </div>
+                            <div className="p-4 bg-white/5 rounded-xl text-[10px] text-zinc-400 font-mono">
+                               Status DNS: <span className="text-emerald-500">Activo (Cloudflare SSL)</span>
+                            </div>
+                         </div>
+                      ) : (
+                         <div className="space-y-4">
+                            <div className="flex gap-4">
+                               <input 
+                                 type="text" 
+                                 placeholder="Ej: agenda.tustudio.com" 
+                                 value={newCustomDomain}
+                                 onChange={e => setNewCustomDomain(e.target.value)}
+                                 className="flex-1 p-4 bg-black/40 border border-white/5 rounded-2xl text-white text-sm outline-none focus:border-[#D4AF37]" 
+                               />
+                               <button 
+                                 onClick={handleAddDomain}
+                                 disabled={isAddingDomain || !newCustomDomain}
+                                 className="px-6 bg-[#D4AF37] text-black rounded-2xl font-black text-[9px] uppercase tracking-widest hover:scale-105 transition-transform disabled:opacity-50"
+                               >
+                                 {isAddingDomain ? <Loader2 className="animate-spin" size={16}/> : 'Vincular'}
+                               </button>
+                            </div>
+                            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-[10px] text-blue-300 leading-relaxed">
+                               <p className="font-bold mb-1">Instrucciones DNS:</p>
+                               1. Entra a tu proveedor de dominio (GoDaddy, Namecheap, etc).<br/>
+                               2. Crea un registro <b>CNAME</b>.<br/>
+                               3. Apunta a: <b>citaplanner.com</b> (o el dominio raíz del sistema).
+                            </div>
+                         </div>
+                      )}
+                   </div>
+                </section>
+             </div>
+          )}
+
+          {/* ... (Rest of Tabs) ... */}
           {activeTab === 'LANDING' && landingSettings && (
             <div className="space-y-16 animate-entrance">
               {/* BRANDING SECTION */}
@@ -417,21 +519,6 @@ export const SettingsPage: React.FC = () => {
                   </div>
                </section>
             </div>
-          )}
-
-          {activeTab === 'GENERAL' && landingSettings && (
-             <div className="space-y-10 animate-entrance">
-                <section>
-                  <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-8 flex items-center gap-4"><Building2 className="text-[#D4AF37]" size={28} /> Perfil Corporativo</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <input type="text" value={landingSettings.businessName} onChange={e => setLandingSettings({...landingSettings, businessName: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white" placeholder="Nombre" />
-                      <input type="text" value={landingSettings.contactPhone || ''} onChange={e => setLandingSettings({...landingSettings, contactPhone: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white" placeholder="WhatsApp Concierge" />
-                    </div>
-                    <textarea rows={6} value={landingSettings.address || ''} onChange={e => setLandingSettings({...landingSettings, address: e.target.value})} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl focus:border-[#D4AF37] outline-none font-bold text-white resize-none" placeholder="Ubicación" />
-                  </div>
-                </section>
-             </div>
           )}
         </div>
       </div>

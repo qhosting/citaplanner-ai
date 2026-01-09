@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
@@ -29,6 +29,8 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
+import { api } from './services/api';
+import { MaintenanceScreen } from './components/MaintenanceScreen';
 
 const queryClient = new QueryClient();
 
@@ -66,10 +68,11 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   return <>{children}</>;
 };
 
-const Navbar = () => {
+const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   
+  if (maintenanceMode && !user) return null; // Ocultar navbar en mantenimiento si no es staff
   if (location.pathname === '/login') return null;
   if (location.pathname === '/' && !user) return null;
 
@@ -130,6 +133,11 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-6">
+          {maintenanceMode && !user && (
+             <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">
+               <ShieldAlert size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Modo Mantenimiento</span>
+             </div>
+          )}
           {user ? (
             <div className="flex items-center gap-5">
               <div className="hidden sm:block text-right">
@@ -191,38 +199,83 @@ const InternalFooter = () => {
   );
 };
 
+const MainLayout = () => {
+  const { user } = useAuth();
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
+  const [settings, setSettings] = useState<any>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const data = await api.getLandingSettings();
+        setSettings(data);
+        setMaintenanceMode(!!data.maintenanceMode);
+      } catch (e) {
+        console.error("Failed to load settings");
+      } finally {
+        setAppLoading(false);
+      }
+    };
+    checkMaintenance();
+  }, [location.pathname]); // Re-check on navigation to ensure sync
+
+  if (appLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#050505]">
+        <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
+      </div>
+    );
+  }
+
+  // --- LOGICA DE BLOQUEO POR MANTENIMIENTO ---
+  // Si está activo Y el usuario NO es staff (Admin, SuperAdmin, Pro), mostramos bloqueo.
+  // Permitimos /login para que el staff pueda entrar.
+  const isStaff = user && ['ADMIN', 'SUPERADMIN', 'PROFESSIONAL'].includes(user.role);
+  const isLoginPage = location.pathname === '/login';
+  
+  if (maintenanceMode && !isStaff && !isLoginPage) {
+    return <MaintenanceScreen contactPhone={settings?.contactPhone} brandName={settings?.businessName} />;
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#050505]">
+      <Toaster richColors position="top-right" theme="dark" />
+      <Navbar maintenanceMode={maintenanceMode} />
+      <div className="flex-grow">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/book" element={<BookingPage />} /> 
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/nexus" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
+          <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><POSPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ClientsPage /></ProtectedRoute>} />
+          <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><MarketingPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SettingsPage /></ProtectedRoute>} />
+          <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><BranchesPage /></ProtectedRoute>} />
+          <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ServicesPage /></ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InventoryPage /></ProtectedRoute>} />
+          <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SchedulesPage /></ProtectedRoute>} />
+          <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InsightsPage /></ProtectedRoute>} />
+          <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN', 'SUPERADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
+          <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN', 'SUPERADMIN']}><ClientPortal /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        </Routes>
+      </div>
+      <InternalFooter />
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <div className="min-h-screen flex flex-col bg-[#050505]">
-            <Toaster richColors position="top-right" theme="dark" />
-            <Navbar />
-            <div className="flex-grow">
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/book" element={<BookingPage />} /> 
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
-                <Route path="/nexus" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><POSPage /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-                <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ClientsPage /></ProtectedRoute>} />
-                <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><MarketingPage /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SettingsPage /></ProtectedRoute>} />
-                <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><BranchesPage /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ServicesPage /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InventoryPage /></ProtectedRoute>} />
-                <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SchedulesPage /></ProtectedRoute>} />
-                <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InsightsPage /></ProtectedRoute>} />
-                <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN', 'SUPERADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
-                <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN', 'SUPERADMIN']}><ClientPortal /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              </Routes>
-            </div>
-            <InternalFooter />
-          </div>
+           <MainLayout />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>

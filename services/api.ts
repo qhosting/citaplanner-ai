@@ -1,5 +1,6 @@
 
-import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement } from "../types";
+import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule } from "../types";
+import { AurumConnectorService } from "./aurumConnector";
 
 const API_URL = '/api';
 
@@ -43,6 +44,36 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(s)
       });
+      
+      // Sincronizar DATOS DEL INQUILINO (Shula Studio) con Aurum Hub
+      // Solo información administrativa del negocio, NO datos de sus clientes.
+      if (res.ok && s.businessName && s.contactPhone) {
+        AurumConnectorService.syncTenant({
+          commercialName: s.businessName,
+          email: 'admin@system', // Idealmente vendría del perfil del admin
+          phone: s.contactPhone,
+          postalCode: '00000' // Placeholder si no está en settings
+        }).catch(e => console.warn("Sync Tenant Warning", e));
+      }
+
+      return res.ok;
+    } catch { return false; }
+  },
+
+  addCustomDomain: async (domain: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/settings/domain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain })
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  removeCustomDomain: async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/settings/domain`, { method: 'DELETE' });
       return res.ok;
     } catch { return false; }
   },
@@ -65,6 +96,7 @@ export const api = {
   },
 
   updateClient: async (c: Client): Promise<boolean> => {
+    // DATOS PRIVADOS DEL TENANT: No se sincronizan externamente
     const res = await fetch(`${API_URL}/clients/${c.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -74,6 +106,7 @@ export const api = {
   },
 
   createClient: async (c: Partial<Client>): Promise<boolean> => {
+    // DATOS PRIVADOS DEL TENANT: No se sincronizan externamente
     const res = await fetch(`${API_URL}/clients`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -204,6 +237,7 @@ export const api = {
   },
 
   updateService: async (s: Service): Promise<boolean> => {
+    // DATOS PRIVADOS DEL TENANT: No se sincronizan externamente
     const res = await fetch(`${API_URL}/services/${s.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -213,12 +247,14 @@ export const api = {
   },
 
   createService: async (s: Omit<Service, 'id' | 'tenantId'>): Promise<Service | null> => {
+    // DATOS PRIVADOS DEL TENANT: No se sincronizan externamente
     const res = await fetch(`${API_URL}/services`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(s)
     });
-    return res.ok ? await res.json() : null;
+    const newService = res.ok ? await res.json() : null;
+    return newService;
   },
 
   deleteService: async (id: string): Promise<boolean> => {
@@ -266,5 +302,24 @@ export const api = {
   getBusinessStats: async (): Promise<any> => {
     const res = await fetch(`${API_URL}/analytics/stats`);
     return res.ok ? await res.json() : { revenueThisMonth: 0, occupationRate: 0 };
+  },
+
+  getCampaigns: async (): Promise<Campaign[]> => {
+    const res = await fetch(`${API_URL}/marketing/campaigns`);
+    return res.ok ? await res.json() : [];
+  },
+
+  createCampaign: async (c: Partial<Campaign>): Promise<Campaign | null> => {
+    const res = await fetch(`${API_URL}/marketing/campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(c)
+    });
+    return res.ok ? await res.json() : null;
+  },
+
+  getAutomations: async (): Promise<AutomationRule[]> => {
+    const res = await fetch(`${API_URL}/marketing/automations`);
+    return res.ok ? await res.json() : [];
   }
 };

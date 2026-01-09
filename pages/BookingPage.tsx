@@ -157,46 +157,7 @@ export const BookingPage: React.FC = () => {
       );
   }
 
-  // VISTA DE MANTENIMIENTO
-  if (settings.maintenanceMode) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-8">
-         <div className="max-w-2xl w-full text-center space-y-10 animate-entrance">
-            <div className="relative inline-block">
-               <div className="w-32 h-32 rounded-[3rem] bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] shadow-[0_0_50px_rgba(212,175,55,0.2)]">
-                  <ShieldAlert size={64} className="animate-pulse" />
-               </div>
-               <div className="absolute -top-4 -right-4 bg-red-500 w-8 h-8 rounded-full border-4 border-[#050505]" />
-            </div>
-            
-            <div className="space-y-4">
-              <h2 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Protocolo de <span className="gold-text-gradient">Sincronización</span></h2>
-              <p className="text-slate-500 text-lg font-medium leading-relaxed">
-                Nuestra infraestructura está recibiendo una actualización de seguridad master. 
-                El sistema de agendamiento online estará disponible en breve.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6 pt-10">
-               <div className="glass-card p-6 rounded-[2rem] border-white/5">
-                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Concierge Directo</p>
-                  <p className="text-white font-black">{settings.contactPhone}</p>
-               </div>
-               <div className="glass-card p-6 rounded-[2rem] border-white/5">
-                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Estado de Red</p>
-                  <p className="text-emerald-500 font-black uppercase">Nodo Protegido</p>
-               </div>
-            </div>
-
-            <div className="pt-10">
-               <Link to="/" className="inline-flex items-center gap-3 text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em] border-b border-[#D4AF37]/30 pb-2 hover:text-white hover:border-white transition-all">
-                  <Home size={14} /> Volver al Studio
-               </Link>
-            </div>
-         </div>
-      </div>
-    );
-  }
+  // NOTE: Maintenance logic moved to global App.tsx guard.
 
   const renderStep1 = () => {
     const categories = Array.from(new Set(services.map(s => s.category)));

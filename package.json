@@ -28,7 +28,8 @@
     "fs": "^0.0.1-security",
     "url": "^0.11.4",
     "vite": "^7.3.0",
-    "@vitejs/plugin-react": "^5.1.2"
+    "@vitejs/plugin-react": "^5.1.2",
+    "redis": "^5.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -1,32 +1,16 @@
+
 import React, { useState } from 'react';
-import { Megaphone, Mail, MessageCircle, Send, Plus, Users, Zap, Clock, CheckCircle2, AlertCircle, Play } from 'lucide-react';
+import { Megaphone, Mail, MessageCircle, Send, Plus, Users, Zap, Clock, CheckCircle2, AlertCircle, Play, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Campaign, AutomationRule, MarketingChannel } from '../types';
 import { launchCampaign, saveAutomationRule } from '../services/integrationService';
+import { api } from '../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export const MarketingPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'CAMPAIGNS' | 'AUTOMATIONS'>('CAMPAIGNS');
-
-  const [campaigns, setCampaigns] = useState<Campaign[]>([
-    {
-      id: 'c1',
-      name: 'Promoción de Verano',
-      channel: 'EMAIL',
-      status: 'SENT',
-      content: '¡Descuentos del 20% en todos los servicios!',
-      targetSegment: 'ALL',
-      sentCount: 154,
-      subject: 'Prepárate para el verano ☀️'
-    },
-    {
-      id: 'c2',
-      name: 'Recordatorio Check-up',
-      channel: 'WHATSAPP',
-      status: 'DRAFT',
-      content: 'Hola! Hace tiempo no te vemos. Agenda tu cita hoy.',
-      targetSegment: 'INACTIVE_90_DAYS'
-    }
-  ]);
+  
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [newCampaign, setNewCampaign] = useState<Partial<Campaign>>({
     name: '',
@@ -35,56 +19,37 @@ export const MarketingPage: React.FC = () => {
     content: '',
     subject: ''
   });
-  const [sending, setSending] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
-  const [automations, setAutomations] = useState<AutomationRule[]>([
-    {
-      id: 'a1',
-      name: 'Solicitud de Reseña Post-Cita',
-      isActive: true,
-      triggerType: 'APPOINTMENT_COMPLETED',
-      delayHours: 2,
-      channel: 'WHATSAPP',
-      templateMessage: 'Hola {{name}}, gracias por visitarnos. ¿Podrías dejarnos una reseña?'
-    },
-    {
-      id: 'a2',
-      name: 'Reactivación de Clientes',
-      isActive: false,
-      triggerType: 'CLIENT_INACTIVE',
-      delayHours: 720,
-      channel: 'EMAIL',
-      templateMessage: 'Te extrañamos. Aquí tienes un cupón de descuento.'
-    },
-    {
-      id: 'a3',
-      name: 'Saludo de Cumpleaños',
-      isActive: true,
-      triggerType: 'BIRTHDAY',
-      delayHours: 9,
-      channel: 'WHATSAPP',
-      templateMessage: '¡Feliz cumpleaños {{name}}! 🎉 Tienes un regalo esperando en tu próxima visita.'
+  // DATA FETCHING REAL
+  const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: api.getCampaigns
+  });
+
+  const { data: automations = [], isLoading: loadingAutomations } = useQuery({
+    queryKey: ['automations'],
+    queryFn: api.getAutomations
+  });
+
+  const createMutation = useMutation({
+    mutationFn: api.createCampaign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      setIsCampaignModalOpen(false);
+      setNewCampaign({ name: '', channel: 'EMAIL', targetSegment: 'ALL', content: '', subject: '' });
+      toast.success("Campaña creada en borrador");
     }
-  ]);
+  });
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCampaign.name || !newCampaign.content) return;
-
-    const campaign: Campaign = {
-      id: Date.now().toString(),
-      name: newCampaign.name!,
-      channel: newCampaign.channel || 'EMAIL',
-      content: newCampaign.content!,
-      targetSegment: newCampaign.targetSegment as any || 'ALL',
-      status: 'DRAFT',
-      subject: newCampaign.subject
-    };
-
-    setCampaigns([campaign, ...campaigns]);
-    setNewCampaign({ name: '', channel: 'EMAIL', targetSegment: 'ALL', content: '', subject: '' });
-    setIsCampaignModalOpen(false);
-    toast.success("Borrador creado");
+    
+    createMutation.mutate({
+      ...newCampaign,
+      status: 'DRAFT'
+    });
   };
 
   const handleSendCampaign = async (id: string) => {
@@ -93,21 +58,19 @@ export const MarketingPage: React.FC = () => {
 
     if (!window.confirm(`¿Estás seguro de enviar esta campaña a la audiencia seleccionada?`)) return;
 
-    setSending(true);
+    setSendingId(id);
     try {
       const result = await launchCampaign(campaign);
       if (result.success) {
-        setCampaigns(prev => prev.map(c => 
-          c.id === id ? { ...c, status: 'SENT', sentCount: result.sentCount } : c
-        ));
+        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
         toast.success(result.message);
       } else {
         toast.error("Error al enviar la campaña.");
       }
     } catch (error) {
-      toast.error("Error de conexión con N8N.");
+      toast.error("Error de conexión con proveedor de mensajería.");
     } finally {
-      setSending(false);
+      setSendingId(null);
     }
   };
 
@@ -117,13 +80,12 @@ export const MarketingPage: React.FC = () => {
 
     const newStatus = !rule.isActive;
     
-    setAutomations(prev => prev.map(a => a.id === id ? { ...a, isActive: newStatus } : a));
-
+    // Optimistic Update handled via invalidation, but we notify user
     try {
       await saveAutomationRule({ ...rule, isActive: newStatus });
+      queryClient.invalidateQueries({ queryKey: ['automations'] });
       toast.success(newStatus ? 'Automatización activada' : 'Automatización desactivada');
     } catch (error) {
-      setAutomations(prev => prev.map(a => a.id === id ? { ...a, isActive: !newStatus } : a));
       toast.error("Error guardando la configuración.");
     }
   };
@@ -135,6 +97,10 @@ export const MarketingPage: React.FC = () => {
       case 'SMS': return <Zap size={16} />;
     }
   };
+
+  if (loadingCampaigns || loadingAutomations) {
+    return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -186,48 +152,55 @@ export const MarketingPage: React.FC = () => {
              </button>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {campaigns.map(campaign => (
-                <div key={campaign.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow">
-                   <div className="flex justify-between items-start mb-3">
-                      <div className={`p-2 rounded-lg ${campaign.channel === 'WHATSAPP' ? 'bg-green-100 text-green-600' : campaign.channel === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
-                        {getChannelIcon(campaign.channel)}
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                        campaign.status === 'SENT' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {campaign.status === 'SENT' ? 'ENVIADA' : 'BORRADOR'}
-                      </span>
-                   </div>
-                   
-                   <h3 className="font-bold text-slate-800 mb-1">{campaign.name}</h3>
-                   <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
-                     <Users size={12} /> 
-                     Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (&gt;90 días)'}
-                   </p>
-                   
-                   <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 mb-4 flex-grow italic border border-slate-100">
-                     "{campaign.content}"
-                   </div>
+           {campaigns.length === 0 ? (
+             <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+               <Megaphone className="mx-auto text-slate-400 mb-4" size={48} />
+               <p className="text-slate-500 font-medium">No hay campañas registradas</p>
+             </div>
+           ) : (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {campaigns.map(campaign => (
+                  <div key={campaign.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className={`p-2 rounded-lg ${campaign.channel === 'WHATSAPP' ? 'bg-green-100 text-green-600' : campaign.channel === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                          {getChannelIcon(campaign.channel)}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                          campaign.status === 'SENT' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {campaign.status === 'SENT' ? 'ENVIADA' : 'BORRADOR'}
+                        </span>
+                    </div>
+                    
+                    <h3 className="font-bold text-slate-800 mb-1">{campaign.name}</h3>
+                    <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
+                      <Users size={12} /> 
+                      Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (&gt;90 días)'}
+                    </p>
+                    
+                    <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 mb-4 flex-grow italic border border-slate-100">
+                      "{campaign.content}"
+                    </div>
 
-                   <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
-                     {campaign.status === 'SENT' ? (
-                       <div className="text-sm text-green-600 flex items-center gap-1">
-                         <CheckCircle2 size={16} /> Enviado a {campaign.sentCount}
-                       </div>
-                     ) : (
-                       <button 
-                         onClick={() => handleSendCampaign(campaign.id)}
-                         disabled={sending}
-                         className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 flex items-center justify-center gap-2 disabled:opacity-70"
-                       >
-                         {sending ? 'Enviando...' : <><Send size={14} /> Enviar Ahora</>}
-                       </button>
-                     )}
-                   </div>
-                </div>
-              ))}
-           </div>
+                    <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
+                      {campaign.status === 'SENT' ? (
+                        <div className="text-sm text-green-600 flex items-center gap-1">
+                          <CheckCircle2 size={16} /> Enviado a {campaign.sentCount || 0}
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleSendCampaign(campaign.id)}
+                          disabled={sendingId === campaign.id}
+                          className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 flex items-center justify-center gap-2 disabled:opacity-70"
+                        >
+                          {sendingId === campaign.id ? 'Enviando...' : <><Send size={14} /> Enviar Ahora</>}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+             </div>
+           )}
         </div>
       )}
 
@@ -363,8 +336,10 @@ export const MarketingPage: React.FC = () => {
                     </button>
                     <button 
                       type="submit"
-                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700"
+                      disabled={createMutation.isPending}
+                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2"
                     >
+                       {createMutation.isPending && <Loader2 className="animate-spin" size={14} />}
                        Guardar Borrador
                     </button>
                  </div>
