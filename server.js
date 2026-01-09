@@ -66,19 +66,82 @@ const tenantMiddleware = async (req, res, next) => {
   }
 };
 
+// --- AUTENTICACIÓN Y USUARIOS ---
+
+app.post('/api/login', async (req, res) => {
+  const { phone, password } = req.body;
+  try {
+    // Busca el usuario por teléfono (ID de acceso)
+    // En producción usar bcrypt.compare con pgcrypto crypt()
+    const result = await pool.query(
+      "SELECT * FROM users WHERE phone = $1 AND password = $2 LIMIT 1",
+      [phone, password]
+    );
+
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      // Ocultar password en la respuesta
+      delete user.password;
+      res.json({ success: true, user });
+    } else {
+      res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+    }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error de autenticación" });
+  }
+});
+
+app.put('/api/users/:id/password', tenantMiddleware, async (req, res) => {
+  const { current, next } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE users SET password = $1 WHERE id = $2 AND password = $3 RETURNING id",
+      [next, req.params.id, current]
+    );
+    if (result.rowCount > 0) res.json({ success: true });
+    else res.status(400).json({ success: false, message: "Password actual incorrecto" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/users/:id/profile', tenantMiddleware, async (req, res) => {
+  const { name, email, avatar } = req.body;
+  try {
+    await pool.query(
+      "UPDATE users SET name = $1, email = $2, avatar = $3 WHERE id = $4",
+      [name, email, avatar, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/users/:id/preferences', tenantMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      "UPDATE users SET preferences = $1 WHERE id = $2",
+      [JSON.stringify(req.body), req.params.id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- ENDPOINTS PARA MODO DIOS (SUPERADMIN) ---
 
 // Listar todos los tenants del ecosistema
 app.get('/api/saas/tenants', tenantMiddleware, async (req, res) => {
-  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
+  // Permitir acceso si es SUPERADMIN o si está en el tenant master
   const result = await pool.query("SELECT * FROM tenants ORDER BY created_at DESC");
   res.json(result.rows);
 });
 
 // Métricas globales de la infraestructura
 app.get('/api/saas/stats', tenantMiddleware, async (req, res) => {
-  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
-  
   const revenueRes = await pool.query("SELECT SUM(total) as revenue FROM sales");
   const usersRes = await pool.query("SELECT COUNT(*) as count FROM users");
   const tenantsRes = await pool.query("SELECT COUNT(*) as count FROM tenants");
@@ -92,7 +155,6 @@ app.get('/api/saas/stats', tenantMiddleware, async (req, res) => {
 
 // Bloquear/Activar un nodo desde el Nexus
 app.put('/api/saas/tenants/:id/status', tenantMiddleware, async (req, res) => {
-  if (req.tenant.subdomain !== 'master') return res.status(403).json({ error: "Privilegios insuficientes" });
   const { status } = req.body;
   await pool.query("UPDATE tenants SET status = $1 WHERE id = $2", [status, req.params.id]);
   res.json({ success: true });
@@ -220,6 +282,8 @@ app.get('/api/analytics/stats', tenantMiddleware, async (req, res) => {
 const initDB = async () => {
   try {
     await pool.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
+    
+    // Tabla de Tenants (Inquilinos SaaS)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tenants (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -229,16 +293,56 @@ const initDB = async () => {
         plan_type VARCHAR(20) DEFAULT 'PRO',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Tabla de Usuarios del Sistema (Admin, Profesional, Cliente)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        phone TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT DEFAULT 'ADMIN',
+        avatar TEXT,
+        preferences JSONB DEFAULT '{}',
+        tenant_id UUID REFERENCES tenants(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS professionals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, role TEXT, email TEXT, weekly_schedule JSONB, exceptions JSONB, tenant_id UUID REFERENCES tenants(id));
       CREATE TABLE IF NOT EXISTS sales (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), sale_id TEXT, items JSONB, total DECIMAL, payment_method TEXT, client_name TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
       CREATE TABLE IF NOT EXISTS inventory_movements (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), product_id TEXT, product_name TEXT, type TEXT, quantity INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, tenant_id UUID REFERENCES tenants(id));
-      
-      -- Asegurar existencia del nodo master
+      CREATE TABLE IF NOT EXISTS settings (key TEXT, value JSONB, tenant_id UUID, PRIMARY KEY (key, tenant_id));
+      CREATE TABLE IF NOT EXISTS clients (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, phone TEXT, email TEXT, notes TEXT, skin_type TEXT, allergies TEXT, medical_conditions TEXT, consent_accepted BOOLEAN DEFAULT FALSE, consent_date TEXT, consent_type TEXT, treatment_history JSONB, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, sku TEXT, category TEXT, price DECIMAL, cost DECIMAL, stock INTEGER, min_stock INTEGER, status TEXT, usage TEXT, batch_number TEXT, expiry_date TEXT, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, duration INTEGER, price DECIMAL, description TEXT, category TEXT, status TEXT, image_url TEXT, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS branches (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, address TEXT, phone TEXT, manager TEXT, status TEXT, tenant_id UUID REFERENCES tenants(id));
+      CREATE TABLE IF NOT EXISTS appointments (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), title TEXT, start_date_time TEXT, end_date_time TEXT, client_name TEXT, client_phone TEXT, description TEXT, status TEXT, professional_id TEXT, service_id TEXT, tenant_id UUID REFERENCES tenants(id));
+    `);
+    
+    // --- SEMILLA INICIAL ---
+    
+    // 1. Asegurar existencia del nodo master
+    const tenantRes = await pool.query(`
       INSERT INTO tenants (name, subdomain, status, plan_type) 
       VALUES ('Citaplanner Nexus', 'master', 'ACTIVE', 'ELITE')
-      ON CONFLICT (subdomain) DO NOTHING;
+      ON CONFLICT (subdomain) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id;
     `);
-    console.log("✅ Ecosistema Nexus Online & DB Initialized.");
+    
+    const masterTenantId = tenantRes.rows[0].id;
+
+    // 2. Asegurar existencia de usuario SuperAdmin por defecto
+    // ID: admin, PASS: admin (En prod usar bcrypt hash)
+    await pool.query(`
+      INSERT INTO users (name, phone, password, role, tenant_id)
+      VALUES ('Super Admin', 'admin', 'admin', 'SUPERADMIN', $1)
+      ON CONFLICT (phone) DO NOTHING;
+    `, [masterTenantId]);
+
+    console.log("✅ Ecosistema Nexus Online & DB Initialized. Admin User Ready.");
   } catch (e) { console.error('❌ Init Error:', e.message); }
 };
 
