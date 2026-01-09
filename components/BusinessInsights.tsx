@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { 
   Sparkles, Loader2, ChevronRight, TrendingUp, AlertCircle, 
   Target, ShieldCheck, Zap, BarChart3, Info, RefreshCw
@@ -29,16 +30,8 @@ export const BusinessInsights: React.FC = () => {
     setError(null);
     const stats = await api.getBusinessStats();
     
-    if (!process.env.API_KEY) {
-      setError(`Conexión de IA en espera. Código: ${ERROR_PROTECTION_CODE}`);
-      setLoading(false);
-      return;
-    }
-
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
     try {
-      const response = await ai.models.generateContent({
+      const response = await api.generateAIContent({
         model: 'gemini-3-flash-preview',
         contents: `Analiza estas métricas: ${JSON.stringify(stats)}`,
         config: {

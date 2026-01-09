@@ -11,7 +11,6 @@ import { Appointment, AppointmentStatus, LandingSettings } from '../types';
 import { api } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { GoogleGenAI } from '@google/genai';
 
 export const ClientPortal: React.FC = () => {
   const { user } = useAuth();
@@ -45,19 +44,18 @@ export const ClientPortal: React.FC = () => {
     .sort((a,b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime())
   , [myAppointments]);
 
-  // IA con contexto real del negocio
+  // IA con contexto real del negocio (backend)
   useEffect(() => {
     const getBeautyAdvice = async () => {
         if (!user || myAppointments.length === 0 || loadingAdvice || !settings) return;
         setLoadingAdvice(true);
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         try {
           const lastApt = history.find(a => a.status === AppointmentStatus.COMPLETED);
           const bizName = settings.businessName || 'nuestro estudio';
           const prompt = `Como concierge experto de "${bizName}" de ultra-lujo, analiza la última visita de ${user.name}: "${lastApt?.title || 'Tratamiento Elite'}". Sugiere un consejo de mantenimiento sofisticado para su tipo de piel. Sé elegante y breve. Máximo 20 palabras.`;
           
-          const result = await ai.models.generateContent({
+          const result = await api.generateAIContent({
             model: 'gemini-3-flash-preview',
             contents: prompt
           });

@@ -22,7 +22,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const storedUser = localStorage.getItem('citaPlannerUser');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsedUser = JSON.parse(storedUser);
+          // Verificar integridad básica (token existe)
+          if (parsedUser.token) {
+             setUser(parsedUser);
+          } else {
+             localStorage.removeItem('citaPlannerUser'); // Limpiar auth corrupta
+          }
         }
       } catch (e) {
         console.warn('Auth Sync Error:', e);
@@ -38,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (apiUser) {
       setUser(apiUser);
       try {
+        // apiUser ya incluye el 'token' retornado por el backend
         localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
       } catch (e) {
         console.warn('Storage Error:', e);

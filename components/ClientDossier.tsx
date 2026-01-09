@@ -6,9 +6,9 @@ import {
   Camera, ChevronRight, Save, Eye, Scissors, Syringe, Droplet, ClipboardCheck
 } from 'lucide-react';
 import { Client, TreatmentRecord } from '../types';
-import { GoogleGenAI } from '@google/genai';
 import { toast } from 'sonner';
 import { ConsentModal } from './ConsentModal';
+import { api } from '../services/api';
 
 interface ClientDossierProps {
   client: Client;
@@ -80,10 +80,8 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
   };
 
   const handleRunAIAnalysis = async () => {
-    if (!process.env.API_KEY) return;
     setIsAnalyzing(true);
     setAiAnalysis(null);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
       const prompt = `
@@ -96,7 +94,7 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
         Genera un veredicto técnico de mantenimiento y precauciones. Sé sofisticado. Máximo 50 palabras.
       `;
 
-      const response = await ai.models.generateContent({
+      const response = await api.generateAIContent({
         model: 'gemini-3-flash-preview',
         contents: prompt
       });

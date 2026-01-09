@@ -1,13 +1,11 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-// Added Wand2 to the imports from lucide-react
 import { Package, Search, Plus, AlertTriangle, TrendingUp, RefreshCw, Edit2, ShoppingBag, Beaker, History, Filter, Loader2, Calendar, ClipboardList, Zap, ArrowUpRight, ShieldAlert, Wand2 } from 'lucide-react';
 import { Product, InventoryMovement } from '../types';
 import { InventoryModal } from '../components/InventoryModal';
 import { api } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { GoogleGenAI } from '@google/genai';
 
 export const InventoryPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -48,9 +46,8 @@ export const InventoryPage: React.FC = () => {
   });
 
   const runAIForecast = async () => {
-    if (!process.env.API_KEY || products.length === 0) return;
+    if (products.length === 0) return;
     setIsAnalyzing(true);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
       const inventoryState = products.map(p => ({ n: p.name, s: p.stock, m: p.minStock }));
@@ -58,7 +55,7 @@ export const InventoryPage: React.FC = () => {
       Dime cuáles 3 productos corren riesgo de agotarse pronto basándote en que el umbral minStock es crítico. 
       Devuelve un consejo estratégico breve (máximo 40 palabras) con tono de consultor elite.`;
 
-      const res = await ai.models.generateContent({
+      const res = await api.generateAIContent({
         model: 'gemini-3-flash-preview',
         contents: prompt
       });

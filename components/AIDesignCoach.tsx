@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { Sparkles, Loader2, Palette, Wand2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '../services/api';
 
 interface AIDesignCoachProps {
   businessDesc: string;
@@ -19,10 +20,9 @@ export const AIDesignCoach: React.FC<AIDesignCoachProps> = ({ businessDesc, onSu
     }
 
     setLoading(true);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await api.generateAIContent({
         model: "gemini-3-flash-preview",
         contents: `Analiza esta descripción de un estudio de belleza y sugiere branding: "${businessDesc}"`,
         config: {

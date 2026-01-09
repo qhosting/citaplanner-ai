@@ -1,5 +1,8 @@
-// COPIA DE SEGURIDAD - SCHEMA PRISMA CITAPLANNER (MIRROR)
-// ECOSISTEMA: AURUM CAPITAL TECHNOLOGY
+
+// [AURUM PROTOCOL] - PRISMA SCHEMA MIRROR
+// PRODUCT: CITAPLANNER ELITE SAAS
+// REVISION: 2026.10.18 (SaaS Core & Security Layer)
+// INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
 generator client {
   provider = "prisma-client-js"
@@ -10,7 +13,243 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Estructura Multitenant detectada:
-// - Business: Contenedor principal de marca y configuración.
-// - User/Client/Service: Entidades vinculadas por businessId.
-// - Appointment: Nodo de unión con validación de estados.
+// --- SAAS CORE & TENANCY ---
+
+model Tenant {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String   @db.VarChar(100)
+  subdomain     String   @unique @db.VarChar(50)
+  customDomain  String?  @unique @map("custom_domain") @db.VarChar(100)
+  cloudflareId  String?  @map("cloudflare_id") @db.VarChar(100)
+  status        String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, SUSPENDED, ARCHIVED
+  planType      String   @default("TRIAL") @map("plan_type") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relaciones de Dominio (Data Isolation Boundary)
+  users               User[]
+  settings            Setting[]
+  clients             Client[]
+  professionals       Professional[]
+  services            Service[]
+  products            Product[]
+  branches            Branch[]
+  appointments        Appointment[]
+  sales               Sale[]
+  inventoryMovements  InventoryMovement[]
+  marketingCampaigns  MarketingCampaign[]
+  automationRules     AutomationRule[]
+  integrationLogs     IntegrationLog[]
+
+  @@map("tenants")
+}
+
+model User {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  phone       String   @unique // Identificador principal de login
+  password    String   // Cifrado con pgcrypto (bcrypt)
+  role        String   @default("ADMIN") // SUPERADMIN, ADMIN, PROFESSIONAL, CLIENT
+  avatar      String?
+  preferences Json?    @default("{}") // Notification settings, UI theme
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@map("users")
+}
+
+model Setting {
+  key       String
+  value     Json
+  tenantId  String @map("tenant_id") @db.Uuid
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+
+  @@id([key, tenantId])
+  @@map("settings")
+}
+
+// --- BUSINESS ENTITIES ---
+
+model Client {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  phone             String
+  email             String?
+  notes             String?
+  skinType          String?  @map("skin_type")
+  allergies         String?
+  medicalConditions String?  @map("medical_conditions")
+  consentAccepted   Boolean  @default(false) @map("consent_accepted")
+  consentDate       String?  @map("consent_date")
+  consentType       String?  @map("consent_type")
+  treatmentHistory  Json?    @default("[]") @map("treatment_history")
+  tenantId          String   @map("tenant_id") @db.Uuid
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("clients")
+}
+
+model Professional {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  role           String
+  email          String?
+  weeklySchedule Json?    @map("weekly_schedule")
+  exceptions     Json?
+  serviceIds     String[] @map("service_ids") // Array opcional en DB, manejado en app
+  tenantId       String   @map("tenant_id") @db.Uuid
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("professionals")
+}
+
+model Service {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  duration    Int
+  price       Decimal
+  description String?
+  category    String
+  status      String   @default("ACTIVE")
+  imageUrl    String?  @map("image_url")
+  tenantId    String   @map("tenant_id") @db.Uuid
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("services")
+}
+
+model Product {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  sku         String
+  category    String
+  price       Decimal
+  cost        Decimal
+  stock       Int
+  minStock    Int      @map("min_stock")
+  status      String   @default("ACTIVE")
+  usage       String   @default("RETAIL") // RETAIL, INTERNAL
+  batchNumber String?  @map("batch_number")
+  expiryDate  String?  @map("expiry_date")
+  tenantId    String   @map("tenant_id") @db.Uuid
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("products")
+}
+
+model Branch {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  address   String
+  phone     String?
+  manager   String?
+  status    String   @default("ACTIVE")
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("branches")
+}
+
+model Appointment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  startDateTime   String   @map("start_date_time") // ISO String
+  endDateTime     String   @map("end_date_time") // ISO String
+  clientName      String   @map("client_name")
+  clientPhone     String   @map("client_phone")
+  description     String?
+  status          String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  professionalId  String?  @map("professional_id")
+  serviceId       String?  @map("service_id")
+  tenantId        String   @map("tenant_id") @db.Uuid
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("appointments")
+}
+
+// --- POS & FINANCE ---
+
+model Sale {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saleId        String   @map("sale_id") // ID legible (AUM-XXX)
+  items         Json     // Snapshot de items vendidos
+  total         Decimal
+  paymentMethod String   @map("payment_method")
+  clientName    String?  @map("client_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  tenantId      String   @map("tenant_id") @db.Uuid
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("sales")
+}
+
+model InventoryMovement {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId   String   @map("product_id")
+  productName String   @map("product_name")
+  type        String   // IN, OUT
+  quantity    Int
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  tenantId    String   @map("tenant_id") @db.Uuid
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+// --- MARKETING & GROWTH ---
+
+model MarketingCampaign {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  channel       String   // EMAIL, WHATSAPP, SMS
+  status        String   // DRAFT, SENT, SCHEDULED
+  content       String
+  targetSegment String   @map("target_segment")
+  subject       String?
+  sentCount     Int      @default(0) @map("sent_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  tenantId      String   @map("tenant_id") @db.Uuid
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("marketing_campaigns")
+}
+
+model AutomationRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  isActive        Boolean  @default(false) @map("is_active")
+  triggerType     String   @map("trigger_type") // APPOINTMENT_COMPLETED, etc
+  delayHours      Int      @map("delay_hours")
+  channel         String
+  templateMessage String   @map("template_message")
+  tenantId        String   @map("tenant_id") @db.Uuid
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("automation_rules")
+}
+
+model IntegrationLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform  String   // N8N, CHATWOOT, AI
+  eventType String   @map("event_type")
+  status    String
+  response  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("integration_logs")
+}

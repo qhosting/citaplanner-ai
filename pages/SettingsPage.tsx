@@ -4,13 +4,13 @@ import {
   Settings, Save, Globe, Zap, Building2, Loader2, 
   ImageIcon, Palette, Layout, Type as TypeIcon, Phone, 
   MapPin, Clock, ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Cpu, Cloud, Plus, Trash2, ArrowUpRight, ShieldAlert,
-  Upload, Wand2, MessageCircle, Instagram, Facebook, Search, Navigation, Target, BarChart, Link as LinkIcon
+  Upload, Wand2, MessageCircle, Instagram, Facebook, Search, Navigation, Target, BarChart, Link as LinkIcon, Edit2, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
 import { LandingSettings, TemplateId, OperatingHours, HeroSlide, SocialLinks } from '../types';
 import { AIDesignCoach } from '../components/AIDesignCoach';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'OPERATIONS' | 'LANDING' | 'INTEGRATION' | 'SECURITY'>('OPERATIONS');
@@ -21,8 +21,14 @@ export const SettingsPage: React.FC = () => {
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   
   const [landingSettings, setLandingSettings] = useState<LandingSettings | null>(null);
+  const [domainStatus, setDomainStatus] = useState<any>(null);
   const [newCustomDomain, setNewCustomDomain] = useState('');
   const [isAddingDomain, setIsAddingDomain] = useState(false);
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
+  
+  // Subdomain Edit State
+  const [isEditingSubdomain, setIsEditingSubdomain] = useState(false);
+  const [newSubdomain, setNewSubdomain] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +46,10 @@ export const SettingsPage: React.FC = () => {
         ...landing,
         showWhatsappButton: landing.showWhatsappButton ?? true
       });
+      // @ts-ignore
+      setDomainStatus(landing.domainStatus);
+      // @ts-ignore
+      setNewSubdomain(landing.subdomain || '');
     } catch (e) {
       toast.error("Error al conectar con el servidor de configuración.");
     } finally {
@@ -59,14 +69,26 @@ export const SettingsPage: React.FC = () => {
   const handleAddDomain = async () => {
     if (!newCustomDomain) return;
     setIsAddingDomain(true);
-    const success = await api.addCustomDomain(newCustomDomain);
+    const result = await api.addCustomDomain(newCustomDomain);
     setIsAddingDomain(false);
-    if (success) {
+    if (result.success) {
       setLandingSettings(prev => prev ? { ...prev, customDomain: newCustomDomain } : null);
+      setDomainStatus({ status: 'pending_validation', verification: result.verification });
       toast.success("Dominio vinculado. Configura tu DNS.");
     } else {
-      toast.error("Error al vincular el dominio.");
+      toast.error(result.error || "Error al vincular el dominio.");
     }
+  };
+
+  const handleCheckDomain = async () => {
+      setIsCheckingDomain(true);
+      const res = await api.checkDomainStatus();
+      setIsCheckingDomain(false);
+      if (res.status) {
+          setDomainStatus({ status: res.status, verification: res.verification });
+          if (res.status === 'active') toast.success("Dominio verificado y activo.");
+          else toast.info("El dominio sigue pendiente de verificación.");
+      }
   };
 
   const handleRemoveDomain = async () => {
@@ -76,10 +98,27 @@ export const SettingsPage: React.FC = () => {
     setIsAddingDomain(false);
     if (success) {
       setLandingSettings(prev => prev ? { ...prev, customDomain: undefined } : null);
+      setDomainStatus(null);
       toast.success("Dominio desvinculado.");
     } else {
       toast.error("Error al desvincular.");
     }
+  };
+
+  const handleUpdateSubdomain = async () => {
+      if (!newSubdomain || newSubdomain === landingSettings?.subdomain) return setIsEditingSubdomain(false);
+      setSaving(true);
+      try {
+          const res = await api.updateSubdomain(newSubdomain);
+          if (res.success) {
+              setLandingSettings(prev => prev ? { ...prev, subdomain: newSubdomain } : null);
+              toast.success(`Subdominio actualizado. Tu nueva URL es: ${res.newUrl}`);
+              setIsEditingSubdomain(false);
+          } else {
+              toast.error(res.error || "Error al actualizar subdominio");
+          }
+      } catch { toast.error("Error de red"); }
+      finally { setSaving(false); }
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,24 +134,23 @@ export const SettingsPage: React.FC = () => {
   };
 
   const handleAiSeo = async () => {
-    if (!landingSettings || !process.env.API_KEY) return;
+    if (!landingSettings) return;
     setIsAiSeoLoading(true);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
-      const prompt = `Actúa como un experto en SEO para negocios de lujo. 
+      const prompt = `Actúa como un experto en SEO para negocios de lujo y estética. 
       Negocio: ${landingSettings.businessName}
       Descripción: ${landingSettings.aboutText}
       Ubicación: ${landingSettings.address}
       
-      Genera:
-      1. Un Meta Título (máximo 60 caracteres) altamente atractivo.
-      2. Una Meta Descripción (máximo 160 caracteres) que invite al clic.
-      3. Una lista de 10 palabras clave separadas por comas que incluyan términos locales basados en la ubicación.
+      Genera una estrategia de contenido:
+      1. Un Meta Título (máximo 60 caracteres) altamente atractivo y profesional.
+      2. Una Meta Descripción (máximo 160 caracteres) que invite al clic y denote exclusividad.
+      3. Una lista de 10 palabras clave (keywords) separadas por comas, incluyendo términos locales basados en la ubicación.
       
-      Formato de salida: JSON.`;
+      Formato de salida: JSON estrictamente.`;
 
-      const response = await ai.models.generateContent({
+      const response = await api.generateAIContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
@@ -120,9 +158,9 @@ export const SettingsPage: React.FC = () => {
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              keywords: { type: Type.STRING }
+              title: { type: Type.STRING, description: "Meta Title SEO" },
+              description: { type: Type.STRING, description: "Meta Description SEO" },
+              keywords: { type: Type.STRING, description: "Keywords separadas por coma" }
             },
             required: ["title", "description", "keywords"]
           }
@@ -138,6 +176,7 @@ export const SettingsPage: React.FC = () => {
       });
       toast.success("Estrategia SEO generada por IA aplicada.");
     } catch (e) {
+      console.error(e);
       toast.error("Error al consultar el núcleo de indexación IA.");
     } finally {
       setIsAiSeoLoading(false);
@@ -238,8 +277,6 @@ export const SettingsPage: React.FC = () => {
 
         <div className="flex-1 p-12 overflow-y-auto max-h-[850px] custom-scrollbar bg-black/20">
           
-          {/* ... (Existing Tabs) ... */}
-
           {activeTab === 'GENERAL' && landingSettings && (
              <div className="space-y-10 animate-entrance">
                 <section>
@@ -258,9 +295,31 @@ export const SettingsPage: React.FC = () => {
                    
                    <div className="mb-8">
                       <p className="text-xs text-zinc-400 mb-2">Subdominio Automático:</p>
-                      <div className="flex items-center gap-2 p-4 bg-black/40 rounded-2xl border border-white/5">
-                         <Globe size={16} className="text-emerald-500" />
-                         <span className="font-mono text-sm text-white">{landingSettings.subdomain || '...'}</span><span className="text-zinc-600">.citaplanner.com</span>
+                      <div className="flex items-center gap-2 p-4 bg-black/40 rounded-2xl border border-white/5 justify-between">
+                         <div className="flex items-center gap-3">
+                             <Globe size={16} className="text-emerald-500" />
+                             {isEditingSubdomain ? (
+                                 <div className="flex items-center gap-1">
+                                     <input 
+                                        autoFocus
+                                        className="bg-white/10 text-white font-mono text-sm p-1 rounded border border-white/20 outline-none w-48"
+                                        value={newSubdomain}
+                                        onChange={e => setNewSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                                     />
+                                     <span className="text-zinc-600 font-mono text-sm">.citaplanner.com</span>
+                                 </div>
+                             ) : (
+                                <><span className="font-mono text-sm text-white">{landingSettings.subdomain || '...'}</span><span className="text-zinc-600 font-mono text-sm">.citaplanner.com</span></>
+                             )}
+                         </div>
+                         {isEditingSubdomain ? (
+                             <div className="flex gap-2">
+                                <button onClick={() => setIsEditingSubdomain(false)} className="p-2 text-zinc-500 hover:text-white"><X size={14}/></button>
+                                <button onClick={handleUpdateSubdomain} className="p-2 text-emerald-500 hover:text-white"><Check size={14}/></button>
+                             </div>
+                         ) : (
+                             <button onClick={() => setIsEditingSubdomain(true)} className="p-2 text-zinc-500 hover:text-[#D4AF37] transition-all"><Edit2 size={14}/></button>
+                         )}
                       </div>
                    </div>
 
@@ -270,14 +329,43 @@ export const SettingsPage: React.FC = () => {
                          <div className="bg-black/40 p-6 rounded-2xl border border-white/5 space-y-4">
                             <div className="flex justify-between items-center">
                                <div className="flex items-center gap-3">
-                                  <ShieldCheck size={18} className="text-[#D4AF37]" />
+                                  <ShieldCheck size={18} className={domainStatus?.status === 'active' ? "text-emerald-500" : "text-amber-500"} />
                                   <span className="font-bold text-white">{landingSettings.customDomain}</span>
                                </div>
-                               <button onClick={handleRemoveDomain} disabled={isAddingDomain} className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:text-white transition-colors">Desvincular</button>
+                               <div className="flex gap-4">
+                                   <button onClick={handleCheckDomain} disabled={isCheckingDomain} className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2">
+                                       {isCheckingDomain ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Verificar
+                                   </button>
+                                   <button onClick={handleRemoveDomain} disabled={isAddingDomain} className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:text-white transition-colors">Desvincular</button>
+                               </div>
                             </div>
-                            <div className="p-4 bg-white/5 rounded-xl text-[10px] text-zinc-400 font-mono">
-                               Status DNS: <span className="text-emerald-500">Activo (Cloudflare SSL)</span>
-                            </div>
+                            
+                            {domainStatus?.status === 'active' ? (
+                                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] text-emerald-400 font-mono flex items-center gap-3">
+                                   <Check size={14} /> Dominio Verificado y SSL Activo
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-400 font-mono">
+                                       Estado: Pendiente de Validación DNS
+                                    </div>
+                                    {domainStatus?.verification && (
+                                        <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-2">
+                                            <p className="text-[10px] text-zinc-400 uppercase font-bold">Agrega este registro TXT a tu proveedor DNS:</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                                                <div>
+                                                    <span className="text-zinc-500 block mb-1">Nombre (Host):</span>
+                                                    <div className="bg-black p-2 rounded border border-white/10 text-white select-all">{domainStatus.verification.name}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-zinc-500 block mb-1">Valor (Value):</span>
+                                                    <div className="bg-black p-2 rounded border border-white/10 text-white select-all break-all">{domainStatus.verification.value}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                          </div>
                       ) : (
                          <div className="space-y-4">
@@ -299,9 +387,8 @@ export const SettingsPage: React.FC = () => {
                             </div>
                             <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-[10px] text-blue-300 leading-relaxed">
                                <p className="font-bold mb-1">Instrucciones DNS:</p>
-                               1. Entra a tu proveedor de dominio (GoDaddy, Namecheap, etc).<br/>
-                               2. Crea un registro <b>CNAME</b>.<br/>
-                               3. Apunta a: <b>citaplanner.com</b> (o el dominio raíz del sistema).
+                               1. Crea un registro <b>CNAME</b> apuntando a <b>citaplanner.com</b>.<br/>
+                               2. Si se requiere verificación extra, te mostraremos el registro TXT necesario arriba.
                             </div>
                          </div>
                       )}
@@ -310,10 +397,8 @@ export const SettingsPage: React.FC = () => {
              </div>
           )}
 
-          {/* ... (Rest of Tabs) ... */}
           {activeTab === 'LANDING' && landingSettings && (
             <div className="space-y-16 animate-entrance">
-              {/* BRANDING SECTION */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <section className="bg-white/5 p-10 rounded-[3.5rem] border border-white/5">
                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-8 flex items-center gap-3"><Sparkles size={20} className="text-[#D4AF37]" /> Identidad Visual</h3>

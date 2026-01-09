@@ -1,8 +1,9 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { AIParsedAppointment, Service } from "../types";
+import { api } from "./api";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// NO IMPORTAMOS GoogleGenAI aquí. Usamos api.generateAIContent.
 
 export const parseAppointmentRequest = async (input: string): Promise<AIParsedAppointment | null> => {
   const now = new Date().toISOString();
@@ -23,7 +24,7 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await api.generateAIContent({
       model: "gemini-3-flash-preview",
       contents: input,
       config: {
@@ -51,9 +52,6 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
   }
 };
 
-/**
- * Nueva función para responder dudas de clientes basadas en el catálogo real.
- */
 export const answerServiceQuery = async (customerMessage: string, catalog: Service[]): Promise<string> => {
   const catalogContext = catalog.map(s => `- ${s.name}: $${s.price} (Duración: ${s.duration} min). Desc: ${s.description}`).join('\n');
 
@@ -73,7 +71,7 @@ export const answerServiceQuery = async (customerMessage: string, catalog: Servi
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await api.generateAIContent({
       model: "gemini-3-flash-preview",
       contents: customerMessage,
       config: {

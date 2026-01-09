@@ -10,7 +10,6 @@ import { api } from '../services/api';
 import { Branch } from '../types';
 import { toast } from 'sonner';
 import { BranchModal } from '../components/BranchModal';
-import { GoogleGenAI } from '@google/genai';
 
 export const BranchesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -45,16 +44,14 @@ export const BranchesPage: React.FC = () => {
   });
 
   const handleRunAiAnalysis = async (branch: Branch) => {
-    if (!process.env.API_KEY) return;
     setIsAnalyzing(branch.id);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
       const prompt = `Analiza esta ubicación para un estudio de belleza de ultra-lujo: "${branch.address}". 
       Dime si la zona es estratégica para el mercado elite en México. 
       Devuelve un veredicto breve (máximo 30 palabras) y sofisticado.`;
 
-      const res = await ai.models.generateContent({
+      const res = await api.generateAIContent({
         model: 'gemini-3-flash-preview',
         contents: prompt
       });

@@ -245,7 +245,11 @@ export const LandingPage: React.FC = () => {
                   <div className="space-y-6">
                     <div className="flex gap-4">
                       <MapPin size={18} className="text-[#C5A028] shrink-0" />
-                      <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
+                      {settings.googleMapsUrl ? (
+                        <a href={settings.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed hover:text-[#C5A028] transition-colors">{settings.address}</a>
+                      ) : (
+                        <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
+                      )}
                     </div>
                     <div className="flex gap-4">
                       <Phone size={18} className="text-[#C5A028] shrink-0" />
@@ -293,7 +297,7 @@ export const LandingPage: React.FC = () => {
                <div className="flex items-center gap-3">
                   <Shield size={16} className="text-zinc-700" />
                   <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em]">
-                    Socio Tecnológico Certificado por Aurum Capital Technology
+                    Aurum Capital Technology • 8888
                   </p>
                </div>
                
