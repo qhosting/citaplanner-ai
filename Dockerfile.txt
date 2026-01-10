@@ -1,7 +1,7 @@
 
 # [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
-# REVISIÓN: 2026.10.21 (Dependency Resolution Strategy: Prune & Copy)
+# REVISIÓN: 2026.10.22 (Dependency Lock & Multi-Stage Fix)
 # STATUS: PRODUCTION DEPLOYMENT READY
 # INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
@@ -30,7 +30,7 @@ ENV DOMAIN_URL=$DOMAIN_URL
 COPY package*.json ./
 
 # Instalación INICIAL (incluye devDependencies para tener acceso a 'vite')
-# Usamos legacy-peer-deps para evitar bloqueos iniciales
+# Usamos legacy-peer-deps para evitar bloqueos iniciales por versiones de react-hook-form
 RUN NODE_ENV=development npm install --legacy-peer-deps
 
 # Inyección total del código fuente
@@ -52,7 +52,7 @@ RUN npm prune --production
 FROM node:20-alpine AS runner
 
 LABEL maintainer="Aurum Capital Technology"
-LABEL version="4.7.3"
+LABEL version="4.8.0"
 LABEL environment="production"
 
 WORKDIR /app
@@ -69,7 +69,7 @@ RUN adduser --system --uid 1001 citaplanner
 RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
 
 # Transferencia de binarios y dependencias validadas desde el Builder
-# Ya no ejecutamos npm install aquí para evitar conflictos de resolución (ERESOLVE)
+# CRÍTICO: No ejecutamos npm install aquí para evitar reevaluación de dependencias y errores ERESOLVE
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./

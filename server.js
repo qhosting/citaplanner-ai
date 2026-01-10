@@ -287,6 +287,42 @@ const initDB = async () => {
       );
     `);
 
+    // --- AURUM MASTER SEEDING (Auto-Deploy) ---
+    const masterCheck = await client.query("SELECT id FROM tenants WHERE subdomain = 'master'");
+    if (masterCheck.rows.length === 0) {
+      console.log("🚀 Desplegando Aurum Master Node...");
+      
+      const tenantRes = await client.query(
+        "INSERT INTO tenants (name, subdomain, status, plan_type) VALUES ($1, $2, 'ACTIVE', 'PRO') RETURNING id",
+        ['Aurum Master', 'master']
+      );
+      const tenantId = tenantRes.rows[0].id;
+
+      // Crear Super Admin
+      await client.query(
+        "INSERT INTO users (name, phone, password, role, tenant_id) VALUES ($1, $2, crypt($3, gen_salt('bf')), 'SUPERADMIN', $4)",
+        ['Super Admin', '4425060999', 'x0420EZS*', tenantId]
+      );
+
+      // Configuración Base
+      const defaultSettings = { 
+        businessName: 'Aurum Master', 
+        primaryColor: '#D4AF37', 
+        secondaryColor: '#1A1A1A', 
+        contactPhone: '4425060999', 
+        maintenanceMode: false,
+        aboutText: 'Nodo Central de Administración Aurum Ecosystem.',
+        address: 'HQ'
+      };
+
+      await client.query(
+        "INSERT INTO settings (key, value, tenant_id) VALUES ('landing', $1, $2)",
+        [JSON.stringify(defaultSettings), tenantId]
+      );
+      
+      console.log("✅ Super Admin desplegado: 4425060999");
+    }
+
     await client.query('COMMIT');
     console.log("✅ Esquema de Base de Datos Sincronizado.");
   } catch (e) {

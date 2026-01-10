@@ -1,7 +1,7 @@
 
 // [AURUM PROTOCOL] - PRISMA SCHEMA MIRROR
 // PRODUCT: CITAPLANNER ELITE SAAS
-// REVISION: 2026.10.20 (Tenant Verification Fields Added)
+// REVISION: 2026.10.22 (User Constraint Fix & Tenant Verification)
 // INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
 generator client {
@@ -48,7 +48,7 @@ model Tenant {
 model User {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
-  phone       String   @unique // Identificador principal de login
+  phone       String   // Identificador de login (No único globalmente, único por Tenant)
   password    String   // Cifrado con pgcrypto (bcrypt)
   role        String   @default("ADMIN") // SUPERADMIN, ADMIN, PROFESSIONAL, CLIENT
   avatar      String?
@@ -58,6 +58,8 @@ model User {
 
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
 
+  // Restricción única compuesta para permitir el mismo teléfono en diferentes tenants
+  @@unique([phone, tenantId])
   @@map("users")
 }
 
