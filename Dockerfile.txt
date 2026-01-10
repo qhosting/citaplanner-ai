@@ -1,7 +1,7 @@
 
 # [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
-# REVISIÓN: 2026.10.20 (Vite Build Fix: Force Dev Deps)
+# REVISIÓN: 2026.10.21 (Dependency Resolution Strategy: Prune & Copy)
 # STATUS: PRODUCTION DEPLOYMENT READY
 # INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
@@ -26,25 +26,33 @@ ENV GEMINI_API_KEY=$API_KEY
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 ENV DOMAIN_URL=$DOMAIN_URL
 
-# Optimización de Capas
+# Optimización de Capas: Copiar definiciones primero
 COPY package*.json ./
 
-# Instalación COMPLETA (incluye devDependencies para tener acceso a 'vite')
-# Forzamos NODE_ENV=development para evitar que se omitan devDependencies si el arg global es production
-RUN NODE_ENV=development npm install --legacy-peer-deps && \
-    NODE_ENV=development npm install zod@3.24.1 react-hook-form@7.54.1 @hookform/resolvers@3.9.1 redis@4.6.13 jsonwebtoken@9.0.2 --legacy-peer-deps
+# Instalación INICIAL (incluye devDependencies para tener acceso a 'vite')
+# Usamos legacy-peer-deps para evitar bloqueos iniciales
+RUN NODE_ENV=development npm install --legacy-peer-deps
 
 # Inyección total del código fuente
 COPY . .
 
-# Generación del bundle de alta disponibilidad (Ahora sí encontrará 'vite')
+# CORRECCIÓN CRÍTICA DE DEPENDENCIAS & SERVER DEPS
+# 1. Reinstalamos versiones compatibles explícitas para asegurar integridad.
+# 2. Instalamos dependencias del servidor (redis, jsonwebtoken) para que queden en node_modules.
+RUN npm install react-hook-form@7.54.1 @hookform/resolvers@3.9.1 redis@4.6.13 jsonwebtoken@9.0.2 --save --legacy-peer-deps
+
+# Generación del bundle de alta disponibilidad
 RUN npm run build
+
+# Limpieza de dependencias de desarrollo (Vite, Typescript, etc.)
+# Esto deja en node_modules solo lo necesario para producción (Express, PG, etc.)
+RUN npm prune --production
 
 # --- FASE 2: RUNNER (Nodo de Operación Master) ---
 FROM node:20-alpine AS runner
 
 LABEL maintainer="Aurum Capital Technology"
-LABEL version="4.7.2"
+LABEL version="4.7.3"
 LABEL environment="production"
 
 WORKDIR /app
@@ -60,15 +68,12 @@ RUN adduser --system --uid 1001 citaplanner
 # Persistencia Crítica de Archivos
 RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
 
-# Transferencia de binarios validados desde el Builder
+# Transferencia de binarios y dependencias validadas desde el Builder
+# Ya no ejecutamos npm install aquí para evitar conflictos de resolución (ERESOLVE)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/package*.json ./
-
-# Instalación de dependencias LIGERAS (Solo producción) para el servidor
-RUN npm install --omit=dev --legacy-peer-deps && \
-    npm install redis@4.6.13 jsonwebtoken@9.0.2 --no-save && \
-    npm cache clean --force
 
 # Sellado de permisos
 RUN chown -R citaplanner:nodejs /app
