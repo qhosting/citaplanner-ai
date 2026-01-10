@@ -1,7 +1,7 @@
 
 // [AURUM PROTOCOL] - PRISMA SCHEMA MIRROR
 // PRODUCT: CITAPLANNER ELITE SAAS
-// REVISION: 2026.10.18 (SaaS Core & Security Layer)
+// REVISION: 2026.10.20 (Tenant Verification Fields Added)
 // INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
 
 generator client {
@@ -16,14 +16,16 @@ datasource db {
 // --- SAAS CORE & TENANCY ---
 
 model Tenant {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String   @db.VarChar(100)
-  subdomain     String   @unique @db.VarChar(50)
-  customDomain  String?  @unique @map("custom_domain") @db.VarChar(100)
-  cloudflareId  String?  @map("cloudflare_id") @db.VarChar(100)
-  status        String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, SUSPENDED, ARCHIVED
-  planType      String   @default("TRIAL") @map("plan_type") @db.VarChar(20)
-  createdAt     DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String   @db.VarChar(100)
+  subdomain          String   @unique @db.VarChar(50)
+  customDomain       String?  @unique @map("custom_domain") @db.VarChar(100)
+  cloudflareId       String?  @map("cloudflare_id") @db.VarChar(100)
+  cloudflareStatus   String?  @default("pending") @map("cloudflare_status") @db.VarChar(50)
+  verificationRecord Json?    @map("verification_record")
+  status             String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, SUSPENDED, ARCHIVED
+  planType           String   @default("TRIAL") @map("plan_type") @db.VarChar(20)
+  createdAt          DateTime @default(now()) @map("created_at")
 
   // Relaciones de Dominio (Data Isolation Boundary)
   users               User[]
