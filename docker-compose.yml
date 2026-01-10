@@ -29,7 +29,7 @@ services:
       NEXTAUTH_URL: ${DOMAIN_URL}
       API_KEY: ${API_KEY}
     volumes:
-      - uploads_data:/app/public/uploads
+      - uploads_data:/app/uploads
     networks:
       - citaplanner_internal
 
