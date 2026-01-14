@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality, Type, FunctionDeclaration } from '@google/genai';
 import { Mic, MicOff, Loader2, X, Volume2, Sparkles } from 'lucide-react';
@@ -48,6 +49,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
   const startAssistant = async () => {
     setIsConnecting(true);
     try {
+      // Create a new GoogleGenAI instance right before making an API call
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -57,7 +59,8 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
       audioContextRef.current = outputCtx;
 
       const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        // Updated to the recommended model name
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: {
           responseModalities: [Modality.AUDIO],
           systemInstruction: 'Eres el Asistente de Voz de CitaPlanner. Tu objetivo es ayudar al usuario a agendar citas. Habla de forma natural y breve en español. Cuando tengas los datos (título, fecha, hora y cliente), usa la herramienta create_appointment.',
@@ -75,28 +78,31 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
             processor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const pcmBlob = createBlob(inputData);
-              sessionPromise.then(session => session.sendRealtimeInput({ media: pcmBlob }));
+              // CRITICAL: Solely rely on sessionPromise resolves and then call `session.sendRealtimeInput`
+              sessionPromise.then(session => {
+                session.sendRealtimeInput({ media: pcmBlob });
+              });
             };
             source.connect(processor);
             processor.connect(inputCtx.destination);
           },
           onmessage: async (msg: LiveServerMessage) => {
             // Manejo de Audio de Salida
-            const audioData = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-            if (audioData) {
+            const base64EncodedAudioString = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (base64EncodedAudioString) {
               setStatus('SPEAKING');
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
-              const buffer = await decodeAudioData(decode(audioData), outputCtx, 24000, 1);
+              const buffer = await decodeAudioData(decode(base64EncodedAudioString), outputCtx, 24000, 1);
               const source = outputCtx.createBufferSource();
               source.buffer = buffer;
               source.connect(outputCtx.destination);
-              source.onended = () => {
+              source.addEventListener('ended', () => {
                 sourcesRef.current.delete(source);
                 if (sourcesRef.current.size === 0) setStatus('LISTENING');
-              };
+              });
               source.start(nextStartTimeRef.current);
               nextStartTimeRef.current += buffer.duration;
-              sourcesRef.current.add(source);
+              sourcesRef.add(source);
             }
 
             // Manejo de Function Calls
@@ -113,6 +119,15 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
                   }));
                 }
               }
+            }
+
+            const interrupted = msg.serverContent?.interrupted;
+            if (interrupted) {
+              for (const source of sourcesRef.current.values()) {
+                source.stop();
+                sourcesRef.current.delete(source);
+              }
+              nextStartTimeRef.current = 0;
             }
           },
           onerror: (e) => { console.error(e); stopAssistant(); },

@@ -30,7 +30,8 @@
     "vite": "^7.3.0",
     "@vitejs/plugin-react": "^5.1.2",
     "redis": "^5.10.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
