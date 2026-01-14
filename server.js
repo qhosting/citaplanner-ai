@@ -43,28 +43,6 @@ const pool = new Pool({
   ssl: connectionString?.includes('localhost') ? false : { rejectUnauthorized: false }
 });
 
-// --- HELPER: AURUM BRIDGE SENDER ---
-const sendBridgeEvent = async (tenant, eventType, payload) => {
-  if (!tenant.bridge_enabled || !tenant.bridge_webhook_url) return;
-  try {
-    await axios.post(tenant.bridge_webhook_url, {
-      ...payload,
-      eventType,
-      businessId: `${tenant.subdomain.toUpperCase()}_NODE_${tenant.bridge_satellite_id || '3'}`,
-      timestamp: new Date().toISOString()
-    }, {
-      headers: {
-        'x-api-key': tenant.bridge_api_key,
-        'x-satellite-id': tenant.bridge_satellite_id || '3'
-      },
-      timeout: 5000
-    });
-    await pool.query("INSERT INTO integration_logs (platform, event_type, status, response, tenant_id) VALUES ('AURUM_BRIDGE', $1, 'SUCCESS', 'Handshake OK', $2)", [eventType, tenant.id]);
-  } catch (error) {
-    await pool.query("INSERT INTO integration_logs (platform, event_type, status, response, tenant_id) VALUES ('AURUM_BRIDGE', $1, 'FAILED', $2, $3)", [eventType, error.message, tenant.id]);
-  }
-};
-
 // --- INICIALIZACIÓN Y SEEDING ---
 const initDB = async () => {
   const client = await pool.connect();
@@ -72,7 +50,6 @@ const initDB = async () => {
     await client.query('BEGIN');
     await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
 
-    // 1. Crear Tablas base
     await client.query(`
       CREATE TABLE IF NOT EXISTS tenants (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -101,43 +78,21 @@ const initDB = async () => {
 
     await client.query(`CREATE TABLE IF NOT EXISTS integration_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), platform VARCHAR(50), event_type VARCHAR(100), status VARCHAR(50), response TEXT, tenant_id UUID REFERENCES tenants(id), created_at TIMESTAMP DEFAULT NOW());`);
     await client.query(`CREATE TABLE IF NOT EXISTS settings (key VARCHAR(100) NOT NULL, value JSONB NOT NULL, tenant_id UUID REFERENCES tenants(id), PRIMARY KEY (key, tenant_id));`);
-    await client.query(`CREATE TABLE IF NOT EXISTS professionals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, role VARCHAR(100), email VARCHAR(255), aurum_employee_id VARCHAR(50), tenant_id UUID REFERENCES tenants(id));`);
 
-    // 2. SEEDING: Crear Nodo Master y SuperAdmin si no existen
     const tenantCheck = await client.query("SELECT id FROM tenants WHERE subdomain = 'master' LIMIT 1");
     if (tenantCheck.rows.length === 0) {
-      console.log("🌱 Sembrando Nodo Maestro de Infraestructura...");
       const masterRes = await client.query(
         "INSERT INTO tenants (name, subdomain, status, bridge_enabled) VALUES ('Aurum Global Nexus', 'master', 'ACTIVE', TRUE) RETURNING id"
       );
       const masterId = masterRes.rows[0].id;
-
-      // Crear SuperAdmin Global
       await client.query(
         "INSERT INTO users (name, phone, password, role, tenant_id) VALUES ('Nexus Command', '8888', crypt('aurum2026', gen_salt('bf')), 'SUPERADMIN', $1)",
         [masterId]
       );
-
-      // Crear Nodo Shula para pruebas
-      const shulaRes = await client.query(
-        "INSERT INTO tenants (name, subdomain, status) VALUES ('Shula Studio', 'shula', 'ACTIVE') RETURNING id"
-      );
-      const shulaId = shulaRes.rows[0].id;
-
-      await client.query(
-        "INSERT INTO users (name, phone, password, role, tenant_id) VALUES ('Shula Admin', '5571427321', crypt('shula123', gen_salt('bf')), 'ADMIN', $1)",
-        [shulaId]
-      );
-
-      // Default Settings
-      await client.query(
-        "INSERT INTO settings (key, value, tenant_id) VALUES ('landing', $1, $2)",
-        [JSON.stringify({ businessName: 'Shula Studio', primaryColor: '#D4AF37' }), shulaId]
-      );
     }
 
     await client.query('COMMIT');
-    console.log("✅ Infraestructura Aurum lista y sincronizada.");
+    console.log("✅ Infraestructura Aurum lista.");
   } catch (e) {
     await client.query('ROLLBACK');
     console.error("❌ Error de despliegue:", e);
@@ -162,7 +117,7 @@ const tenantMiddleware = async (req, res, next) => {
   } catch (e) { res.status(500).json({ error: "Falla de red" }); }
 };
 
-// --- LOGIN CON VALIDACIÓN CRYPT ---
+// --- AUTH ---
 app.post('/api/login', tenantMiddleware, async (req, res) => {
   const { phone, password } = req.body;
   try {
@@ -170,34 +125,51 @@ app.post('/api/login', tenantMiddleware, async (req, res) => {
       "SELECT * FROM users WHERE phone = $1 AND tenant_id = $2 AND password = crypt($3, password) LIMIT 1",
       [phone, req.tenant.id, password]
     );
-
     if (result.rows.length > 0) {
       const user = result.rows[0];
       const token = jwt.sign({ id: user.id, role: user.role, tenantId: req.tenant.id }, JWT_SECRET, { expiresIn: '24h' });
       res.json({ success: true, token, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, tenantId: user.tenant_id } });
     } else {
-      res.status(401).json({ success: false, error: "Credenciales inválidas en este nodo." });
+      res.status(401).json({ success: false, error: "Credenciales inválidas." });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// RESTO DE ENDPOINTS
+// --- AI PROXY (CRITICAL FOR SMART SCHEDULER) ---
+app.post('/api/ai/generate', tenantMiddleware, async (req, res) => {
+  const { model, contents, config } = req.body;
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  try {
+    const response = await ai.models.generateContent({
+      model: model || 'gemini-3-flash-preview',
+      contents: contents,
+      config: config
+    });
+    res.json({ text: response.text });
+  } catch (e) {
+    console.error("AI Proxy Error:", e);
+    res.status(500).json({ text: "Frecuencia AI inestable. Por favor, reintente." });
+  }
+});
+
+// --- INTEGRATION STATUS ---
+app.get('/api/integrations/status', tenantMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM integration_logs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20",
+      [req.tenant.id]
+    );
+    res.json(result.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
     const result = await pool.query("SELECT value FROM settings WHERE key = 'landing' AND tenant_id = $1", [req.tenant.id]);
-    res.json({ 
-        ...(result.rows[0]?.value || {}), 
-        subdomain: req.tenant.subdomain,
-        bridge: {
-            enabled: req.tenant.bridge_enabled,
-            webhookUrl: req.tenant.bridge_webhook_url,
-            apiKey: req.tenant.bridge_api_key,
-            satelliteId: req.tenant.bridge_satellite_id
-        }
-    });
+    res.json({ ...(result.rows[0]?.value || {}), subdomain: req.tenant.subdomain });
 });
 
 app.get(/.*/, (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`🚀 CitaPlanner Ecosystem operativo en puerto ${PORT}`));
+  app.listen(PORT, () => console.log(`🚀 CitaPlanner operativo en puerto ${PORT}`));
 });
