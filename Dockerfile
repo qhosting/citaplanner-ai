@@ -1,0 +1,70 @@
+# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
+# PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
+# REVISIÓN: 2026.02.18.2 (Build Fix)
+# STATUS: READY FOR CLOUD DEPLOYMENT
+
+# --- FASE 1: BUILDER (Compilación del Frontend y Preparación) ---
+FROM node:20-alpine AS builder
+
+# Instalación de dependencias de sistema para compilaciones nativas
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+# Inyección de argumentos de construcción
+ARG DATABASE_URL
+ARG API_KEY
+ARG NEXTAUTH_SECRET
+ARG DOMAIN_URL
+ARG REDIS_URL
+
+# Nota: No establecemos NODE_ENV=production aquí para asegurar que 
+# npm instale todas las herramientas necesarias para el build.
+COPY package.json package-lock.json* ./
+
+# Instalación total (incluyendo build tools)
+RUN npm install --legacy-peer-deps
+
+# Copia total del código fuente
+COPY . .
+
+# Generación del bundle de producción (Vite -> /dist)
+RUN npm run build
+
+# --- FASE 2: RUNNER (Imagen Final Aligerada) ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Configuración del entorno de ejecución real
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Seguridad: Creación de usuario no privilegiado
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 citaplanner
+
+# Preparación de directorios para persistencia de datos (Uploads)
+RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
+
+# Copia selectiva desde el Builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/package.json ./
+
+# Asignación de permisos al usuario de ejecución
+RUN chown -R citaplanner:nodejs /app
+
+# Cambio al contexto de usuario seguro
+USER citaplanner
+
+# Monitor de Salud de Infraestructura (Healthcheck)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/api/settings/landing').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+
+# Exposición del puerto del microservicio
+EXPOSE 3000
+
+# Activación del Nodo Maestro de Operaciones
+CMD ["node", "server.js"]
