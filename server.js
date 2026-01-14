@@ -181,7 +181,7 @@ app.post('/api/login', tenantMiddleware, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// RESTO DE ENDPOINTS (Mantenidos del sistema anterior)
+// RESTO DE ENDPOINTS
 app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
     const result = await pool.query("SELECT value FROM settings WHERE key = 'landing' AND tenant_id = $1", [req.tenant.id]);
     res.json({ 
