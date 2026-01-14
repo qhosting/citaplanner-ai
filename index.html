@@ -14,7 +14,6 @@
         --deep-black: #050505;
         --transition-fluid: 1200ms cubic-bezier(0.16, 1, 0.3, 1);
       }
-
       body {
         font-family: 'Inter', sans-serif;
         background-color: #050505;
@@ -22,46 +21,35 @@
         margin: 0;
         overflow-x: hidden;
       }
-
       .font-playfair { font-family: 'Playfair Display', serif; }
-
       .gold-btn {
         background: linear-gradient(135deg, var(--primary-gold) 0%, #8C6F1B 100%);
         color: #000;
         font-weight: 800;
         transition: var(--transition-fluid);
       }
-
       .gold-btn:hover {
         transform: translateY(-5px) scale(1.02);
         box-shadow: 0 40px 80px -20px rgba(197, 160, 40, 0.5);
       }
-
       .glass-card {
         background: rgba(255, 255, 255, 0.03);
         backdrop-filter: blur(15px);
         border: 1px solid rgba(255, 255, 255, 0.05);
       }
-
       .gold-text-gradient {
         background: linear-gradient(135deg, var(--primary-gold) 0%, #B8860B 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
-
       @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(50px); }
         to { opacity: 1; transform: translateY(0); }
       }
-
       .animate-entrance { animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: #050505; }
       ::-webkit-scrollbar-thumb { background: var(--primary-gold); border-radius: 10px; }
-      
-      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
     </style>
     <script type="importmap">
 {
@@ -81,17 +69,15 @@
     "axios": "https://esm.sh/axios@1.7.9",
     "path": "https://esm.sh/path-browserify@1.0.1",
     "uuid": "https://esm.sh/uuid@11.0.5",
-    "pg": "https://esm.sh/pg@^8.16.3",
-    "express": "https://esm.sh/express@^5.2.1",
     "@hookform/resolvers/": "https://esm.sh/@hookform/resolvers@^5.2.2/",
-    "redis": "https://esm.sh/redis@^5.10.0",
-    "url": "https://esm.sh/url@^0.11.4",
-    "fs": "https://esm.sh/fs@^0.0.1-security",
-    "multer": "https://esm.sh/multer@^2.0.2",
+    "express": "https://esm.sh/express@^5.2.1",
+    "pg": "https://esm.sh/pg@^8.16.3",
     "cors": "https://esm.sh/cors@^2.8.5",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "url": "https://esm.sh/url@^0.11.4",
+    "redis": "https://esm.sh/redis@^5.10.0",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
