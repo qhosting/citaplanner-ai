@@ -57,6 +57,7 @@ export const LandingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -134,20 +135,47 @@ export const LandingPage: React.FC = () => {
       )}
 
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-[100] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#C5A028]/20' : 'bg-transparent py-8'}`}>
+      <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#C5A028]/20 shadow-2xl' : 'bg-transparent py-8'}`}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
           <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
           
-          <div className="hidden lg:flex items-center gap-12">
+          <div className="hidden lg:flex items-center gap-10">
             <a href="#services" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Servicios</a>
             <a href="#about" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Santuario</a>
-            <Link to="/login" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/40 hover:text-[#C5A028]">Staff</Link>
+            <div className="w-px h-4 bg-white/10 mx-2" />
+            <Link to="/login" className="font-black text-[10px] uppercase tracking-[0.3em] transition-all text-white/60 hover:text-[#C5A028] px-4 py-2 rounded-xl hover:bg-white/5">Staff</Link>
             <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 bg-white text-black">
               Agendar Ritual <ArrowRight size={14} />
             </Link>
           </div>
+
+          <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-3 text-white bg-white/5 rounded-xl border border-white/10">
+            <Menu size={24} />
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-2xl animate-entrance p-8 flex flex-col">
+           <div className="flex justify-between items-center mb-20">
+              <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
+              <button onClick={() => setMobileMenuOpen(false)} className="p-4 bg-white/5 rounded-2xl text-[#C5A028] border border-[#C5A028]/20">
+                <X size={32} />
+              </button>
+           </div>
+           <div className="flex flex-col gap-10 text-center">
+              <a href="#services" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Servicios</a>
+              <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Santuario</a>
+              <div className="h-px bg-white/10 w-24 mx-auto my-4" />
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-black text-[#C5A028] uppercase tracking-[0.2em]">Acceso Staff</Link>
+              <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="gold-btn py-6 rounded-[2rem] text-sm uppercase tracking-[0.4em] font-black mx-auto w-full max-w-xs">Reservar Ahora</Link>
+           </div>
+           <div className="mt-auto text-center border-t border-white/5 pt-10">
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{settings.businessName}</p>
+           </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative h-screen min-h-[750px] w-full bg-black overflow-hidden">
@@ -158,7 +186,7 @@ export const LandingPage: React.FC = () => {
             <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
               <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
                 <span className="text-[11px] font-black uppercase tracking-[1em] text-[#C5A028] mb-8 block">Exclusividad • Arte • Precisión</span>
-                <h1 className="text-8xl md:text-[140px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
+                <h1 className="text-6xl md:text-[140px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
                   {slide.title} <span className="italic font-light text-[#C5A028]">{slide.subtitle}</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed mb-14">{slide.text}</p>
@@ -174,7 +202,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-8">
            <div className="mb-32">
               <span className="text-[11px] font-black uppercase tracking-[0.6em] text-[#C5A028] mb-8 block">Le Menu d'Excellence</span>
-              <h2 className="text-7xl md:text-[100px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
+              <h2 className="text-6xl md:text-[100px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
                 Invierte en tu <br/> <span className="italic font-light text-[#C5A028]">Propia Mirada.</span>
               </h2>
            </div>
@@ -236,6 +264,11 @@ export const LandingPage: React.FC = () => {
                         </a>
                       </li>
                     ))}
+                    <li>
+                      <Link to="/login" className="text-[11px] font-black text-[#C5A028] uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
+                         <ShieldCheck size={14} /> Acceso Staff
+                      </Link>
+                    </li>
                   </ul>
                </div>
 
@@ -262,7 +295,7 @@ export const LandingPage: React.FC = () => {
                   </div>
                </div>
 
-               {/* Column 4: Network Status (Interactive Fake Component) */}
+               {/* Column 4: Network Status */}
                <div className="lg:col-span-3">
                   <div className="glass-card p-8 rounded-[2.5rem] border-white/5 bg-gradient-to-tr from-white/[0.02] to-transparent">
                     <div className="flex items-center justify-between mb-8">
