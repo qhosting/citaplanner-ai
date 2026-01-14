@@ -20,10 +20,11 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   const handleRedirection = (role: Role) => {
-    if (role === 'SUPERADMIN') navigate('/nexus', { replace: true });
-    else if (role === 'ADMIN') navigate('/admin', { replace: true });
-    else if (role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
-    else if (role === 'CLIENT') navigate('/client-portal', { replace: true });
+    // Fixed: Updated role names to match Role type ('GOD_MODE', 'STUDIO_OWNER', 'STAFF', 'MEMBER')
+    if (role === 'GOD_MODE') navigate('/nexus', { replace: true });
+    else if (role === 'STUDIO_OWNER') navigate('/admin', { replace: true });
+    else if (role === 'STAFF') navigate('/professional-dashboard', { replace: true });
+    else if (role === 'MEMBER') navigate('/client-portal', { replace: true });
     else navigate('/', { replace: true });
   };
 
@@ -41,7 +42,8 @@ export const LoginPage: React.FC = () => {
     try {
       const apiUser = await login(phone, password);
       if (apiUser) {
-        if (isMaintenance && apiUser.role === 'CLIENT') {
+        // Fixed: Updated role check to 'MEMBER' to match Role type
+        if (isMaintenance && apiUser.role === 'MEMBER') {
           setError('PROTOCOLO DE MANTENIMIENTO: Acceso restringido.');
           return;
         }

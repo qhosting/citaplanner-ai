@@ -1,10 +1,27 @@
 
-export type Role = 'SUPERADMIN' | 'ADMIN' | 'PROFESSIONAL' | 'CLIENT';
+export type Role = 'GOD_MODE' | 'STUDIO_OWNER' | 'STAFF' | 'MEMBER';
 
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED',
+}
+
+export interface TenantFeatures {
+  ai_scheduler: boolean;
+  marketing_pro: boolean;
+  inventory_advanced: boolean;
+  analytics_nexus: boolean;
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  subdomain: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'MAINTENANCE';
+  planType: 'TRIAL' | 'ELITE' | 'LEGACY';
+  features: TenantFeatures;
+  createdAt: string;
 }
 
 export interface BridgeSettings {
@@ -27,7 +44,6 @@ export interface LandingSettings {
   maintenanceMode?: boolean;
   subdomain?: string;
   bridge?: BridgeSettings;
-  // Added properties for LandingSettings
   heroSlides?: Array<{ image: string; title: string; subtitle: string; text: string; }>;
   stats?: Array<{ label: string; value: string; }>;
   socialLinks?: { instagram?: string; facebook?: string; twitter?: string; linkedin?: string; };
@@ -42,7 +58,7 @@ export interface Professional {
   name: string;
   role: string;
   email: string;
-  aurum_employee_id?: string; // ID para sincronización con nómina de Holding
+  aurum_employee_id?: string;
   weeklySchedule: any[];
   exceptions: any[];
   serviceIds?: string[];
@@ -61,7 +77,6 @@ export interface Product {
   status: 'ACTIVE' | 'INACTIVE';
   usage: 'RETAIL' | 'INTERNAL';
   tenantId?: string;
-  // Added traceability fields
   batchNumber?: string;
   expiryDate?: string;
 }
@@ -74,7 +89,6 @@ export interface Service {
   category: string;
   status: 'ACTIVE' | 'INACTIVE';
   tenantId?: string;
-  // Added description and imageUrl
   description: string;
   imageUrl?: string;
 }
@@ -110,6 +124,7 @@ export interface User {
   preferences?: NotificationPreferences;
   relatedId?: string;
   email?: string;
+  isImpersonated?: boolean;
 }
 
 export interface CartItem {
@@ -124,7 +139,6 @@ export interface CartItem {
 
 export type PaymentMethod = 'CASH' | 'SPEI' | 'CARD';
 
-// Added missing AIParsedAppointment
 export interface AIParsedAppointment {
   title: string;
   startDateTime: string;
@@ -134,7 +148,6 @@ export interface AIParsedAppointment {
   description?: string;
 }
 
-// Added missing TreatmentRecord
 export interface TreatmentRecord {
   id: string;
   date: string;
@@ -146,7 +159,6 @@ export interface TreatmentRecord {
   professionalName: string;
 }
 
-// Added missing Client
 export interface Client {
   id: string;
   name: string;
@@ -163,7 +175,6 @@ export interface Client {
   treatmentHistory: TreatmentRecord[];
 }
 
-// Added missing InventoryMovement
 export interface InventoryMovement {
   id: string;
   productId: string;
@@ -175,7 +186,6 @@ export interface InventoryMovement {
   user: string;
 }
 
-// Added missing ExceptionType and ScheduleException
 export enum ExceptionType {
   VACATION = 'VACATION',
   SICKNESS = 'SICKNESS',
@@ -191,7 +201,6 @@ export interface ScheduleException {
   note?: string;
 }
 
-// Added missing Marketing types
 export type MarketingChannel = 'EMAIL' | 'WHATSAPP' | 'SMS';
 
 export interface Campaign {
@@ -214,7 +223,6 @@ export interface AutomationRule {
   templateMessage: string;
 }
 
-// Added missing Branch
 export interface Branch {
   id: string;
   name: string;
@@ -225,7 +233,6 @@ export interface Branch {
   tenantId?: string;
 }
 
-// Added missing Aurum Connector types
 export interface AurumClientPayload {
   commercialName: string;
   email: string;

@@ -1,38 +1,57 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
   Sparkles, ShoppingBag, Megaphone, Settings, 
   ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2,
-  ShieldCheck, Activity, Cpu, Cloud, ShieldAlert
+  ShieldCheck, Activity, Cpu, Cloud, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Dashboard } from './pages/Dashboard';
-import { ClientsPage } from './pages/ClientsPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { SchedulesPage } from './pages/SchedulesPage';
-import { ServicesPage } from './pages/ServicesPage';
-import { BookingPage } from './pages/BookingPage';
-import { LoginPage } from './pages/LoginPage';
-import { ProfessionalDashboard } from './pages/ProfessionalDashboard';
-import { ClientPortal } from './pages/ClientPortal';
-import { ProfilePage } from './pages/ProfilePage';
-import { LandingPage, LogoCitaplanner } from './pages/LandingPage';
-import { POSPage } from './pages/POSPage';
-import { MarketingPage } from './pages/MarketingPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { BranchesPage } from './pages/BranchesPage';
-import { InsightsPage } from './pages/InsightsPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 import { api } from './services/api';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 
-const queryClient = new QueryClient();
+// --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const ClientsPage = lazy(() => import('./pages/ClientsPage').then(m => ({ default: m.ClientsPage })));
+const InventoryPage = lazy(() => import('./pages/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const SchedulesPage = lazy(() => import('./pages/SchedulesPage').then(m => ({ default: m.SchedulesPage })));
+const ServicesPage = lazy(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
+const BookingPage = lazy(() => import('./pages/BookingPage').then(m => ({ default: m.BookingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard').then(m => ({ default: m.ProfessionalDashboard })));
+const ClientPortal = lazy(() => import('./pages/ClientPortal').then(m => ({ default: m.ClientPortal })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const POSPage = lazy(() => import('./pages/POSPage').then(m => ({ default: m.POSPage })));
+const MarketingPage = lazy(() => import('./pages/MarketingPage').then(m => ({ default: m.MarketingPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const BranchesPage = lazy(() => import('./pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
+const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+
+// --- OPTIMIZACIÓN: Caché de consultas ---
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutos de caché "fresca"
+      gcTime: 1000 * 60 * 10,  // 10 minutos antes de eliminar de memoria
+      retry: 1,
+      refetchOnWindowFocus: false,
+    }
+  }
+});
+
+const LoadingScreen = () => (
+  <div className="h-screen flex flex-col items-center justify-center bg-[#050505]">
+    <Loader2 className="animate-spin text-[#D4AF37] mb-4" size={40} />
+    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Nodo...</p>
+  </div>
+);
 
 const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: Role[] }) => {
   const { user, isAuthenticated } = useAuth();
@@ -43,24 +62,18 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
     if (!isAuthenticated) {
       navigate('/login', { state: { from: location }, replace: true });
     } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-      // Redirección de seguridad según jerarquía
-      if (user.role === 'SUPERADMIN') navigate('/nexus', { replace: true });
-      else if (user.role === 'ADMIN') navigate('/admin', { replace: true });
-      else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
-      else if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
+      if (user.role === 'GOD_MODE') navigate('/nexus', { replace: true });
+      else if (user.role === 'STUDIO_OWNER') navigate('/admin', { replace: true });
+      else if (user.role === 'STAFF') navigate('/professional-dashboard', { replace: true });
+      else if (user.role === 'MEMBER') navigate('/client-portal', { replace: true });
       else navigate('/', { replace: true });
     }
   }, [isAuthenticated, user, allowedRoles, location, navigate]);
 
   if (!isAuthenticated) return null;
   
-  // Si estamos autenticados pero el rol no coincide, mostramos loader mientras useEffect redirige
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-black">
-        <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return <>{children}</>;
@@ -88,21 +101,21 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
     <nav className="sticky top-0 z-50 w-full bg-black/90 backdrop-blur-2xl border-b border-white/10 h-20 shadow-2xl">
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to={user?.role === 'SUPERADMIN' ? '/nexus' : user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'PROFESSIONAL' ? '/professional-dashboard' : '/admin'}>
+          <Link to={user?.role === 'GOD_MODE' ? '/nexus' : user?.role === 'MEMBER' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : '/admin'}>
             <div className="flex items-center gap-3 group">
               <div className="p-2.5 rounded-xl bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30 group-hover:border-[#D4AF37]/60 transition-all shadow-lg">
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-xl tracking-tighter text-white uppercase leading-none">Cita<span className="gold-text-gradient">Planner</span></span>
-                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'SUPERADMIN' ? 'Nexus Infrastructure' : 'Aurum Ecosystem'}</span>
+                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'GOD_MODE' ? 'Nexus Infrastructure' : 'Aurum Ecosystem'}</span>
               </div>
             </div>
           </Link>
           
-          {user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
+          {user && (user.role === 'STUDIO_OWNER' || user.role === 'GOD_MODE') && (
             <div className="hidden xl:flex items-center gap-1">
-              {user.role === 'SUPERADMIN' && <NavLink to="/nexus"><ShieldAlert size={14} className="text-red-500" /> Nexus God Mode</NavLink>}
+              {user.role === 'GOD_MODE' && <NavLink to="/nexus"><ShieldAlert size={14} className="text-red-500" /> Nexus God Mode</NavLink>}
               <NavLink to="/admin">Consola</NavLink>
               <NavLink to="/pos">Ventas & POS</NavLink>
               <NavLink to="/analytics">Reportes</NavLink>
@@ -130,10 +143,17 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
         </div>
 
         <div className="flex items-center gap-6">
-          {maintenanceMode && !user && (
-             <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-3 py-1 rounded-lg border border-red-500/20">
-               <ShieldAlert size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Modo Mantenimiento</span>
-             </div>
+          {user?.isImpersonated && (
+             <button onClick={() => {
+               const original = localStorage.getItem('citaPlannerOriginalAuth');
+               if (original) {
+                 localStorage.setItem('citaPlannerUser', original);
+                 localStorage.removeItem('citaPlannerOriginalAuth');
+                 window.location.href = '/nexus';
+               }
+             }} className="flex items-center gap-2 text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">
+                <ArrowLeft size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Salir de Soporte</span>
+             </button>
           )}
           {user ? (
             <div className="flex items-center gap-5">
@@ -170,11 +190,11 @@ const InternalFooter = () => {
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-3">
             <Cpu size={16} className="text-zinc-700" />
-            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">Core Node v4.6.0</span>
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">Nexus SaaS v5.0</span>
           </div>
           <div className="flex items-center gap-3">
             <Cloud size={16} className="text-zinc-700" />
-            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">SaaS Sync Active</span>
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-600">Multi-Instance Active</span>
           </div>
           <div className="flex items-center gap-3">
             <ShieldCheck size={16} className="text-emerald-900" />
@@ -218,15 +238,9 @@ const MainLayout = () => {
     checkMaintenance();
   }, [location.pathname]);
 
-  if (appLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-[#050505]">
-        <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
-      </div>
-    );
-  }
+  if (appLoading) return <LoadingScreen />;
 
-  const isStaff = user && ['ADMIN', 'SUPERADMIN', 'PROFESSIONAL'].includes(user.role);
+  const isStaff = user && ['STUDIO_OWNER', 'GOD_MODE', 'STAFF'].includes(user.role);
   const isLoginPage = location.pathname === '/login';
   
   if (maintenanceMode && !isStaff && !isLoginPage) {
@@ -238,26 +252,28 @@ const MainLayout = () => {
       <Toaster richColors position="top-right" theme="dark" />
       <Navbar maintenanceMode={maintenanceMode} />
       <div className="flex-grow">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/book" element={<BookingPage />} /> 
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/nexus" element={<ProtectedRoute allowedRoles={['SUPERADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
-          <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><POSPage /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-          <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ClientsPage /></ProtectedRoute>} />
-          <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><MarketingPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SettingsPage /></ProtectedRoute>} />
-          <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><BranchesPage /></ProtectedRoute>} />
-          <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><ServicesPage /></ProtectedRoute>} />
-          <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InventoryPage /></ProtectedRoute>} />
-          <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><SchedulesPage /></ProtectedRoute>} />
-          <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}><InsightsPage /></ProtectedRoute>} />
-          <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN', 'SUPERADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
-          <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN', 'SUPERADMIN']}><ClientPortal /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-        </Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/book" element={<BookingPage />} /> 
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/nexus" element={<ProtectedRoute allowedRoles={['GOD_MODE']}><SuperAdminDashboard /></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
+            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
+            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
+            <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF', 'STUDIO_OWNER', 'GOD_MODE']}><ProfessionalDashboard /></ProtectedRoute>} />
+            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER', 'STUDIO_OWNER', 'GOD_MODE']}><ClientPortal /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+          </Routes>
+        </Suspense>
       </div>
       <InternalFooter />
     </div>
