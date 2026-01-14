@@ -1,6 +1,6 @@
 # [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
 # PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
-# REVISIÓN: 2026.02.18.3 (Stable Release)
+# REVISIÓN: 2026.02.18.4 (Stable Release)
 # STATUS: READY FOR CLOUD DEPLOYMENT
 
 # --- FASE 1: BUILDER (Compilación y Preparación) ---
@@ -14,14 +14,13 @@ WORKDIR /app
 # Copia de manifiestos de dependencias
 COPY package.json package-lock.json* ./
 
-# Instalación limpia de dependencias (incluyendo herramientas de construcción)
-RUN npm ci --legacy-peer-deps
+# Instalación de dependencias (usamos install en lugar de ci por ausencia de lockfile en el repo)
+RUN npm install --legacy-peer-deps
 
 # Copia del código fuente completo del ecosistema
 COPY . .
 
 # Generación del bundle de producción (Vite -> /dist)
-# Se inyectan variables de entorno base si el build de Vite las requiere
 RUN npm run build
 
 # --- FASE 2: RUNNER (Imagen Final de Operación) ---
