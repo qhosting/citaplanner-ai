@@ -72,9 +72,11 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   
-  if (maintenanceMode && !user) return null; // Ocultar navbar en mantenimiento si no es staff
+  // CORRECCIÓN CRÍTICA: Ocultar si estamos en la Landing o el Booking para evitar menús dobles
+  if (location.pathname === '/' || location.pathname === '/book') return null;
+  
+  if (maintenanceMode && !user) return null; 
   if (location.pathname === '/login') return null;
-  if (location.pathname === '/' && !user) return null;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -219,7 +221,7 @@ const MainLayout = () => {
       }
     };
     checkMaintenance();
-  }, [location.pathname]); // Re-check on navigation to ensure sync
+  }, [location.pathname]);
 
   if (appLoading) {
     return (
@@ -229,9 +231,6 @@ const MainLayout = () => {
     );
   }
 
-  // --- LOGICA DE BLOQUEO POR MANTENIMIENTO ---
-  // Si está activo Y el usuario NO es staff (Admin, SuperAdmin, Pro), mostramos bloqueo.
-  // Permitimos /login para que el staff pueda entrar.
   const isStaff = user && ['ADMIN', 'SUPERADMIN', 'PROFESSIONAL'].includes(user.role);
   const isLoginPage = location.pathname === '/login';
   
