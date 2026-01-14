@@ -1,4 +1,3 @@
-
 import express from 'express';
 import pg from 'pg';
 import cors from 'cors';
@@ -68,6 +67,18 @@ const initDB = async () => {
         loyalty_points INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS professionals (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(255),
+        email VARCHAR(255),
+        aurum_employee_id VARCHAR(50),
+        weekly_schedule JSONB DEFAULT '[]',
+        exceptions JSONB DEFAULT '[]',
+        tenant_id UUID REFERENCES tenants(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS services (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
@@ -89,8 +100,8 @@ const initDB = async () => {
         client_phone VARCHAR(50),
         status VARCHAR(20) DEFAULT 'SCHEDULED',
         description TEXT,
-        professional_id UUID,
-        service_id UUID,
+        professional_id UUID REFERENCES professionals(id),
+        service_id UUID REFERENCES services(id),
         tenant_id UUID REFERENCES tenants(id)
       );
 
@@ -118,13 +129,13 @@ const initDB = async () => {
     
     const masterId = masterIdRes.rows[0].id;
 
-    // Aseguramos que el usuario Root exista con la contraseña correcta
+    // Aseguramos que el usuario Root exista
     await client.query(`
       INSERT INTO users (name, phone, password, role, tenant_id) 
       VALUES ('Aurum Master Root', 'root@aurumcapital.mx', crypt('x0420EZS$$', gen_salt('bf')), 'SUPERADMIN', $1)
       ON CONFLICT (phone, tenant_id) 
       DO UPDATE SET 
-        password = crypt('x0420EZS$$', gen_salt('bf')), 
+        password = EXCLUDED.password, 
         role = 'SUPERADMIN',
         name = EXCLUDED.name
     `, [masterId]);
@@ -228,6 +239,21 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
   res.json({ ...(result.rows[0]?.value || {}), subdomain: req.tenant.subdomain });
 });
 
+// PROFESIONALES
+app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT id, name, role, email, aurum_employee_id as \"aurum_employee_id\", weekly_schedule as \"weeklySchedule\", exceptions FROM professionals WHERE tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows);
+});
+
+app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
+  const { name, role, email, aurum_employee_id, weeklySchedule, exceptions } = req.body;
+  try {
+    const result = await pool.query("INSERT INTO professionals (name, role, email, aurum_employee_id, weekly_schedule, exceptions, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id", [name, role, email, aurum_employee_id, JSON.stringify(weeklySchedule), JSON.stringify(exceptions), req.tenant.id]);
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// CITAS
 app.get('/api/appointments', authenticateToken, tenantMiddleware, async (req, res) => {
   const result = await pool.query("SELECT id, title, start_date_time as \"startDateTime\", end_date_time as \"endDateTime\", client_name as \"clientName\", client_phone as \"clientPhone\", status, description, professional_id as \"professionalId\", service_id as \"serviceId\" FROM appointments WHERE tenant_id = $1", [req.tenant.id]);
   res.json(result.rows);
@@ -239,6 +265,12 @@ app.post('/api/appointments', authenticateToken, tenantMiddleware, async (req, r
     await pool.query("INSERT INTO appointments (title, start_date_time, end_date_time, client_name, client_phone, description, professional_id, service_id, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [title, startDateTime, endDateTime, clientName, clientPhone, description, professionalId, serviceId, req.tenant.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// SERVICIOS
+app.get('/api/services', authenticateToken, tenantMiddleware, async (req, res) => {
+  const result = await pool.query("SELECT id, name, duration, price, category, status, description, image_url as \"imageUrl\" FROM services WHERE tenant_id = $1", [req.tenant.id]);
+  res.json(result.rows);
 });
 
 app.use(express.static(path.join(__dirname, 'dist')));
