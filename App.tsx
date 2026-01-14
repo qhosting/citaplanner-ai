@@ -38,25 +38,24 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isChecking, setIsChecking] = React.useState(true);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-        if (!isAuthenticated) {
-          navigate('/login', { state: { from: location }, replace: true });
-        } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-          if (user.role === 'SUPERADMIN') navigate('/nexus', { replace: true });
-          else if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
-          else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
-          else navigate('/admin', { replace: true });
-        }
-        setIsChecking(false);
-    }, 50);
-
-    return () => clearTimeout(timer);
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location }, replace: true });
+    } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+      // Redirección de seguridad según jerarquía
+      if (user.role === 'SUPERADMIN') navigate('/nexus', { replace: true });
+      else if (user.role === 'ADMIN') navigate('/admin', { replace: true });
+      else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
+      else if (user.role === 'CLIENT') navigate('/client-portal', { replace: true });
+      else navigate('/', { replace: true });
+    }
   }, [isAuthenticated, user, allowedRoles, location, navigate]);
 
-  if (!isAuthenticated && isChecking) {
+  if (!isAuthenticated) return null;
+  
+  // Si estamos autenticados pero el rol no coincide, mostramos loader mientras useEffect redirige
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return (
       <div className="h-screen flex items-center justify-center bg-black">
         <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
@@ -64,7 +63,6 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
     );
   }
 
-  if (!isAuthenticated) return null;
   return <>{children}</>;
 };
 
@@ -72,11 +70,8 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   
-  // CORRECCIÓN CRÍTICA: Ocultar si estamos en la Landing o el Booking para evitar menús dobles
-  if (location.pathname === '/' || location.pathname === '/book') return null;
-  
+  if (location.pathname === '/' || location.pathname === '/book' || location.pathname === '/login') return null;
   if (maintenanceMode && !user) return null; 
-  if (location.pathname === '/login') return null;
 
   const isActive = (path: string) => location.pathname === path;
 

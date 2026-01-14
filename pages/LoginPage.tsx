@@ -20,17 +20,18 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   const handleRedirection = (role: Role) => {
-    if (role === 'ADMIN') navigate('/admin');
-    else if (role === 'PROFESSIONAL') navigate('/professional-dashboard');
-    else if (role === 'CLIENT') navigate('/client-portal');
-    else navigate('/');
+    if (role === 'SUPERADMIN') navigate('/nexus', { replace: true });
+    else if (role === 'ADMIN') navigate('/admin', { replace: true });
+    else if (role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
+    else if (role === 'CLIENT') navigate('/client-portal', { replace: true });
+    else navigate('/', { replace: true });
   };
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !loading) {
       handleRedirection(user.role);
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
