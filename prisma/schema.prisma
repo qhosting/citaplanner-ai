@@ -1,0 +1,63 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String   @db.VarChar(100)
+  subdomain          String   @unique @db.VarChar(50)
+  customDomain       String?  @unique @map("custom_domain") @db.VarChar(100)
+  status             String   @default("ACTIVE") @db.VarChar(20)
+  planType           String   @default("TRIAL") @map("plan_type") @db.VarChar(20)
+  
+  // Aurum Bridge Infrastructure
+  bridgeEnabled      Boolean  @default(false) @map("bridge_enabled")
+  bridgeWebhookUrl   String?  @map("bridge_webhook_url")
+  bridgeApiKey       String   @default(dbgenerated("gen_random_uuid()")) @map("bridge_api_key") @db.Uuid
+  bridgeSatelliteId  Int      @default(3) @map("bridge_satellite_id")
+
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  professionals       Professional[]
+  sales               Sale[]
+  integrationLogs     IntegrationLog[]
+  // ... otras relaciones
+}
+
+model Professional {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  role             String
+  email            String?
+  aurumEmployeeId  String?  @map("aurum_employee_id") @db.VarChar(50)
+  tenantId         String   @map("tenant_id") @db.Uuid
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Sale {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  saleId        String   @map("sale_id")
+  items         Json
+  total         Decimal
+  clientName    String?  @map("client_name")
+  tenantId      String   @map("tenant_id") @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime @default(now()) @map("created_at")
+}
+
+model IntegrationLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform  String   // AURUM_BRIDGE, AI, etc
+  eventType String   @map("event_type")
+  status    String
+  response  String?
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+}
