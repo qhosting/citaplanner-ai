@@ -1,0 +1,89 @@
+# [AURUM PROTOCOL] - DOCKERFILE PRODUCTION MIRROR
+# PRODUCTO: CITAPLANNER ELITE BUSINESS SUITE (SaaS EDITION)
+# REVISIÓN: 2026.10.25 (Security & Redis Optimized)
+# STATUS: PRODUCTION DEPLOYMENT READY
+# INFRASTRUCTURE: AURUM CAPITAL TECHNOLOGY ECOSYSTEM
+
+# --- FASE 1: BUILDER (Arquitectura de Compilación) ---
+FROM node:20-alpine AS builder
+
+# Dependencias de sistema necesarias para compilar binarios de red y cifrado
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+# Argumentos de construcción inyectados por el plano de control (Easypanel/Coolify)
+ARG DATABASE_URL
+ARG API_KEY
+ARG NEXTAUTH_SECRET
+ARG DOMAIN_URL
+ARG REDIS_URL
+
+# Exponer variables al entorno de construcción (Vite las inyecta en el cliente)
+ENV DATABASE_URL=$DATABASE_URL
+ENV API_KEY=$API_KEY
+ENV GEMINI_API_KEY=$API_KEY
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+ENV DOMAIN_URL=$DOMAIN_URL
+ENV REDIS_URL=$REDIS_URL
+
+# Optimización de Capas de Caché: Copiar definiciones de paquetes
+COPY package*.json ./
+
+# Instalación de dependencias completa (incluye devDeps para el build de React)
+# Se utiliza --legacy-peer-deps para evitar conflictos de resolución con React 19
+RUN npm install --legacy-peer-deps
+
+# Inyección del código fuente tras la instalación de módulos
+COPY . .
+
+# Verificación e instalación forzada de módulos de infraestructura crítica
+# Aseguramos que Redis y JWT estén presentes para el runtime del server.js
+RUN npm install redis@^5.10.0 jsonwebtoken@^9.0.3 uuid@^13.0.0 --save --legacy-peer-deps
+
+# Generación del bundle de Frontend optimizado para producción
+RUN npm run build
+
+# Purga de dependencias de desarrollo para minimizar la superficie de ataque y el peso
+RUN npm prune --production
+
+# --- FASE 2: RUNNER (Nodo de Operación Maestro) ---
+FROM node:20-alpine AS runner
+
+LABEL maintainer="Aurum Capital Technology"
+LABEL version="4.8.5"
+LABEL security="Quantum Secured"
+
+WORKDIR /app
+
+# Definición de entorno de ejecución
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Seguridad: Creación de usuario no privilegiado para el aislamiento del proceso
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 citaplanner
+
+# Configuración de persistencia para el almacenamiento de activos (uploads)
+RUN mkdir -p /app/uploads && chown -R citaplanner:nodejs /app/uploads
+
+# Transferencia selectiva desde el Builder: Solo binarios necesarios
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/package*.json ./
+
+# Sellado final de permisos sobre el directorio de trabajo
+RUN chown -R citaplanner:nodejs /app
+
+USER citaplanner
+
+# Protocolo de Salud (Healthcheck) - Verifica la disponibilidad del Nodo Maestro
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://localhost:3000/api/settings/landing').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+
+# Puerto de enlace de la infraestructura
+EXPOSE 3000
+
+# Activación del Protocolo Aurum Core (Motor de la aplicación)
+CMD ["node", "server.js"]
