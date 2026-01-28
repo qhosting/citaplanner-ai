@@ -10,8 +10,8 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 - [x] **Integración con Redis:** Implementada capa de caché para endpoints de lectura (Productos, Servicios) con fallback automático.
 
 ### 2. Funcionalidad de WhatsApp (WAHA)
-- [ ] **Conexión Real con WAHA:** Actualmente existe la variable `WAHA_URL` pero falta la lógica en el backend para enviar mensajes reales de confirmación.
-- [ ] **Webhooks de Recepción:** Implementar endpoint para recibir respuestas de clientes por WhatsApp y actualizar el estado de la cita.
+- [x] **Conexión Real con WAHA:** Implementado envío de mensajes de confirmación automáticos al crear cita vía `POST /api/appointments`.
+- [x] **Webhooks de Recepción:** Implementado endpoint `/api/integrations/whatsapp/webhook` para procesar confirmaciones ("CONFIRMAR") y actualizar el estado.
 
 ### 3. Finalización de Módulos Mock
 - [ ] **Marketing Real:** El módulo de Marketing (`MarketingPage.tsx`) tiene la interfaz lista pero no conecta con un servicio real de envío de correos o WhatsApp masivo.

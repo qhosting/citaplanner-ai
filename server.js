@@ -62,6 +62,34 @@ const getCached = async (key, fetchFn, ttl = 300) => {
     }
 };
 
+const sendWhatsAppMessage = async (phone, text, branchId) => {
+    if (!phone) return;
+    try {
+        // WAHA requires formatted phone numbers (e.g. 52155...)
+        // This is a simplified implementation
+        const chatId = `${phone.replace(/\D/g, '')}@c.us`;
+
+        console.log(`📨 Sending WhatsApp to ${chatId}: ${text}`);
+
+        await axios.post(`${WAHA_URL}/api/sendText`, {
+            chatId: chatId,
+            text: text,
+            session: 'default'
+        });
+
+        await pool.query(
+            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['WHATSAPP', 'SEND_MESSAGE', JSON.stringify({ chatId, text }), 'Sent', 'SUCCESS', branchId]
+        );
+    } catch (e) {
+        console.error('❌ WhatsApp Send Error:', e.message);
+        await pool.query(
+            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['WHATSAPP', 'SEND_ERROR', JSON.stringify({ phone, text }), e.message, 'ERROR', branchId]
+        );
+    }
+};
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -310,6 +338,41 @@ app.get('/api/branches', async (req, res) => {
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 
+app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
+    try {
+        const data = req.body;
+        // Basic logging
+        console.log("🔔 WhatsApp Webhook:", JSON.stringify(data));
+        await pool.query(
+            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['WHATSAPP', 'WEBHOOK_RECEIVED', JSON.stringify(data), 'Processed', 'SUCCESS', null]
+        );
+
+        // Simple Keyword Logic
+        const message = data?.payload?.body?.toUpperCase() || '';
+        const sender = data?.payload?.from || ''; // e.g. 5215512345678@c.us
+        const cleanPhone = sender.split('@')[0];
+
+        if (message.includes('CONFIRM') || message.includes('CONFIRMAR')) {
+             // Find latest scheduled appointment for this phone
+             const aptRes = await pool.query(
+                 "SELECT id FROM appointments WHERE client_phone LIKE $1 AND status = 'SCHEDULED' ORDER BY start_datetime DESC LIMIT 1",
+                 [`%${cleanPhone}%`]
+             );
+             if (aptRes.rows.length > 0) {
+                 await pool.query("UPDATE appointments SET status = 'CONFIRMED' WHERE id = $1", [aptRes.rows[0].id]);
+                 console.log(`✅ Appointment ${aptRes.rows[0].id} confirmed via WhatsApp`);
+                 sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null);
+             }
+        }
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Webhook Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/appointments', async (req, res) => {
     try {
         let query = "SELECT * FROM appointments";
@@ -332,6 +395,30 @@ app.get('/api/appointments', async (req, res) => {
             notes: a.notes
         }));
         res.json(mapped);
+    } catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.post('/api/appointments', async (req, res) => {
+    try {
+        const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
+
+        const result = await pool.query(
+            `INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, status, professional_id, service_id, notes, branch_id)
+             VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7, $8, $9)
+             RETURNING id`,
+            [title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, req.branchId]
+        );
+
+        const newId = result.rows[0].id;
+
+        // Notify via WhatsApp
+        if (clientPhone) {
+            const dateStr = new Date(startDateTime).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+            const message = `Hola ${clientName}, tu cita para "${title}" ha sido confirmada para el ${dateStr}. Te esperamos en Aurum.`;
+            sendWhatsAppMessage(clientPhone, message, req.branchId);
+        }
+
+        res.json({ success: true, id: newId });
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 
