@@ -5,8 +5,9 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 ## 🔴 Prioridad Alta (Corto Plazo)
 
 ### 1. Infraestructura y Base de Datos
-- [ ] **Configuración de DB en Producción:** Asegurar que las migraciones de `pgcrypto` y tablas se ejecuten correctamente en un entorno PostgreSQL persistente (ej. Railway, Supabase).
-- [ ] **Manejo de Errores DB:** Mejorar la resiliencia si la conexión a la base de datos se pierde durante la operación (reconexión automática).
+- [x] **Configuración de DB en Producción:** Mejorada la robustez de `initDB` y soporte para fallback en entorno de desarrollo.
+- [x] **Manejo de Errores DB:** Implementado listener de errores en el pool de conexiones.
+- [x] **Integración con Redis:** Implementada capa de caché para endpoints de lectura (Productos, Servicios) con fallback automático.
 
 ### 2. Funcionalidad de WhatsApp (WAHA)
 - [ ] **Conexión Real con WAHA:** Actualmente existe la variable `WAHA_URL` pero falta la lógica en el backend para enviar mensajes reales de confirmación.

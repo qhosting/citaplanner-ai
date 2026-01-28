@@ -4,6 +4,7 @@ import pg from 'pg';
 import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
+import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
 
 const { Pool } = pg;
@@ -14,7 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const WAHA_URL = process.env.WAHA_URL || 'http://waha:3000';
 
-// Fallback for missing DATABASE_URL in Dev environment to avoid crash
+// --- DATABASE & REDIS SETUP ---
+
 const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
 
 const pool = new Pool({ 
@@ -23,6 +25,42 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000, 
   statement_timeout: 10000
 });
+
+pool.on('error', (err, client) => {
+  console.error('❌ Unexpected error on idle client', err);
+});
+
+// Redis Client
+const redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.log('⚠️ Redis Client Error', err));
+
+const connectRedis = async () => {
+    if (process.env.REDIS_URL || process.env.NODE_ENV === 'development') {
+        try {
+            await redisClient.connect();
+            console.log("✅ Redis Connected");
+        } catch (e) {
+            console.warn("⚠️ Redis Connection Failed (Caching Disabled):", e.message);
+        }
+    }
+};
+
+const getCached = async (key, fetchFn, ttl = 300) => {
+    if (!redisClient.isOpen) return fetchFn();
+    try {
+        const cached = await redisClient.get(key);
+        if (cached) return JSON.parse(cached);
+        const data = await fetchFn();
+        if (data) await redisClient.setEx(key, ttl, JSON.stringify(data));
+        return data;
+    } catch (e) {
+        console.warn(`Cache Error for ${key}:`, e.message);
+        return fetchFn();
+    }
+};
 
 app.use(cors());
 app.use(express.json());
@@ -364,22 +402,29 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/products', async (req, res) => {
     try {
-        let query = "SELECT * FROM products";
-        let params = [];
-        if (req.branchId) {
-            query += " WHERE branch_id = $1 OR branch_id IS NULL"; 
-            params.push(req.branchId);
-        }
-        query += " ORDER BY name ASC";
-        const result = await pool.query(query, params);
-        res.json(result.rows);
+        const branchKey = req.branchId || 'global';
+        const products = await getCached(`products:${branchKey}`, async () => {
+            let query = "SELECT * FROM products";
+            let params = [];
+            if (req.branchId) {
+                query += " WHERE branch_id = $1 OR branch_id IS NULL";
+                params.push(req.branchId);
+            }
+            query += " ORDER BY name ASC";
+            const result = await pool.query(query, params);
+            return result.rows;
+        });
+        res.json(products);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 
 app.get('/api/services', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM services ORDER BY name ASC");
-        res.json(result.rows);
+        const services = await getCached('services', async () => {
+             const result = await pool.query("SELECT * FROM services ORDER BY name ASC");
+             return result.rows;
+        });
+        res.json(services);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 
@@ -423,5 +468,6 @@ app.get(/.*/, (req, res) => {
 // START SERVER IMMEDIATELY
 app.listen(PORT, () => console.log(`🚀 AURUM NODE ACTIVE | Port: ${PORT}`));
 
-// INITIALIZE DB IN BACKGROUND
+// INITIALIZE INFRASTRUCTURE
+connectRedis();
 initDB();
