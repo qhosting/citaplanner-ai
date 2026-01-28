@@ -14,7 +14,7 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 - [x] **Webhooks de Recepción:** Implementado endpoint `/api/integrations/whatsapp/webhook` para procesar confirmaciones ("CONFIRMAR") y actualizar el estado.
 
 ### 3. Finalización de Módulos Mock
-- [ ] **Marketing Real:** El módulo de Marketing (`MarketingPage.tsx`) tiene la interfaz lista pero no conecta con un servicio real de envío de correos o WhatsApp masivo.
+- [x] **Marketing Real:** Backend implementado (`POST /api/marketing/campaigns/send`) con soporte para Email (Nodemailer) y WhatsApp (WAHA), incluyendo segmentación básica de audiencia.
 - [ ] **Simulación de Pagos:** El módulo POS registra transacciones pero no conecta con pasarelas de pago reales (Stripe/MercadoPago).
 
 ## 🟡 Prioridad Media (Mediano Plazo)

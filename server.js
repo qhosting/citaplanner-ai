@@ -4,6 +4,7 @@ import pg from 'pg';
 import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
+import nodemailer from 'nodemailer';
 import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
 
@@ -87,6 +88,44 @@ const sendWhatsAppMessage = async (phone, text, branchId) => {
             "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
             ['WHATSAPP', 'SEND_ERROR', JSON.stringify({ phone, text }), e.message, 'ERROR', branchId]
         );
+    }
+};
+
+// Email Transporter
+const emailTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER || 'demo@aurum.ai',
+        pass: process.env.SMTP_PASS || 'demo123'
+    }
+});
+
+const sendEmail = async (to, subject, html, branchId) => {
+    try {
+        if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
+            console.log(`📧 [MOCK EMAIL] To: ${to} | Subject: ${subject}`);
+            return true; // Simulate success if no config
+        }
+        await emailTransporter.sendMail({
+            from: process.env.SMTP_FROM || '"Aurum CitaPlanner" <no-reply@aurum.ai>',
+            to,
+            subject,
+            html
+        });
+        await pool.query(
+            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['EMAIL', 'SEND_MESSAGE', JSON.stringify({ to, subject }), 'Sent', 'SUCCESS', branchId]
+        );
+        return true;
+    } catch (e) {
+        console.error('❌ Email Send Error:', e.message);
+        await pool.query(
+            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            ['EMAIL', 'SEND_ERROR', JSON.stringify({ to, subject }), e.message, 'ERROR', branchId]
+        );
+        return false;
     }
 };
 
@@ -420,6 +459,37 @@ app.post('/api/appointments', async (req, res) => {
 
         res.json({ success: true, id: newId });
     } catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.post('/api/marketing/campaigns/send', async (req, res) => {
+    try {
+        const { campaign } = req.body;
+        // Fetch Target Audience
+        let userQuery = "SELECT * FROM users WHERE role = 'CLIENT'";
+        if (campaign.targetSegment === 'INACTIVE_90_DAYS') {
+            userQuery += " AND created_at < NOW() - INTERVAL '90 days'";
+        } else if (campaign.targetSegment === 'ACTIVE_LAST_30_DAYS') {
+            userQuery += " AND created_at > NOW() - INTERVAL '30 days'";
+        }
+
+        const users = await pool.query(userQuery);
+        let sentCount = 0;
+
+        for (const user of users.rows) {
+            if (campaign.channel === 'EMAIL' && user.email) {
+                const success = await sendEmail(user.email, campaign.subject, campaign.content, req.branchId);
+                if (success) sentCount++;
+            } else if (campaign.channel === 'WHATSAPP' && user.phone) {
+                // Use existing sendWhatsAppMessage
+                await sendWhatsAppMessage(user.phone, campaign.content, req.branchId);
+                sentCount++;
+            }
+        }
+
+        res.json({ success: true, sentCount, message: `Campaña lanzada a ${sentCount} usuarios.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.get('/api/integrations/status', async (req, res) => {
