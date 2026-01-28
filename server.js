@@ -1,19 +1,27 @@
 
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const path = require('path');
-const axios = require('axios');
+import express from 'express';
+import pg from 'pg';
+import cors from 'cors';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+
+const { Pool } = pg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const WAHA_URL = process.env.WAHA_URL || 'http://waha:3000';
 
+// Fallback for missing DATABASE_URL in Dev environment to avoid crash
+const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
+
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('sslmode=disable') ? false : { rejectUnauthorized: false },
+  connectionString: connectionString,
+  ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
   connectionTimeoutMillis: 5000, 
-  statement_timeout: 10000 // Force queries to fail after 10s instead of hanging
+  statement_timeout: 10000
 });
 
 app.use(cors());
@@ -408,7 +416,7 @@ app.get('/api/settings/landing', async (req, res) => {
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

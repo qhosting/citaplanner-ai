@@ -1,0 +1,43 @@
+# Roadmap de Pendientes y Mejoras Futuras
+
+Este documento detalla las tareas pendientes, mejoras técnicas y características planificadas para llevar CitaPlanner AI al siguiente nivel.
+
+## 🔴 Prioridad Alta (Corto Plazo)
+
+### 1. Infraestructura y Base de Datos
+- [ ] **Configuración de DB en Producción:** Asegurar que las migraciones de `pgcrypto` y tablas se ejecuten correctamente en un entorno PostgreSQL persistente (ej. Railway, Supabase).
+- [ ] **Manejo de Errores DB:** Mejorar la resiliencia si la conexión a la base de datos se pierde durante la operación (reconexión automática).
+
+### 2. Funcionalidad de WhatsApp (WAHA)
+- [ ] **Conexión Real con WAHA:** Actualmente existe la variable `WAHA_URL` pero falta la lógica en el backend para enviar mensajes reales de confirmación.
+- [ ] **Webhooks de Recepción:** Implementar endpoint para recibir respuestas de clientes por WhatsApp y actualizar el estado de la cita.
+
+### 3. Finalización de Módulos Mock
+- [ ] **Marketing Real:** El módulo de Marketing (`MarketingPage.tsx`) tiene la interfaz lista pero no conecta con un servicio real de envío de correos o WhatsApp masivo.
+- [ ] **Simulación de Pagos:** El módulo POS registra transacciones pero no conecta con pasarelas de pago reales (Stripe/MercadoPago).
+
+## 🟡 Prioridad Media (Mediano Plazo)
+
+### 1. Mejoras en IA (Gemini)
+- [ ] **Asistente de Voz Real:** Conectar el componente `VoiceAssistant` con la API de Speech-to-Text del navegador o de Google para permitir agendamiento por voz real.
+- [ ] **Análisis Predictivo:** Usar el historial de citas para sugerir momentos de alta demanda o clientes en riesgo de fuga.
+
+### 2. Experiencia de Usuario (UX)
+- [ ] **Notificaciones Push:** Implementar Web Push Notifications para avisar al profesional de nuevas citas.
+- [ ] **Tema Claro/Oscuro:** El sistema es "Dark Mode" por defecto (Aurum Luxury). Añadir soporte para tema claro si se requiere.
+
+### 3. Portal del Cliente
+- [ ] **Auto-agendamiento:** Permitir que el cliente (rol CLIENT) vea huecos libres y reserve su propia cita sin intervención del admin.
+
+## 🟢 Prioridad Baja / Deseos (Largo Plazo)
+
+### 1. Expansión de Negocio
+- [ ] **Multi-Tenant Real:** Refactorizar para que una sola instancia sirva a múltiples negocios totalmente aislados (SaaS).
+- [ ] **App Móvil:** Crear una versión en React Native o PWA instalable para profesionales.
+
+### 2. Auditoría y Seguridad
+- [ ] **Logs de Auditoría:** Registrar quién modificó qué cita y cuándo.
+- [ ] **2FA:** Autenticación de dos factores para administradores.
+
+---
+**Nota:** Todas las contribuciones deben seguir el flujo de trabajo de Git establecido (Branch -> PR -> Main).
