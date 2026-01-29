@@ -2,19 +2,43 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Calendar as CalendarIcon, Clock, User, CheckCircle2, 
-  Loader2, AlertCircle, StickyNote, History, Zap, Sparkles 
+  Loader2, AlertCircle, StickyNote, History, Zap, Sparkles, Bell
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../types';
 import { api } from '../services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { urlBase64ToUint8Array } from '../utils/webPush';
 
 export const ProfessionalDashboard: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
   const [notes, setNotes] = useState('');
+
+  const enableNotifications = async () => {
+    if (!('serviceWorker' in navigator)) return toast.error('Navegador no soporta SW');
+
+    try {
+      const register = await navigator.serviceWorker.ready;
+      const publicKey = await api.getVapidPublicKey();
+      if (!publicKey) return toast.error('Error obteniendo clave pública');
+
+      const subscription = await register.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+
+      if (user?.id) {
+          await api.subscribeToNotifications(subscription, user.id);
+          toast.success('Notificaciones Push activadas para este dispositivo');
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Error activando notificaciones: ' + e.message);
+    }
+  };
 
   // Carga Real de la Agenda del Profesional
   const { data: appointments = [], isLoading } = useQuery({
@@ -180,6 +204,10 @@ export const ProfessionalDashboard: React.FC = () => {
                  <button className="w-full flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-[#D4AF37]/30 transition-all text-left">
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">Ver Inventario Staff</span>
                     <Sparkles size={16} className="text-[#D4AF37]" />
+                 </button>
+                 <button onClick={enableNotifications} className="w-full flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-[#D4AF37]/30 transition-all text-left">
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Activar Alertas (Push)</span>
+                    <Bell size={16} className="text-[#D4AF37]" />
                  </button>
                  <button className="w-full flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-[#D4AF37]/30 transition-all text-left">
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">Protocolos de Lujo</span>

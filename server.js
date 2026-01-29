@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
+import webPush from 'web-push';
 import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
 
@@ -17,6 +18,27 @@ const PORT = process.env.PORT || 3000;
 const WAHA_URL = process.env.WAHA_URL || 'http://waha:3000';
 
 // --- DATABASE & REDIS SETUP ---
+
+// Web Push Configuration
+const vapidKeys = {
+    publicKey: process.env.VAPID_PUBLIC_KEY || 'BFxL8_...GenerateMe...',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '...GenerateMe...'
+};
+
+if (!process.env.VAPID_PUBLIC_KEY) {
+    const keys = webPush.generateVAPIDKeys();
+    vapidKeys.publicKey = keys.publicKey;
+    vapidKeys.privateKey = keys.privateKey;
+    console.log("🔑 Generated VAPID Keys (Add to .env for persistence):");
+    console.log("Public:", keys.publicKey);
+    console.log("Private:", keys.privateKey);
+}
+
+webPush.setVapidDetails(
+    'mailto:admin@aurum.ai',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
 
 const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
 
@@ -181,6 +203,7 @@ const initDB = async () => {
         related_id VARCHAR(100),
         branch_id UUID,
         preferences JSONB DEFAULT '{}',
+        push_subscription JSONB,
         skin_type VARCHAR(100),
         allergies TEXT,
         medical_conditions TEXT,
@@ -189,6 +212,9 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Ensure column exists for existing DBs
+    try { await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB'); } catch (e) {}
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS professionals (
@@ -460,6 +486,30 @@ app.post('/api/appointments', async (req, res) => {
             sendWhatsAppMessage(clientPhone, message, req.branchId);
         }
 
+        // Notify Professional via Web Push
+        try {
+            // Find User associated with Professional
+            const proUserRes = await pool.query(
+                "SELECT * FROM users WHERE related_id = $1 AND role = 'PROFESSIONAL'",
+                [professionalId]
+            );
+
+            if (proUserRes.rows.length > 0) {
+                const proUser = proUserRes.rows[0];
+                if (proUser.push_subscription) {
+                    const payload = JSON.stringify({
+                        title: 'Nueva Cita Agendada',
+                        body: `Cliente: ${clientName} - ${new Date(startDateTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
+                        url: '/professional-dashboard'
+                    });
+                    await webPush.sendNotification(proUser.push_subscription, payload);
+                    console.log(`🔔 Web Push Sent to Professional ${proUser.name}`);
+                }
+            }
+        } catch (e) {
+            console.error("Web Push Error:", e.message);
+        }
+
         res.json({ success: true, id: newId });
     } catch (e) { res.status(500).json({error: e.message}); }
 });
@@ -618,6 +668,21 @@ app.get('/api/settings/landing', async (req, res) => {
             heroImageUrl: data.hero_image_url || ''
         };
         res.json(normalized);
+    } catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.get('/api/notifications/vapid-public-key', (req, res) => {
+    res.json({ publicKey: vapidKeys.publicKey });
+});
+
+app.post('/api/notifications/subscribe', async (req, res) => {
+    const { subscription, userId } = req.body;
+    try {
+        await pool.query(
+            "UPDATE users SET push_subscription = $1 WHERE id = $2",
+            [subscription, userId]
+        );
+        res.json({ success: true });
     } catch (e) { res.status(500).json({error: e.message}); }
 });
 

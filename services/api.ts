@@ -277,6 +277,28 @@ export const api = {
     } catch { return false; }
   },
 
+  getVapidPublicKey: async (): Promise<string | null> => {
+    try {
+        const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            return data.publicKey;
+        }
+        return null;
+    } catch { return null; }
+  },
+
+  subscribeToNotifications: async (subscription: any, userId: string): Promise<boolean> => {
+    try {
+        const res = await safeFetch(`${API_URL}/notifications/subscribe`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ subscription, userId })
+        });
+        return res.ok;
+    } catch { return false; }
+  },
+
   processSale: async (saleData: any): Promise<{success: boolean, saleId?: string, date?: string}> => {
     try {
         const res = await safeFetch(`${API_URL}/sales`, {

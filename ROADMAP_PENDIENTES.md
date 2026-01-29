@@ -24,7 +24,7 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 - [ ] **Análisis Predictivo:** Usar el historial de citas para sugerir momentos de alta demanda o clientes en riesgo de fuga.
 
 ### 2. Experiencia de Usuario (UX)
-- [ ] **Notificaciones Push:** Implementar Web Push Notifications para avisar al profesional de nuevas citas.
+- [x] **Notificaciones Push:** Implementado sistema de Web Push Notifications (backend VAPID + Service Worker) para alertas en tiempo real.
 - [ ] **Tema Claro/Oscuro:** El sistema es "Dark Mode" por defecto (Aurum Luxury). Añadir soporte para tema claro si se requiere.
 
 ### 3. Portal del Cliente
