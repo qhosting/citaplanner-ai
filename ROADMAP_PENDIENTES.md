@@ -28,7 +28,7 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 - [ ] **Tema Claro/Oscuro:** El sistema es "Dark Mode" por defecto (Aurum Luxury). Añadir soporte para tema claro si se requiere.
 
 ### 3. Portal del Cliente
-- [ ] **Auto-agendamiento:** Permitir que el cliente (rol CLIENT) vea huecos libres y reserve su propia cita sin intervención del admin.
+- [x] **Auto-agendamiento:** Implementada página de reservas (`BookingPage`) con detección de huecos libres, exclusión de citas ocupadas y pre-llenado de datos para clientes logueados.
 
 ## 🟢 Prioridad Baja / Deseos (Largo Plazo)
 

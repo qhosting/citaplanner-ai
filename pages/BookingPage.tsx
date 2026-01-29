@@ -8,9 +8,10 @@ import {
 import { Professional, Service, Appointment, AppointmentStatus, LandingSettings } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // --- HELPERS ---
-const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number): string[] => {
+const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number, appointments: Appointment[]): string[] => {
   const dayOfWeek = date.getDay(); 
   const schedule = professional.weeklySchedule.find(d => d.dayOfWeek === dayOfWeek);
 
@@ -32,6 +33,16 @@ const generateTimeSlots = (date: Date, professional: Professional, serviceDurati
   if (isBlocked) return [];
 
   const slots: string[] = [];
+
+  // Filtrar citas del profesional para el día seleccionado
+  const dayAppointments = appointments.filter(a => {
+      const aptDate = new Date(a.startDateTime);
+      return aptDate.getDate() === date.getDate() &&
+             aptDate.getMonth() === date.getMonth() &&
+             aptDate.getFullYear() === date.getFullYear() &&
+             a.status !== AppointmentStatus.CANCELLED;
+  });
+
   schedule.slots.forEach(range => {
     const [startH, startM] = range.start.split(':').map(Number);
     const [endH, endM] = range.end.split(':').map(Number);
@@ -46,7 +57,17 @@ const generateTimeSlots = (date: Date, professional: Professional, serviceDurati
     const now = new Date();
     
     while (current.getTime() + serviceDuration * 60000 <= endTime.getTime()) {
-      if (current.getTime() > now.getTime()) {
+      const slotEnd = new Date(current.getTime() + serviceDuration * 60000);
+
+      // Verificar colisión con citas existentes
+      const isTaken = dayAppointments.some(apt => {
+          const aptStart = new Date(apt.startDateTime);
+          const aptEnd = new Date(apt.endDateTime);
+          // Overlap logic: (StartA < EndB) and (EndA > StartB)
+          return current < aptEnd && slotEnd > aptStart;
+      });
+
+      if (current.getTime() > now.getTime() && !isTaken) {
         slots.push(current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
       }
       current.setMinutes(current.getMinutes() + 30);
@@ -58,11 +79,13 @@ const generateTimeSlots = (date: Date, professional: Professional, serviceDurati
 
 export const BookingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   
   // Data State
   const [settings, setSettings] = useState<LandingSettings | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -80,19 +103,32 @@ export const BookingPage: React.FC = () => {
     notes: ''
   });
 
+  // Pre-fill user data
+  useEffect(() => {
+      if (isAuthenticated && user) {
+          setClientDetails(prev => ({
+              ...prev,
+              name: user.name || '',
+              email: user.email || '',
+              phone: user.phone || ''
+          }));
+      }
+  }, [isAuthenticated, user]);
+
   // Init Data
   useEffect(() => {
     const loadData = async () => {
         try {
-            // Fix: calling getServices with 0 arguments as defined in api.ts
-            const [set, s, p] = await Promise.all([
+            const [set, s, p, a] = await Promise.all([
                 api.getLandingSettings(),
                 api.getServices(),
-                api.getProfessionals()
+                api.getProfessionals(),
+                api.getAppointments() // Load all for availability check (optimization: fetch by pro/date)
             ]);
             setSettings(set);
             setServices(s);
             setProfessionals(p);
+            setAppointments(a);
         } catch (error) {
             console.error("Error loading booking data", error);
         } finally {
@@ -104,14 +140,15 @@ export const BookingPage: React.FC = () => {
 
   const availablePros = useMemo(() => {
     if (!selectedService) return [];
-    // En un sistema real, filtramos profesionales que ofrecen el servicio
     return professionals.filter(p => p.serviceIds?.includes(selectedService.id) || p.serviceIds?.length === 0);
   }, [selectedService, professionals]);
 
   const availableSlots = useMemo(() => {
     if (!selectedPro || !selectedService) return [];
-    return generateTimeSlots(selectedDate, selectedPro, selectedService.duration);
-  }, [selectedDate, selectedPro, selectedService]);
+    // Filter appointments for the selected professional to optimize
+    const proAppointments = appointments.filter(a => a.professionalId === selectedPro.id);
+    return generateTimeSlots(selectedDate, selectedPro, selectedService.duration, proAppointments);
+  }, [selectedDate, selectedPro, selectedService, appointments]);
 
   const primaryColor = settings?.primaryColor || '#db2777';
   const secondaryColor = primaryColor + '10';
