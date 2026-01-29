@@ -33,8 +33,8 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 ## 🟢 Prioridad Baja / Deseos (Largo Plazo)
 
 ### 1. Expansión de Negocio
-- [ ] **Multi-Tenant Real:** Refactorizar para que una sola instancia sirva a múltiples negocios totalmente aislados (SaaS).
-- [ ] **App Móvil:** Crear una versión en React Native o PWA instalable para profesionales.
+- [x] **Multi-Tenant Real:** Implementada arquitectura multi-tenant con columna `organization_id` y middleware de aislamiento de queries.
+- [x] **App Móvil (PWA):** Configurada Progressive Web App (Manifest + Service Worker) para instalación en dispositivos móviles.
 
 ### 2. Auditoría y Seguridad
 - [ ] **Logs de Auditoría:** Registrar quién modificó qué cita y cuándo.

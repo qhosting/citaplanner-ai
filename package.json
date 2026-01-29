@@ -24,6 +24,7 @@
     "react-router-dom": "6.28.0",
     "redis": "^5.10.0",
     "sonner": "1.7.0",
+    "vite-plugin-pwa": "^1.2.0",
     "zod": "3.24.1"
   },
   "devDependencies": {

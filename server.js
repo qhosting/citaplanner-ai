@@ -144,6 +144,7 @@ const initDB = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS branches (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id VARCHAR(50) DEFAULT 'demo',
         name VARCHAR(100) NOT NULL,
         address TEXT,
         phone VARCHAR(20),
@@ -362,7 +363,9 @@ const initDB = async () => {
 
 const branchMiddleware = (req, res, next) => {
     const branchId = req.headers['x-branch-id'];
+    const tenantId = req.headers['x-tenant-id'] || 'demo';
     req.branchId = branchId;
+    req.tenantId = tenantId;
     next();
 };
 
@@ -372,7 +375,7 @@ app.use(branchMiddleware);
 
 app.get('/api/branches', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM branches ORDER BY created_at ASC");
+        const result = await pool.query("SELECT * FROM branches WHERE organization_id = $1 ORDER BY created_at ASC", [req.tenantId]);
         res.json(result.rows);
     } catch (e) { res.status(500).json({error: e.message}); }
 });
