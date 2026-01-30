@@ -176,6 +176,21 @@ const initDB = async () => {
       );
     `);
 
+    // --- MIGRATIONS (Ensure columns exist for existing tables) ---
+    try {
+        await client.query(`ALTER TABLE branches ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
+        await client.query(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS branch_id UUID`);
+        await client.query(`ALTER TABLE integration_logs ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    } catch (e) {
+        console.warn("⚠️ Migration Warning:", e.message);
+    }
+
     // Ensure Default Branch
     const branchRes = await client.query("SELECT id FROM branches LIMIT 1");
     let defaultBranchId;
