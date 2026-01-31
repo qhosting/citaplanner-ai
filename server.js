@@ -176,21 +176,6 @@ const initDB = async () => {
       );
     `);
 
-    // --- MIGRATIONS (Ensure columns exist for existing tables) ---
-    try {
-        await client.query(`ALTER TABLE branches ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
-        await client.query(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS branch_id UUID`);
-        await client.query(`ALTER TABLE integration_logs ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    } catch (e) {
-        console.warn("⚠️ Migration Warning:", e.message);
-    }
-
     // Ensure Default Branch
     const branchRes = await client.query("SELECT id FROM branches LIMIT 1");
     let defaultBranchId;
@@ -342,6 +327,21 @@ const initDB = async () => {
           VALUES (1, 'CitaPlanner Elite', '#630E14', '#C5A028', 'citaplanner', 'Gestión de Lujo Simplificada', 'Plataforma líder en gestión de citas y negocios de belleza.', 'Av. Principal 123, CDMX', '+52 55 1234 5678');
         `);
     }
+
+    // --- MIGRATIONS (Run AFTER tables are created) ---
+    const runMigration = async (query) => {
+        try { await client.query(query); } catch (e) { /* Ignore if fails (e.g. column exists) or log debug */ }
+    };
+
+    await runMigration(`ALTER TABLE branches ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
+    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE services ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE integration_logs ADD COLUMN IF NOT EXISTS branch_id UUID`);
 
     // Seeding Services
     const serviceCount = await client.query("SELECT count(*) FROM services");
@@ -609,8 +609,10 @@ app.post('/api/login', async (req, res) => {
     // --------------------------------
 
     try {
+        console.log(`[AUTH] Login Attempt: ${phone}`);
         const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2", [phone, password]);
         if (result.rows.length > 0) {
+            console.log(`[AUTH] Success for: ${phone}`);
             const user = result.rows[0];
             const mappedUser = {
                 ...user,
@@ -620,9 +622,13 @@ app.post('/api/login', async (req, res) => {
             };
             res.json({ success: true, user: mappedUser });
         } else {
+            console.warn(`[AUTH] Failed for: ${phone}`);
             res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) {
+        console.error('[AUTH] DB Error:', e.message);
+        res.status(500).json({error: e.message});
+    }
 });
 
 app.get('/api/products', async (req, res) => {
