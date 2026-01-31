@@ -41,8 +41,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (phone: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
+    console.log('[AUTH CONTEXT] Login started for:', phone);
     try {
       const apiUser = await api.login(phone, pass);
+      console.log('[AUTH CONTEXT] API Response:', apiUser);
       
       if (apiUser) {
         setUser(apiUser);
@@ -52,6 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return true;
       }
+      return false;
+    } catch (e) {
+      console.error('[AUTH CONTEXT] Login Error:', e);
       return false;
     } finally {
       setIsLoading(false);

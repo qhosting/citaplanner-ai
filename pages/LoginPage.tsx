@@ -13,11 +13,16 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('[LOGIN PAGE] Auth State Change:', { isAuthenticated, user });
     if (isAuthenticated && user) {
+        console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
         if(user.role === 'ADMIN') navigate('/admin');
         else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
         else if(user.role === 'CLIENT') navigate('/client-portal');
-        else navigate('/');
+        else {
+            console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
+            navigate('/');
+        }
     }
   }, [isAuthenticated, user, navigate]);
 
