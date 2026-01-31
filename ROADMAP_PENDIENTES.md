@@ -15,7 +15,7 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 
 ### 3. Finalización de Módulos Mock
 - [x] **Marketing Real:** Backend implementado (`POST /api/marketing/campaigns/send`) con soporte para Email (Nodemailer) y WhatsApp (WAHA), incluyendo segmentación básica de audiencia.
-- [ ] **Simulación de Pagos:** El módulo POS registra transacciones pero no conecta con pasarelas de pago reales (Stripe/MercadoPago).
+- [x] **Simulación de Pagos:** Integrada pasarela **Mercado Pago** en el POS (backend + frontend) para generar links de pago y procesar webhooks.
 
 ## 🟡 Prioridad Media (Mediano Plazo)
 

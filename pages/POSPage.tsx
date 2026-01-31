@@ -28,11 +28,11 @@ export const POSPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'ALL' | 'PRODUCTS' | 'SERVICES'>('ALL');
   
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'MERCADOPAGO'>('CASH');
   const [amountTendered, setAmountTendered] = useState<string>('');
   const [clientName, setClientName] = useState('');
   
-  const [lastSale, setLastSale] = useState<{id: string, date: string, items: CartItem[], total: number, paymentMethod: PaymentMethod, change: number, clientName?: string} | null>(null);
+  const [lastSale, setLastSale] = useState<{id: string, date: string, items: CartItem[], total: number, paymentMethod: PaymentMethod | 'MERCADOPAGO', change: number, clientName?: string} | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
@@ -131,6 +131,38 @@ export const POSPage: React.FC = () => {
     if (paymentMethod === 'CASH' && tendered < total) {
       toast.error("El monto recibido es menor al total.");
       return;
+    }
+
+    // Mercado Pago Flow
+    if (paymentMethod === 'MERCADOPAGO') {
+        try {
+            toast.loading("Generando link de pago...");
+            const response = await fetch('/api/payments/create_preference', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: cart,
+                    payer: { email: 'test_user@test.com', name: clientName || 'Cliente Mostrador' },
+                    branchId: localStorage.getItem('aurum_branch_id')
+                })
+            });
+            const data = await response.json();
+
+            if (data.init_point) {
+                // In a real POS, show QR or open window.
+                window.open(data.init_point, '_blank', 'width=800,height=600');
+
+                // For now, assume success after user returns (Optimistic UI for demo)
+                // In production, use websocket or polling to check status
+                toast.dismiss();
+                toast.success("Ventana de pago abierta. Verifique terminal.");
+            } else {
+                toast.error("Error conectando con Mercado Pago");
+            }
+        } catch (e) {
+            toast.error("Error de red al procesar pago");
+        }
+        return; // Don't close modal immediately or handle as standard sale yet
     }
 
     const saleData = {
@@ -271,9 +303,10 @@ export const POSPage: React.FC = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Cliente (Opcional)</label>
                   <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nombre del cliente" className="w-full p-2 border border-slate-300 rounded-lg" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                   <button onClick={() => setPaymentMethod('CASH')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'CASH' ? 'border-green-500 bg-green-50 text-green-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}><Banknote size={24} /><span className="font-bold">Efectivo</span></button>
-                   <button onClick={() => setPaymentMethod('SPEI')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'SPEI' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}><ScanLine size={24} /><span className="font-bold">Transferencia</span></button>
+                <div className="grid grid-cols-3 gap-3">
+                   <button onClick={() => setPaymentMethod('CASH')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'CASH' ? 'border-green-500 bg-green-50 text-green-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}><Banknote size={24} /><span className="font-bold text-xs">Efectivo</span></button>
+                   <button onClick={() => setPaymentMethod('SPEI')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'SPEI' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}><ScanLine size={24} /><span className="font-bold text-xs">Transferencia</span></button>
+                   <button onClick={() => setPaymentMethod('MERCADOPAGO')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'MERCADOPAGO' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}><CreditCard size={24} /><span className="font-bold text-xs">Mercado Pago</span></button>
                 </div>
                 {paymentMethod === 'CASH' && (
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">

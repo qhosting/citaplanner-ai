@@ -6,6 +6,7 @@ import path from 'path';
 import axios from 'axios';
 import nodemailer from 'nodemailer';
 import webPush from 'web-push';
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
 
@@ -18,6 +19,11 @@ const PORT = process.env.PORT || 3000;
 const WAHA_URL = process.env.WAHA_URL || 'http://waha:3000';
 
 // --- DATABASE & REDIS SETUP ---
+
+// Mercado Pago Client
+const mpClient = new MercadoPagoConfig({
+    accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-00000000-0000-0000-0000-000000000000'
+});
 
 // Web Push Configuration
 const vapidKeys = {
@@ -344,6 +350,8 @@ const initDB = async () => {
     await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(100)`);
+    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mp_status VARCHAR(50)`);
     await runMigration(`ALTER TABLE integration_logs ADD COLUMN IF NOT EXISTS branch_id UUID`);
 
     // Seeding Services
@@ -673,6 +681,71 @@ app.get('/api/professionals', async (req, res) => {
         }));
         res.json(mapped);
     } catch (e) { res.status(500).json({error: e.message}); }
+});
+
+app.post('/api/payments/create_preference', async (req, res) => {
+    try {
+        const { items, payer, branchId } = req.body;
+
+        if (!process.env.MP_ACCESS_TOKEN) {
+            // Mock response if no token
+            return res.json({
+                mock: true,
+                init_point: '#',
+                id: 'mock_pref_123'
+            });
+        }
+
+        const preference = new Preference(mpClient);
+        const result = await preference.create({
+            body: {
+                items: items.map(item => ({
+                    title: item.title,
+                    quantity: item.quantity,
+                    unit_price: parseFloat(item.price)
+                })),
+                payer: {
+                    email: payer.email,
+                    name: payer.name
+                },
+                back_urls: {
+                    success: `${req.headers.origin}/pos?status=success`,
+                    failure: `${req.headers.origin}/pos?status=failure`,
+                    pending: `${req.headers.origin}/pos?status=pending`
+                },
+                auto_return: 'approved',
+                metadata: {
+                    branch_id: branchId
+                }
+            }
+        });
+
+        res.json({
+            id: result.id,
+            init_point: result.init_point
+        });
+    } catch (e) {
+        console.error('MP Error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/payments/webhook', async (req, res) => {
+    try {
+        const { type, data } = req.body;
+        if (type === 'payment') {
+            // Here you would check payment status with MP API using data.id
+            // For now we just log it
+            await pool.query(
+                "INSERT INTO integration_logs (platform, event_type, payload, status) VALUES ($1, $2, $3, $4)",
+                ['MERCADOPAGO', 'WEBHOOK_PAYMENT', JSON.stringify(req.body), 'RECEIVED']
+            );
+        }
+        res.sendStatus(200);
+    } catch (e) {
+        console.error('MP Webhook Error:', e);
+        res.sendStatus(500);
+    }
 });
 
 app.get('/api/settings/landing', async (req, res) => {
