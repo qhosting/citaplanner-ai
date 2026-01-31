@@ -337,6 +337,9 @@ const initDB = async () => {
     await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
     await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
+    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS service_ids TEXT`);
+    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS weekly_schedule JSONB`);
+    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS exceptions JSONB`);
     await runMigration(`ALTER TABLE services ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
