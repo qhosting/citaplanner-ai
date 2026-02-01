@@ -339,7 +339,19 @@ const initDB = async () => {
         try { await client.query(query); } catch (e) { /* Ignore if fails (e.g. column exists) or log debug */ }
     };
 
+    // STRICT MULTI-TENANCY COLUMNS
     await runMigration(`ALTER TABLE branches ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+
+    // Add organization_id to ALL tables for isolation
+    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE services ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE landing_settings ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
+    await runMigration(`ALTER TABLE landing_settings ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'`);
+
     await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
     await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
     await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
@@ -374,8 +386,8 @@ const initDB = async () => {
     if (parseInt(userCount.rows[0].count) === 0) {
         // ADMIN with password '123'
         await client.query(`
-            INSERT INTO users (name, phone, email, password, role, branch_id, preferences)
-            VALUES ('Admin Master', 'admin', 'admin@aurum.ai', '123', 'ADMIN', $1, '{"whatsapp":true,"email":true}')
+            INSERT INTO users (name, phone, email, password, role, branch_id, preferences, organization_id)
+            VALUES ('Admin Master', 'admin', 'admin@aurum.ai', '123', 'ADMIN', $1, '{"whatsapp":true,"email":true}', 'demo')
         `, [defaultBranchId]);
 
         // PRO
@@ -387,19 +399,19 @@ const initDB = async () => {
             {dayOfWeek:5,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]}
         ]);
         const proRes = await client.query(`
-            INSERT INTO professionals (name, role, email, branch_id, weekly_schedule, exceptions, service_ids)
-            VALUES ('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, '[]', '[]')
+            INSERT INTO professionals (name, role, email, branch_id, weekly_schedule, exceptions, service_ids, organization_id)
+            VALUES ('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, '[]', '[]', 'demo')
             RETURNING id
         `, [defaultBranchId, defaultSchedule]);
         await client.query(`
-            INSERT INTO users (name, phone, email, password, role, related_id, branch_id)
-            VALUES ('Dra. Ana Elite', 'pro', 'ana@aurum.ai', 'pro123', 'PROFESSIONAL', $1, $2)
+            INSERT INTO users (name, phone, email, password, role, related_id, branch_id, organization_id)
+            VALUES ('Dra. Ana Elite', 'pro', 'ana@aurum.ai', 'pro123', 'PROFESSIONAL', $1, $2, 'demo')
         `, [proRes.rows[0].id, defaultBranchId]);
 
         // CLIENT
         await client.query(`
-            INSERT INTO users (name, phone, email, password, role, branch_id, skin_type, loyalty_points)
-            VALUES ('Valeria Gold', 'client', 'valeria@client.com', 'client123', 'CLIENT', $1, 'Fitzpatrick III', 150)
+            INSERT INTO users (name, phone, email, password, role, branch_id, skin_type, loyalty_points, organization_id)
+            VALUES ('Valeria Gold', 'client', 'valeria@client.com', 'client123', 'CLIENT', $1, 'Fitzpatrick III', 150, 'demo')
         `, [defaultBranchId]);
     }
 
@@ -413,17 +425,48 @@ const initDB = async () => {
   }
 };
 
-const branchMiddleware = (req, res, next) => {
-    const branchId = req.headers['x-branch-id'];
-    const tenantId = req.headers['x-tenant-id'] || 'demo';
-    req.branchId = branchId;
+const tenantMiddleware = (req, res, next) => {
+    // 1. Detect Tenant from Subdomain
+    const host = req.headers.host || '';
+    const parts = host.split('.');
+    let tenantId = 'demo';
+
+    // Check if subdomain exists (e.g. shula.citaplanner.com)
+    if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'citaplanner') {
+        tenantId = parts[0];
+    } else {
+        // Fallback to Header (Useful for dev/postman)
+        tenantId = req.headers['x-tenant-id'] || 'demo';
+    }
+
     req.tenantId = tenantId;
+    req.branchId = req.headers['x-branch-id']; // Optional specific branch
+
+    // Log context for debugging
+    console.log(`[CTX] Tenant: ${tenantId} | Branch: ${req.branchId || 'ALL'}`);
+
     next();
 };
 
-app.use(branchMiddleware);
+app.use(tenantMiddleware);
 
 // --- ROUTES ---
+
+// AURUM HUB INTEGRATION (PROXY)
+app.post('/api/integrations/aurum/sync', async (req, res) => {
+    // Stub for syncing business identity with Master Hub
+    console.log(`[AURUM HUB] Syncing identity for tenant: ${req.tenantId}`);
+    res.json({ success: true, status: 'SYNCED', hubId: `hub_${req.tenantId}` });
+});
+
+app.get('/api/integrations/aurum/status', async (req, res) => {
+    // Stub for checking subscription status
+    res.json({
+        active: true,
+        plan: 'ELITE_GOLD',
+        features: { ai: true, inventory: true, marketing: true }
+    });
+});
 
 app.get('/api/branches', async (req, res) => {
     try {
@@ -448,7 +491,8 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
         const cleanPhone = sender.split('@')[0];
 
         if (message.includes('CONFIRM') || message.includes('CONFIRMAR')) {
-             // Find latest scheduled appointment for this phone
+             // Find latest scheduled appointment for this phone (Scoped to Tenant NOT enforced here yet as webhook is global, but typically webhook url is tenant specific or payload has id)
+             // For now, simple lookup
              const aptRes = await pool.query(
                  "SELECT id FROM appointments WHERE client_phone LIKE $1 AND status = 'SCHEDULED' ORDER BY start_datetime DESC LIMIT 1",
                  [`%${cleanPhone}%`]
@@ -469,10 +513,12 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
 
 app.get('/api/appointments', async (req, res) => {
     try {
-        let query = "SELECT * FROM appointments";
-        let params = [];
+        // Multi-tenant filter
+        let query = "SELECT * FROM appointments WHERE organization_id = $1";
+        let params = [req.tenantId];
+
         if (req.branchId) {
-            query += " WHERE branch_id = $1";
+            query += " AND branch_id = $2";
             params.push(req.branchId);
         }
         const result = await pool.query(query, params);
@@ -497,10 +543,10 @@ app.post('/api/appointments', async (req, res) => {
         const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
 
         const result = await pool.query(
-            `INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, status, professional_id, service_id, notes, branch_id)
-             VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7, $8, $9)
+            `INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, status, professional_id, service_id, notes, branch_id, organization_id)
+             VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7, $8, $9, $10)
              RETURNING id`,
-            [title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, req.branchId]
+            [title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, req.branchId, req.tenantId]
         );
 
         const newId = result.rows[0].id;
@@ -544,14 +590,16 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
     try {
         const { campaign } = req.body;
         // Fetch Target Audience
-        let userQuery = "SELECT * FROM users WHERE role = 'CLIENT'";
+        let userQuery = "SELECT * FROM users WHERE role = 'CLIENT' AND organization_id = $1";
+        let params = [req.tenantId];
+
         if (campaign.targetSegment === 'INACTIVE_90_DAYS') {
             userQuery += " AND created_at < NOW() - INTERVAL '90 days'";
         } else if (campaign.targetSegment === 'ACTIVE_LAST_30_DAYS') {
             userQuery += " AND created_at > NOW() - INTERVAL '30 days'";
         }
 
-        const users = await pool.query(userQuery);
+        const users = await pool.query(userQuery, params);
         let sentCount = 0;
 
         for (const user of users.rows) {
@@ -574,8 +622,8 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
 app.get('/api/integrations/status', async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT * FROM integration_logs WHERE branch_id = $1 OR $1 IS NULL ORDER BY created_at DESC LIMIT 20", 
-            [req.branchId || null]
+            "SELECT * FROM integration_logs WHERE (branch_id = $1 OR $1 IS NULL) AND (organization_id = $2 OR organization_id IS NULL) ORDER BY created_at DESC LIMIT 20",
+            [req.branchId || null, req.tenantId]
         );
         res.json(result.rows);
     } catch (e) { res.status(500).json({error: e.message}); }
@@ -620,8 +668,10 @@ app.post('/api/login', async (req, res) => {
     // --------------------------------
 
     try {
-        console.log(`[AUTH] Login Attempt: ${phone}`);
-        const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2", [phone, password]);
+        console.log(`[AUTH] Login Attempt: ${phone} | Tenant: ${req.tenantId}`);
+        // Ensure user belongs to tenant (or is global/demo if needed, but strict mode enforces tenant)
+        const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2 AND organization_id = $3", [phone, password, req.tenantId]);
+
         if (result.rows.length > 0) {
             console.log(`[AUTH] Success for: ${phone}`);
             const user = result.rows[0];
