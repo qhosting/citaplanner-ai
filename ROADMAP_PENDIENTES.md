@@ -6,11 +6,11 @@ Este documento detalla las tareas pendientes, mejoras técnicas y característic
 
 ### 1. Provisionamiento Automático
 - [ ] **Stripe Subscription Webhooks:** Conectar eventos de Stripe (checkout.session.completed) para crear automáticamente nuevos tenants en el "Hub Maestro".
-- [ ] **Gestión de DNS:** Automatizar la creación de subdominios (via Cloudflare API) cuando un cliente se registra.
 
 ### 2. Panel SuperAdmin (God Mode)
-- [ ] **Dashboard Maestro:** Vista para ver todos los tenants activos, ingresos recurrentes (MRR) y estado del sistema.
-- [ ] **User Masquerade:** Capacidad para "iniciar sesión como" un dueño de negocio para soporte técnico.
+- [x] **Gestión de DNS:** Implementado servicio de integración con Cloudflare API para crear registros tipo A automáticos.
+- [x] **Dashboard Maestro:** Creada vista `/superadmin` con lista de tenants, estadísticas globales y acciones rápidas.
+- [x] **User Masquerade:** Implementada funcionalidad en backend (`/api/superadmin/masquerade`) y frontend para suplantar identidad de usuarios por tenant.
 
 ## 🟡 Prioridad Media (Experiencia)
 

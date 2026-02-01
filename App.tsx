@@ -25,6 +25,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { BranchesPage } from './pages/BranchesPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 
@@ -189,6 +190,7 @@ const App: React.FC = () => {
                 <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
                 <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN']}><ClientPortal /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/superadmin" element={<SuperAdminPage />} />
               </Routes>
             </div>
             <InternalFooter />
