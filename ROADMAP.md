@@ -3,17 +3,19 @@
 ## 🌟 Visión del Proyecto
 CitaPlanner AI (Aurum Edition) es una plataforma de gestión empresarial de "Lujo Simplificado" diseñada para negocios de belleza, bienestar y servicios profesionales. Su objetivo es unificar la agenda, la gestión de clientes y la inteligencia artificial en una interfaz elegante y de alto rendimiento.
 
-## 🏗️ Arquitectura Actual
-El sistema opera bajo un modelo **Monolito Modular Moderno**:
-*   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS.
+## 🏗️ Arquitectura Actual (SaaS Multi-Tenant)
+El sistema opera bajo un modelo **SaaS Isolate-Tenant**:
+*   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS. Compatible como **PWA (App Móvil)**.
 *   **Backend:** Node.js (Express 5), PostgreSQL (pg).
+*   **Multi-Tenancy:** Aislamiento lógico de datos por `organization_id`. Detección automática de tenant vía subdominio o header `x-tenant-id`.
 *   **Infraestructura:** Contenerizable (Docker), compatible con Google Project IDX / AI Studio.
 
 ## 📦 Módulos Principales (Implementados)
 
-### 1. Núcleo de Gestión (Core)
+### 1. Núcleo de Gestión (Core SaaS)
 *   **Autenticación Robusta:** Sistema de roles (ADMIN, PROFESSIONAL, CLIENT) con protección de rutas.
-*   **Gestión de Sedes (Multi-branch):** Soporte para múltiples sucursales en la base de datos.
+*   **Aislamiento de Negocio:** Cada cliente opera en un entorno separado lógicamente.
+*   **Gestión de Sedes (Multi-branch):** Soporte para múltiples sucursales dentro de cada organización.
 *   **Panel de Control (Dashboard):** Vista centralizada con métricas en tiempo real y accesos rápidos.
 
 ### 2. Agenda Inteligente
