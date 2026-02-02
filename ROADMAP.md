@@ -1,44 +1,207 @@
-# Roadmap del Sistema CitaPlanner AI
+# 📋 ROADMAP - CitaPlanner AI
+## Estado Actual del Sistema (Aurum Clean Code)
 
-## 🌟 Visión del Proyecto
-CitaPlanner AI (Aurum Edition) es una plataforma de gestión empresarial de "Lujo Simplificado" diseñada para negocios de belleza, bienestar y servicios profesionales. Su objetivo es unificar la agenda, la gestión de clientes y la inteligencia artificial en una interfaz elegante y de alto rendimiento.
+---
 
-## 🏗️ Arquitectura Actual (SaaS Multi-Tenant)
-El sistema opera bajo un modelo **SaaS Isolate-Tenant**:
-*   **Frontend:** React 19, TypeScript, Vite, Tailwind CSS. Compatible como **PWA (App Móvil)**.
-*   **Backend:** Node.js (Express 5), PostgreSQL (pg).
-*   **Multi-Tenancy:** Aislamiento lógico de datos por `organization_id`. Detección automática de tenant vía subdominio o header `x-tenant-id`.
-*   **Infraestructura:** Contenerizable (Docker), compatible con Google Project IDX / AI Studio.
+## 🏗️ **STACK TECNOLÓGICO**
 
-## 📦 Módulos Principales (Implementados)
+### **Frontend**
+- [x] **React 19.0.0** - Framework principal
+- [x] **TypeScript 5.8.2** - Tipado estático
+- [x] **Vite 6.4.1** - Build tool y dev server
+- [x] **React Router DOM 6.28.0** - Enrutamiento SPA
+- [x] **React Hook Form 7.54.1** - Gestión de formularios
+- [x] **Zod 3.24.1** - Validación de esquemas
+- [x] **TanStack Query 5.62.7** - Estado y caché de servidor
+- [x] **Lucide React 0.475.0** - Sistema de íconos
+- [x] **Sonner 1.7.0** - Notificaciones toast
 
-### 1. Núcleo de Gestión (Core SaaS)
-*   **Autenticación Robusta:** Sistema de roles (ADMIN, PROFESSIONAL, CLIENT) con protección de rutas.
-*   **Aislamiento de Negocio:** Cada cliente opera en un entorno separado lógicamente.
-*   **Gestión de Sedes (Multi-branch):** Soporte para múltiples sucursales dentro de cada organización.
-*   **Panel de Control (Dashboard):** Vista centralizada con métricas en tiempo real y accesos rápidos.
+### **Backend**
+- [x] **Node.js 20** (Alpine) - Runtime
+- [x] **Express 5.2.1** - Framework HTTP
+- [x] **PostgreSQL 15** - Base de datos principal
+- [x] **Redis 5.10.0** - Caché y sesiones
+- [x] **CORS 2.8.5** - Seguridad cross-origin
 
-### 2. Agenda Inteligente
-*   **Smart Scheduler (Gemini AI):** Interpretación de lenguaje natural para crear citas (ej: "Cita con Ana mañana a las 5pm").
-*   **Vista de Calendario:** Visualización de citas por profesional y estado.
-*   **Detección de Conflictos:** Validación básica de horarios ocupados.
+### **Integraciones**
+- [x] **Google GenAI 1.33.0** - IA conversacional (Gemini 2.5 Flash)
+- [x] **Google APIs 170.1.0** - Integración con servicios Google
+- [x] **Mercado Pago 2.12.0** - Gateway de pagos
+- [x] **Nodemailer 7.0.13** - Envío de correos
+- [x] **Web Push 3.6.7** - Notificaciones push
 
-### 3. Directorio de Entidades
-*   **Clientes:** Perfiles detallados, historial y preferencias.
-*   **Profesionales:** Gestión de horarios, excepciones y especialidades.
-*   **Servicios:** Catálogo de servicios con precios y duraciones.
-*   **Inventario:** Control básico de productos y stock.
+### **DevOps & Infraestructura**
+- [x] **Docker Multi-Stage** - Containerización optimizada
+- [x] **Docker Compose 3.8** - Orquestación local
+- [x] **PostgreSQL Client** - Herramientas de backup
+- [x] **MongoDB Tools** - Migración/backup opcional
+- [x] **Node Cron 4.2.1** - Tareas programadas
+- [x] **Archiver 7.0.1** - Compresión de backups
 
-### 4. Marketing y Expansión
-*   **Landing Page Configurable:** Motor para generar la página web pública del negocio desde la configuración interna.
-*   **Módulo de Marketing:** Interfaz para campañas (Email/WhatsApp) y automatizaciones.
+---
 
-### 5. Integraciones
-*   **Logs de Integración:** Registro de eventos externos (Webhooks, AI, etc.).
-*   **Modo Desarrollo:** Bypass de autenticación para entornos sin base de datos (`dev` / `dev`).
+## 🎯 **FUNCIONALIDADES IMPLEMENTADAS**
 
-## 🚀 Flujo de Trabajo Recomendado
-1.  **Inicio:** El administrador configura servicios y profesionales.
-2.  **Operación:** El recepcionista o la IA agendan citas.
-3.  **Seguimiento:** El sistema registra transacciones y cambios de estado.
-4.  **Análisis:** El dueño revisa las métricas de negocio en el Dashboard.
+### **Módulo de Autenticación**
+- [x] Sistema de Login con JWT
+- [x] Bypass de desarrollo (modo dev)
+- [x] Gestión de sesiones con Redis
+- [x] Multi-tenant con caché de tenants (TTL: 5 min)
+- [x] Roles: ADMIN, PROFESSIONAL, CLIENT, SUPER_ADMIN
+
+### **Módulo de Agendamiento (Bookings)**
+- [x] Creación de citas con validación de horarios
+- [x] Filtros avanzados (estado, fecha, profesional)
+- [x] Asociación automática cliente-profesional
+- [x] Notificaciones push a profesionales
+- [x] Notificaciones WhatsApp/Email a clientes
+- [x] Estados: SCHEDULED, COMPLETED, CANCELLED
+
+### **Módulo de Clientes (CRM)**
+- [x] Directorio de clientes con búsqueda
+- [x] Almacenamiento de datos de contacto
+- [x] Historial de citas por cliente
+- [x] Preferencias de notificación (WhatsApp/Email)
+
+### **Módulo de Profesionales**
+- [x] Gestión de horarios semanales
+- [x] Excepciones de calendario
+- [x] Vinculación con Aurum Employee ID
+- [x] Dashboard de citas asignadas
+
+### **Punto de Venta (POS)**
+- [x] Catálogo de productos/servicios
+- [x] Carrito de compras
+- [x] Integración con Mercado Pago
+- [x] Generación de preferencias de pago
+- [x] Modo mock para desarrollo sin credenciales
+
+### **Marketing & Campañas**
+- [x] Creación de campañas multicanal
+- [x] Segmentación por audiencia (tags, clientes)
+- [x] Envío automático vía Email/WhatsApp
+- [x] Tracking de campañas enviadas
+
+### **Analytics & Reportes**
+- [x] Dashboard de métricas
+- [x] Estadísticas de citas (por estado, profesional)
+- [x] Análisis de ingresos (POS)
+- [x] Exportación de datos
+
+### **Gestión Multi-Branch**
+- [x] Soporte para múltiples sucursales
+- [x] Caché por sucursal (productos, settings)
+- [x] Aislamiento de datos por branch
+
+### **Integraciones**
+- [x] Google Cloud (setup documentado en GOOGLE_CLOUD_SETUP.md)
+- [x] Cloudflare para CDN/DNS
+- [x] Servicio de backups automáticos (PostgreSQL/MongoDB)
+- [x] Web Push (VAPID keys configuradas)
+
+### **PWA (Progressive Web App)**
+- [x] Manifest.json configurado
+- [x] Vite PWA Plugin integrado
+- [x] Service Worker para offline
+- [x] Instalable en dispositivos móviles
+
+---
+
+## 🐳 **CONTENEDORES DOCKER**
+
+### **citaplanner-db** (PostgreSQL 15-alpine)
+- [x] Usuario: `citaplanner_admin`
+- [x] Database: `citaplanner_prod`
+- [x] Volumen persistente: `postgres_data`
+- [x] Red interna: `citaplanner_internal`
+
+### **citaplanner-app** (Node 20-alpine)
+- [x] Build Multi-Stage (builder + runner)
+- [x] Frontend servido desde `/app/dist`
+- [x] Backend en Node.js (server.js)
+- [x] Auto-migraciones incluidas
+- [x] Volumen de uploads: `uploads_data`
+- [x] Puerto expuesto: **3000**
+
+---
+
+## 📦 **ESTRUCTURA DEL PROYECTO**
+
+```
+citaplanner-ai/
+├── pages/              # 19 páginas React (Dashboard, POS, Analytics, etc.)
+├── components/         # 14 componentes reutilizables
+├── services/           # 6 servicios (API, Gemini, Backup, Cloudflare, etc.)
+├── context/            # AuthContext (gestión de estado global)
+├── utils/              # Utilidades (webPush)
+├── prisma/             # Esquema de base de datos (vacío - migraciones en server.js)
+├── public/             # Manifest PWA
+├── server.js           # Backend Express monolítico (813 líneas)
+├── Dockerfile          # Multi-stage optimizado
+├── docker-compose.yml  # Orquestación local
+└── vite.config.ts      # Configuración de build
+```
+
+---
+
+## ✅ **PROTOCOLO AURUM DETECTADO**
+
+El código utiliza comentarios numéricos que parecen seguir una metodología interna:
+- `148721091` - Protocolo de Materialización
+- `520` - Protocolo de Abundancia
+- `8888` - Protección de entorno limpio
+- `419 488 71` - Protocolo de Crecimiento
+
+---
+
+## 🔐 **VARIABLES DE ENTORNO REQUERIDAS**
+
+```env
+# Database
+DATABASE_URL=postgresql://...
+DATABASE_PASSWORD=***
+
+# Auth
+NEXTAUTH_SECRET=***
+NEXTAUTH_URL=https://...
+JWT_SECRET=***
+
+# APIs
+API_KEY=*** (Google Gemini)
+MP_ACCESS_TOKEN=*** (Mercado Pago)
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=***
+SMTP_PASS=***
+
+# WhatsApp (Evolution API)
+EVOLUTION_API_URL=***
+EVOLUTION_API_KEY=***
+
+# Web Push
+VAPID_PUBLIC_KEY=***
+VAPID_PRIVATE_KEY=***
+VAPID_CONTACT=mailto:***
+
+# Domain
+DOMAIN_URL=https://citaplanner.ai
+```
+
+---
+
+## 📊 **LÍNEAS DE CÓDIGO**
+
+- **Backend (server.js)**: 813 líneas
+- **Frontend**: ~200,000+ caracteres repartidos en 19 páginas
+- **Servicios**: 6 archivos especializados
+- **Componentes**: 14 archivos reutilizables
+
+---
+
+**Última actualización**: 2026-02-01  
+**Estado**: ✅ En producción parcial (falta completar integraciones críticas)
