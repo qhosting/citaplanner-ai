@@ -935,10 +935,14 @@ app.post('/api/payments/webhook', async (req, res) => {
         if (type === 'payment') {
             // Here you would check payment status with MP API using data.id
             // For now we just log it
-            await pool.query(
-                "INSERT INTO integration_logs (platform, event_type, payload, status) VALUES ($1, $2, $3, $4)",
-                ['MERCADOPAGO', 'WEBHOOK_PAYMENT', JSON.stringify(req.body), 'RECEIVED']
-            );
+            await prisma.integrationLog.create({
+                data: {
+                    platform: 'MERCADOPAGO',
+                    eventType: 'WEBHOOK_PAYMENT',
+                    payload: JSON.stringify(req.body),
+                    status: 'RECEIVED'
+                }
+            });
         }
         res.sendStatus(200);
     } catch (e) {
@@ -975,10 +979,10 @@ app.get('/api/notifications/vapid-public-key', (req, res) => {
 app.post('/api/notifications/subscribe', async (req, res) => {
     const { subscription, userId } = req.body;
     try {
-        await pool.query(
-            "UPDATE users SET push_subscription = $1 WHERE id = $2",
-            [subscription, userId]
-        );
+        await prisma.user.update({
+            where: { id: userId },
+            data: { pushSubscription: subscription }
+        });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -988,9 +992,15 @@ app.get(/.*/, (req, res) => {
 });
 
 // INITIALIZE INFRASTRUCTURE
-connectRedis();
-initDB().then(() => {
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+    initDB().then(() => {
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+        });
     });
-});
+}
+
+export { app };
