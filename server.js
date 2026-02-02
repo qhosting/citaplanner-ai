@@ -25,6 +25,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// Trust proxy is required when running behind a reverse proxy (Caddy/Nginx)
+// to correctly identify client IP addresses for rate limiting.
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 const ROOT_DOMAIN = (process.env.ROOT_DOMAIN || 'citaplanner.com').toLowerCase();
 const REDIS_URL = process.env.REDIS_URL;
@@ -817,11 +821,15 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
     // --------------------------------
 
     try {
-        console.log(`[AUTH] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
+        console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId}`);
         const user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
+
+        console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
 
         if (user) {
             const validPassword = await bcrypt.compare(password, user.password);
+            console.log(`[AUTH DEBUG] Password Valid: ${validPassword ? 'YES' : 'NO'}`);
+
             if (!validPassword) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
 
             console.log(`[AUTH] Success for: ${phone} `);

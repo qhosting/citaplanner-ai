@@ -168,7 +168,37 @@ async function main() {
         });
         console.log('✅ Professional user created (phone: pro, password: pro123)');
     } else {
-        console.log('ℹ️ Users already exist, skipping');
+        console.log('ℹ️ Users already exist, skipping default user creation');
+    }
+
+    // 6. Seed Special QHosting Admin
+    const qhostingAdminPhone = 'admin@qhosting.net';
+    const existingQAdmin = await prisma.user.findFirst({
+        where: {
+            phone: qhostingAdminPhone,
+            organizationId: 'demo'
+        }
+    });
+
+    if (!existingQAdmin) {
+        await prisma.user.create({
+            data: {
+                name: 'Admin QHosting',
+                phone: qhostingAdminPhone, // Fits in VARCHAR(20)
+                email: 'admin@qhosting.net',
+                password: bcrypt.hashSync('x0420EZS*', 10),
+                role: 'ADMIN',
+                branchId: defaultBranch.id,
+                organizationId: 'demo',
+                preferences: {
+                    whatsapp: true,
+                    email: true
+                }
+            }
+        });
+        console.log('✅ QHosting Admin user created (phone: admin@qhosting.net)');
+    } else {
+        console.log('ℹ️ QHosting Admin user already exists');
     }
 
     console.log('🎉 Database seeding completed!');
