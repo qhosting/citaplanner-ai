@@ -100,6 +100,8 @@ webPush.setVapidDetails(
 
 const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
 
+// @DEPRECATED: Pool is only used for initDB() legacy migrations
+// TODO: Migrate to Prisma Migrate (npx prisma migrate dev)
 const pool = new Pool({
     connectionString: connectionString,
     ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
@@ -155,16 +157,28 @@ const sendWhatsAppMessage = async (phone, text, branchId) => {
             session: 'default'
         });
 
-        await pool.query(
-            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            ['WHATSAPP', 'SEND_MESSAGE', JSON.stringify({ chatId, text }), 'Sent', 'SUCCESS', branchId]
-        );
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'WHATSAPP',
+                eventType: 'SEND_MESSAGE',
+                payload: { chatId, text },
+                response: 'Sent',
+                status: 'SUCCESS',
+                branchId
+            }
+        });
     } catch (e) {
         console.error('❌ WhatsApp Send Error:', e.message);
-        await pool.query(
-            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            ['WHATSAPP', 'SEND_ERROR', JSON.stringify({ phone, text }), e.message, 'ERROR', branchId]
-        );
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'WHATSAPP',
+                eventType: 'SEND_ERROR',
+                payload: { phone, text },
+                response: e.message,
+                status: 'ERROR',
+                branchId
+            }
+        });
     }
 };
 
@@ -191,17 +205,29 @@ const sendEmail = async (to, subject, html, branchId) => {
             subject,
             html
         });
-        await pool.query(
-            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            ['EMAIL', 'SEND_MESSAGE', JSON.stringify({ to, subject }), 'Sent', 'SUCCESS', branchId]
-        );
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'EMAIL',
+                eventType: 'SEND_MESSAGE',
+                payload: { to, subject },
+                response: 'Sent',
+                status: 'SUCCESS',
+                branchId
+            }
+        });
         return true;
     } catch (e) {
         console.error('❌ Email Send Error:', e.message);
-        await pool.query(
-            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            ['EMAIL', 'SEND_ERROR', JSON.stringify({ to, subject }), e.message, 'ERROR', branchId]
-        );
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'EMAIL',
+                eventType: 'SEND_ERROR',
+                payload: { to, subject },
+                response: e.message,
+                status: 'ERROR',
+                branchId
+            }
+        });
         return false;
     }
 };
@@ -219,6 +245,10 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// @DEPRECATED: This function uses raw SQL for schema creation and seeding
+// TODO: Replace with Prisma Migrate migrations and seed scripts
+// Run: npx prisma migrate dev --name init
+// Then: npx prisma db seed
 const initDB = async () => {
     const client = await pool.connect();
     try {
@@ -535,10 +565,16 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
         const data = req.body;
         // Basic logging
         console.log("🔔 WhatsApp Webhook:", JSON.stringify(data));
-        await pool.query(
-            "INSERT INTO integration_logs (platform, event_type, payload, response, status, branch_id) VALUES ($1, $2, $3, $4, $5, $6)",
-            ['WHATSAPP', 'WEBHOOK_RECEIVED', JSON.stringify(data), 'Processed', 'SUCCESS', null]
-        );
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'WHATSAPP',
+                eventType: 'WEBHOOK_RECEIVED',
+                payload: data,
+                response: 'Processed',
+                status: 'SUCCESS',
+                branchId: null
+            }
+        });
 
         // Simple Keyword Logic
         const message = data?.payload?.body?.toUpperCase() || '';
@@ -546,15 +582,25 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
         const cleanPhone = sender.split('@')[0];
 
         if (message.includes('CONFIRM') || message.includes('CONFIRMAR')) {
-            // Find latest scheduled appointment for this phone (Scoped to Tenant NOT enforced here yet as webhook is global, but typically webhook url is tenant specific or payload has id)
-            // For now, simple lookup
-            const aptRes = await pool.query(
-                "SELECT id FROM appointments WHERE client_phone LIKE $1 AND status = 'SCHEDULED' ORDER BY start_date_time DESC LIMIT 1",
-                [`%${cleanPhone}%`]
-            );
-            if (aptRes.rows.length > 0) {
-                await pool.query("UPDATE appointments SET status = 'CONFIRMED' WHERE id = $1", [aptRes.rows[0].id]);
-                console.log(`✅ Appointment ${aptRes.rows[0].id} confirmed via WhatsApp`);
+            // Find latest scheduled appointment for this phone
+            const appointment = await prisma.appointment.findFirst({
+                where: {
+                    clientPhone: {
+                        contains: cleanPhone
+                    },
+                    status: 'SCHEDULED'
+                },
+                orderBy: {
+                    startDateTime: 'desc'
+                }
+            });
+
+            if (appointment) {
+                await prisma.appointment.update({
+                    where: { id: appointment.id },
+                    data: { status: 'CONFIRMED' }
+                });
+                console.log(`✅ Appointment ${appointment.id} confirmed via WhatsApp`);
                 sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null);
             }
         }
@@ -643,20 +689,28 @@ app.post('/api/appointments', async (req, res) => {
 app.post('/api/marketing/campaigns/send', async (req, res) => {
     try {
         const { campaign } = req.body;
-        // Fetch Target Audience
-        let userQuery = "SELECT * FROM users WHERE role = 'CLIENT' AND organization_id = $1";
-        let params = [req.tenantId];
 
+        // Build Prisma where clause for target audience
+        const where = {
+            role: 'CLIENT',
+            organizationId: req.tenantId
+        };
+
+        // Add time-based filters
         if (campaign.targetSegment === 'INACTIVE_90_DAYS') {
-            userQuery += " AND created_at < NOW() - INTERVAL '90 days'";
+            where.createdAt = {
+                lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+            };
         } else if (campaign.targetSegment === 'ACTIVE_LAST_30_DAYS') {
-            userQuery += " AND created_at > NOW() - INTERVAL '30 days'";
+            where.createdAt = {
+                gt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+            };
         }
 
-        const users = await pool.query(userQuery, params);
+        const users = await prisma.user.findMany({ where });
         let sentCount = 0;
 
-        for (const user of users.rows) {
+        for (const user of users) {
             if (campaign.channel === 'EMAIL' && user.email) {
                 const success = await sendEmail(user.email, campaign.subject, campaign.content, req.branchId);
                 if (success) sentCount++;
@@ -675,22 +729,51 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
 
 app.get('/api/integrations/status', async (req, res) => {
     try {
-        const result = await pool.query(
-            "SELECT * FROM integration_logs WHERE (branch_id = $1 OR $1 IS NULL) AND (organization_id = $2 OR organization_id IS NULL) ORDER BY created_at DESC LIMIT 20",
-            [req.branchId || null, req.tenantId]
-        );
-        res.json(result.rows);
+        const where = {};
+
+        if (req.branchId) {
+            where.branchId = req.branchId;
+        }
+
+        if (req.tenantId) {
+            where.OR = [
+                { organizationId: req.tenantId },
+                { organizationId: null }
+            ];
+        }
+
+        const logs = await prisma.integrationLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+
+        res.json(logs);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM users WHERE tenant_id = $1 AND role = 'STUDIO_OWNER' LIMIT 1", [req.params.id]);
-        if (result.rows.length === 0) return res.status(404).json({ error: "No se encontró administrador en este nodo" });
-        const targetUser = result.rows[0];
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                // Note: Using organizationId as tenantId proxy based on schema
+                organizationId: req.params.id,
+                role: 'STUDIO_OWNER'
+            }
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ error: "No se encontró administrador en este nodo" });
+        }
+
         const token = jwt.sign({
-            id: targetUser.id, role: targetUser.role, tenantId: targetUser.tenant_id, isImpersonated: true, originalGodId: req.user?.id
+            id: targetUser.id,
+            role: targetUser.role,
+            tenantId: targetUser.organizationId,
+            isImpersonated: true,
+            originalGodId: req.user?.id
         }, JWT_SECRET, { expiresIn: '1h' });
+
         res.json({ success: true, token, user: targetUser });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
