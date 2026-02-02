@@ -286,79 +286,37 @@ export const api = {
     return res.ok;
   },
 
-  createService: async (s: Omit<Service, 'id' | 'tenantId'>): Promise<Service | null> => {
-    const res = await fetch(`${API_URL}/services`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(s)
-    });
-    const newService = res.ok ? await res.json() : null;
-    return newService;
+  getVapidPublicKey: async (): Promise<string | null> => {
+    try {
+        const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
+        if (res.ok) {
+            const data = await res.json();
+            return data.publicKey;
+        }
+        return null;
+    } catch { return null; }
   },
 
-  deleteService: async (id: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/services/${id}`, { method: 'DELETE', headers: getHeaders() });
-    return res.ok;
+  subscribeToNotifications: async (subscription: any, userId: string): Promise<boolean> => {
+    try {
+        const res = await safeFetch(`${API_URL}/notifications/subscribe`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ subscription, userId })
+        });
+        return res.ok;
+    } catch { return false; }
   },
 
-  processSale: async (data: any): Promise<{ success: boolean; saleId?: string; date?: string }> => {
-    const res = await fetch(`${API_URL}/sales`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data)
-    });
-    return await res.json();
-  },
-
-  getBranches: async (): Promise<Branch[]> => {
-    const res = await fetch(`${API_URL}/branches`, { headers: getHeaders() });
-    return res.ok ? await res.json() : [];
-  },
-
-  updateBranch: async (b: Branch): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/branches/${b.id}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(b)
-    });
-    return res.ok;
-  },
-
-  createBranch: async (b: Omit<Branch, 'id' | 'tenantId'>): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/branches`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(b)
-    });
-    return res.ok;
-  },
-
-  deleteBranch: async (id: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/branches/${id}`, { method: 'DELETE', headers: getHeaders() });
-    return res.ok;
-  },
-
-  getBusinessStats: async (): Promise<any> => {
-    const res = await fetch(`${API_URL}/analytics/stats`, { headers: getHeaders() });
-    return res.ok ? await res.json() : { revenueThisMonth: 0, occupationRate: 0 };
-  },
-
-  getCampaigns: async (): Promise<Campaign[]> => {
-    const res = await fetch(`${API_URL}/marketing/campaigns`, { headers: getHeaders() });
-    return res.ok ? await res.json() : [];
-  },
-
-  createCampaign: async (c: Partial<Campaign>): Promise<Campaign | null> => {
-    const res = await fetch(`${API_URL}/marketing/campaigns`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(c)
-    });
-    return res.ok ? await res.json() : null;
-  },
-
-  getAutomations: async (): Promise<AutomationRule[]> => {
-    const res = await fetch(`${API_URL}/marketing/automations`, { headers: getHeaders() });
-    return res.ok ? await res.json() : [];
+  processSale: async (saleData: any): Promise<{success: boolean, saleId?: string, date?: string}> => {
+    try {
+        const res = await safeFetch(`${API_URL}/sales`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(saleData)
+        });
+        if (!res.ok) return { success: false };
+        return res.json();
+    } catch { return { success: false }; }
   }
 };

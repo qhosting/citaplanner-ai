@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, ArrowRight, Loader2, Sparkles, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
 import { Role } from '../types';
@@ -11,28 +11,22 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isMaintenance, setIsMaintenance] = useState(false);
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.getLandingSettings().then(s => setIsMaintenance(!!s.maintenanceMode));
-  }, []);
-
-  const handleRedirection = (role: Role) => {
-    // Fixed: Updated role names to match Role type ('GOD_MODE', 'STUDIO_OWNER', 'STAFF', 'MEMBER')
-    if (role === 'GOD_MODE') navigate('/nexus', { replace: true });
-    else if (role === 'STUDIO_OWNER') navigate('/admin', { replace: true });
-    else if (role === 'STAFF') navigate('/professional-dashboard', { replace: true });
-    else if (role === 'MEMBER') navigate('/client-portal', { replace: true });
-    else navigate('/', { replace: true });
-  };
-
-  useEffect(() => {
-    if (isAuthenticated && user && !loading) {
-      handleRedirection(user.role);
+    console.log('[LOGIN PAGE] Auth State Change:', { isAuthenticated, user });
+    if (isAuthenticated && user) {
+        console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
+        if(user.role === 'ADMIN') navigate('/admin');
+        else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
+        else if(user.role === 'CLIENT') navigate('/client-portal');
+        else {
+            console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
+            navigate('/');
+        }
     }
-  }, [isAuthenticated, user, navigate, loading]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,16 +34,9 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const apiUser = await login(phone, password);
-      if (apiUser) {
-        // Fixed: Updated role check to 'MEMBER' to match Role type
-        if (isMaintenance && apiUser.role === 'MEMBER') {
-          setError('PROTOCOLO DE MANTENIMIENTO: Acceso restringido.');
-          return;
-        }
-        handleRedirection(apiUser.role);
-      } else {
-        setError('Acceso denegado. Credenciales inválidas.');
+      const success = await login(phone, password);
+      if (!success) {
+        setError('Acceso denegado. Credenciales no autorizadas.');
       }
     } catch (err) {
       setError('Falla crítica en la infraestructura.');

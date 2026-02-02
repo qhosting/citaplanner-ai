@@ -9,6 +9,24 @@ import {
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Dashboard } from './pages/Dashboard';
+import { ClientsPage } from './pages/ClientsPage';
+import { InventoryPage } from './pages/InventoryPage';
+import { SchedulesPage } from './pages/SchedulesPage';
+import { ServicesPage } from './pages/ServicesPage';
+import { BookingPage } from './pages/BookingPage';
+import { LoginPage } from './pages/LoginPage';
+import { ProfessionalDashboard } from './pages/ProfessionalDashboard';
+import { ClientPortal } from './pages/ClientPortal';
+import { ProfilePage } from './pages/ProfilePage';
+import { LandingPage, LogoCitaplanner } from './pages/LandingPage';
+import { POSPage } from './pages/POSPage';
+import { MarketingPage } from './pages/MarketingPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { BranchesPage } from './pages/BranchesPage';
+import { InsightsPage } from './pages/InsightsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 import { api } from './services/api';
@@ -284,8 +302,34 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-           <MainLayout />
+        <MemoryRouter>
+          <div className="min-h-screen flex flex-col">
+            <Toaster richColors position="top-right" theme="dark" />
+            <Navbar />
+            <div className="flex-grow">
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/book" element={<BookingPage />} /> 
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
+                <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+                <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
+                <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
+                <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN']}><BranchesPage /></ProtectedRoute>} />
+                <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN']}><ServicesPage /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><InventoryPage /></ProtectedRoute>} />
+                <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN']}><SchedulesPage /></ProtectedRoute>} />
+                <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN']}><InsightsPage /></ProtectedRoute>} />
+                <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
+                <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN']}><ClientPortal /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/superadmin" element={<SuperAdminPage />} />
+              </Routes>
+            </div>
+            <InternalFooter />
+          </div>
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>
