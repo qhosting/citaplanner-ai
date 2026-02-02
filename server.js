@@ -15,6 +15,8 @@ import helmet from 'helmet';
 import prismaClientPkg from '@prisma/client';
 const { PrismaClient } = prismaClientPkg;
 import jwt from 'jsonwebtoken';
+import { validateRequest } from './middleware/validation.js';
+import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema } from './schemas/index.js';
 
 const prisma = new PrismaClient();
 
@@ -232,8 +234,22 @@ const sendEmail = async (to, subject, html, branchId) => {
     }
 };
 
-app.use(helmet());
+
+// ------------------------------------
+// MIDDLEWARES & RATE LIMITING
+// ------------------------------------
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    message: { success: false, message: 'Too many login attempts, please try again later.' }
+});
+
+app.use(helmet({
+    contentSecurityPolicy: false // Disabled for dev flexibility, tighten in prod
+}));
 app.use(cors());
+
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -631,7 +647,7 @@ app.get('/api/appointments', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/appointments', async (req, res) => {
+app.post('/api/appointments', validateRequest(appointmentSchema), async (req, res) => {
     try {
         const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
 
@@ -778,7 +794,7 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, res) => {
     const { phone, password } = req.body;
 
     // --- DEVELOPMENT MODE BYPASS ---

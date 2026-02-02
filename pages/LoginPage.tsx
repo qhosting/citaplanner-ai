@@ -13,18 +13,19 @@ export const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const isMaintenance = false;
 
   useEffect(() => {
     console.log('[LOGIN PAGE] Auth State Change:', { isAuthenticated, user });
     if (isAuthenticated && user) {
-        console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
-        if(user.role === 'ADMIN') navigate('/admin');
-        else if(user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
-        else if(user.role === 'CLIENT') navigate('/client-portal');
-        else {
-            console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
-            navigate('/');
-        }
+      console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
+      if (user.role === 'ADMIN') navigate('/admin');
+      else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
+      else if (user.role === 'CLIENT') navigate('/client-portal');
+      else {
+        console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
+        navigate('/');
+      }
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -49,8 +50,8 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
       {/* Background Nodes */}
       <div className="absolute inset-0 pointer-events-none opacity-40">
-         {[...Array(8)].map((_, i) => (
-           <div 
+        {[...Array(8)].map((_, i) => (
+          <div
             key={i}
             className="absolute satellite-node"
             style={{
@@ -59,27 +60,27 @@ export const LoginPage: React.FC = () => {
               animationDelay: `${i * 0.5}s`,
               animationDuration: `${8 + Math.random() * 5}s`
             }}
-           >
-             <div className="w-1 h-1 bg-[#D4AF37] rounded-full shadow-[0_0_10px_rgba(212,175,55,0.6)]" />
-           </div>
-         ))}
+          >
+            <div className="w-1 h-1 bg-[#D4AF37] rounded-full shadow-[0_0_10px_rgba(212,175,55,0.6)]" />
+          </div>
+        ))}
       </div>
 
       <div className="w-full max-w-md z-10 animate-entrance">
         <div className="glass-card p-8 md:p-10 rounded-[2.5rem] relative border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          
+
           {isMaintenance && (
-             <div className="mb-8 p-3 bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl flex items-center gap-3">
-                <ShieldAlert className="text-[#D4AF37] shrink-0" size={18} />
-                <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest leading-tight">Mantenimiento Activo. <br/>Solo personal autorizado.</p>
-             </div>
+            <div className="mb-8 p-3 bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl flex items-center gap-3">
+              <ShieldAlert className="text-[#D4AF37] shrink-0" size={18} />
+              <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest leading-tight">Mantenimiento Activo. <br />Solo personal autorizado.</p>
+            </div>
           )}
 
           <div className="flex flex-col items-center mb-10">
             <div className="mb-4">
-               <div className="w-16 h-16 rounded-[1.5rem] border border-[#D4AF37]/30 flex items-center justify-center bg-black/40 shadow-xl relative group overflow-hidden">
-                  <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform duration-500" size={28} />
-               </div>
+              <div className="w-16 h-16 rounded-[1.5rem] border border-[#D4AF37]/30 flex items-center justify-center bg-black/40 shadow-xl relative group overflow-hidden">
+                <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform duration-500" size={28} />
+              </div>
             </div>
             <h1 className="text-2xl font-black tracking-tighter text-white uppercase flex items-center gap-2">
               Cita<span className="gold-text-gradient font-light">Planner</span>
@@ -140,11 +141,11 @@ export const LoginPage: React.FC = () => {
           </form>
 
           <div className="mt-10 pt-6 border-t border-white/5 flex flex-col items-center gap-3">
-             <div className="flex items-center gap-2 px-4 py-1.5 bg-white/5 rounded-full border border-white/5">
-                <ShieldCheck className="text-[#D4AF37]" size={12} />
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Aurum Core Secured</span>
-             </div>
-             <p className="text-[8px] text-zinc-800 font-bold uppercase tracking-widest">© 2026 CitaPlanner Infrastructure</p>
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-white/5 rounded-full border border-white/5">
+              <ShieldCheck className="text-[#D4AF37]" size={12} />
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Aurum Core Secured</span>
+            </div>
+            <p className="text-[8px] text-zinc-800 font-bold uppercase tracking-widest">© 2026 CitaPlanner Infrastructure</p>
           </div>
         </div>
       </div>

@@ -42,6 +42,12 @@ RUN npm install --only=production
 # Copy Backend Core
 COPY server.js ./
 COPY services ./services
+COPY middleware ./middleware
+COPY schemas ./schemas
+COPY prisma ./prisma
+
+# Generate Prisma Client
+RUN npx prisma generate
 
 # Copy Frontend Build from Builder
 COPY --from=builder /app/dist ./dist

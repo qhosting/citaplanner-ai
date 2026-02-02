@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut,
   Sparkles, ShoppingBag, Megaphone, Settings,
@@ -285,9 +285,9 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <MemoryRouter>
+        <BrowserRouter>
           <MainLayout />
-        </MemoryRouter>
+        </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
   );
