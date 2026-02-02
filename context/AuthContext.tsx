@@ -25,9 +25,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsedUser = JSON.parse(storedUser);
           // Verificar integridad básica (token existe)
           if (parsedUser.token) {
-             setUser(parsedUser);
+            setUser(parsedUser);
           } else {
-             localStorage.removeItem('citaPlannerUser'); // Limpiar auth corrupta
+            localStorage.removeItem('citaPlannerUser'); // Limpiar auth corrupta
           }
         }
       } catch (e) {
@@ -39,27 +39,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (phone: string, pass: string): Promise<boolean> => {
+  const login = async (phone: string, pass: string): Promise<User | null> => {
     setIsLoading(true);
     console.log('[AUTH CONTEXT] Login started for:', phone);
     try {
       const apiUser = await api.login(phone, pass);
       console.log('[AUTH CONTEXT] API Response:', apiUser);
-      
+
       if (apiUser) {
-        setUser(apiUser);
-        localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
-      } catch (e) {
-        console.warn('Storage Error:', e);
+        try {
+          setUser(apiUser);
+          localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
+        } catch (e) {
+          console.warn('Storage Error:', e);
+        }
+        return apiUser;
       }
-      return false;
+      return null;
     } catch (e) {
       console.error('[AUTH CONTEXT] Login Error:', e);
-      return false;
+      return null;
     } finally {
       setIsLoading(false);
     }
-    return null;
   };
 
   const logout = () => {
