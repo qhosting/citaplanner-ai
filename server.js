@@ -275,6 +275,74 @@ const initDB = async () => {
         await client.query('BEGIN');
         await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
 
+        // --- MIGRACIÓN: ASEGURAR COLUMNAS ---
+        // Si las tablas ya existen de una versión previa, CREATE TABLE IF NOT EXISTS no las actualiza.
+        await client.query(`
+            DO $$ 
+            BEGIN 
+                -- Agregar organization_id a tablas existentes si no existe
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
+                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'branches') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='organization_id') THEN
+                        ALTER TABLE branches ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='organization_id') THEN
+                        ALTER TABLE users ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'professionals') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='organization_id') THEN
+                        ALTER TABLE professionals ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'services') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='organization_id') THEN
+                        ALTER TABLE services ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'appointments') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='organization_id') THEN
+                        ALTER TABLE appointments ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'landing_settings') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='organization_id') THEN
+                        ALTER TABLE landing_settings ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'integration_logs') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='organization_id') THEN
+                        ALTER TABLE integration_logs ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'products') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='organization_id') THEN
+                        ALTER TABLE products ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transactions') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='organization_id') THEN
+                        ALTER TABLE transactions ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                END IF;
+            END $$;
+        `);
+
         // 1. Fundamental Tables
         await client.query(`
             CREATE TABLE IF NOT EXISTS tenants (
