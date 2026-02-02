@@ -7,6 +7,17 @@ const API_URL = '/api';
 export const SOLUTION_TIMEOUT = 1000;
 export const ERROR_PROTECTION_CODE = 'AUM-99';
 
+// UTILS
+const safeFetch = async (url: string, options: RequestInit = {}) => {
+  try {
+    const res = await fetch(url, options);
+    return res;
+  } catch (e) {
+    console.error(`[SAFE FETCH ERROR] ${url}:`, e);
+    throw e;
+  }
+};
+
 // HELPER DE SEGURIDAD
 const getHeaders = (isUpload = false) => {
   const userStr = localStorage.getItem('citaPlannerUser');
@@ -50,16 +61,16 @@ export const api = {
   // Login (Público - Genera Token)
   login: async (phone: string, pass: string): Promise<User | null> => {
     try {
-        const res = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password: pass })
-        });
-        const data = await res.json();
-        if (data.success && data.user && data.token) {
-            return { ...data.user, token: data.token }; 
-        }
-        return null;
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password: pass })
+      });
+      const data = await res.json();
+      if (data.success && data.user && data.token) {
+        return { ...data.user, token: data.token };
+      }
+      return null;
     } catch { return null; }
   },
 
@@ -75,8 +86,8 @@ export const api = {
 
   getLandingSettings: async (): Promise<LandingSettings> => {
     try {
-        const res = await fetch(`${API_URL}/settings/landing`, { headers: getHeaders() });
-        return await res.json();
+      const res = await fetch(`${API_URL}/settings/landing`, { headers: getHeaders() });
+      return await res.json();
     } catch { return {} as LandingSettings; }
   },
 
@@ -87,7 +98,7 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify(s)
       });
-      
+
       if (res.ok && s.businessName && s.contactPhone) {
         AurumConnectorService.syncTenant({
           commercialName: s.businessName,
@@ -288,35 +299,35 @@ export const api = {
 
   getVapidPublicKey: async (): Promise<string | null> => {
     try {
-        const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
-        if (res.ok) {
-            const data = await res.json();
-            return data.publicKey;
-        }
-        return null;
+      const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        return data.publicKey;
+      }
+      return null;
     } catch { return null; }
   },
 
   subscribeToNotifications: async (subscription: any, userId: string): Promise<boolean> => {
     try {
-        const res = await safeFetch(`${API_URL}/notifications/subscribe`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({ subscription, userId })
-        });
-        return res.ok;
+      const res = await safeFetch(`${API_URL}/notifications/subscribe`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subscription, userId })
+      });
+      return res.ok;
     } catch { return false; }
   },
 
-  processSale: async (saleData: any): Promise<{success: boolean, saleId?: string, date?: string}> => {
+  processSale: async (saleData: any): Promise<{ success: boolean, saleId?: string, date?: string }> => {
     try {
-        const res = await safeFetch(`${API_URL}/sales`, {
+      const res = await safeFetch(`${API_URL}/sales`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(saleData)
-        });
-        if (!res.ok) return { success: false };
-        return res.json();
+      });
+      if (!res.ok) return { success: false };
+      return res.json();
     } catch { return { success: false }; }
   }
 };

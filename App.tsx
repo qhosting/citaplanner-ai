@@ -1,56 +1,40 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { MemoryRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut, 
-  Sparkles, ShoppingBag, Megaphone, Settings, 
+import {
+  LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut,
+  Sparkles, ShoppingBag, Megaphone, Settings,
   ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2,
   ShieldCheck, Activity, Cpu, Cloud, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Dashboard } from './pages/Dashboard';
-import { ClientsPage } from './pages/ClientsPage';
-import { InventoryPage } from './pages/InventoryPage';
-import { SchedulesPage } from './pages/SchedulesPage';
-import { ServicesPage } from './pages/ServicesPage';
-import { BookingPage } from './pages/BookingPage';
-import { LoginPage } from './pages/LoginPage';
-import { ProfessionalDashboard } from './pages/ProfessionalDashboard';
-import { ClientPortal } from './pages/ClientPortal';
-import { ProfilePage } from './pages/ProfilePage';
-import { LandingPage, LogoCitaplanner } from './pages/LandingPage';
-import { POSPage } from './pages/POSPage';
-import { MarketingPage } from './pages/MarketingPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { BranchesPage } from './pages/BranchesPage';
-import { InsightsPage } from './pages/InsightsPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { SuperAdminPage } from './pages/SuperAdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 import { api } from './services/api';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
+import { LogoCitaplanner } from './pages/LandingPage';
 
 // --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
-const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const ClientsPage = lazy(() => import('./pages/ClientsPage').then(m => ({ default: m.ClientsPage })));
-const InventoryPage = lazy(() => import('./pages/InventoryPage').then(m => ({ default: m.InventoryPage })));
-const SchedulesPage = lazy(() => import('./pages/SchedulesPage').then(m => ({ default: m.SchedulesPage })));
-const ServicesPage = lazy(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
-const BookingPage = lazy(() => import('./pages/BookingPage').then(m => ({ default: m.BookingPage })));
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard').then(m => ({ default: m.ProfessionalDashboard })));
-const ClientPortal = lazy(() => import('./pages/ClientPortal').then(m => ({ default: m.ClientPortal })));
-const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
-const POSPage = lazy(() => import('./pages/POSPage').then(m => ({ default: m.POSPage })));
-const MarketingPage = lazy(() => import('./pages/MarketingPage').then(m => ({ default: m.MarketingPage })));
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const BranchesPage = lazy(() => import('./pages/BranchesPage').then(m => ({ default: m.BranchesPage })));
-const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: (m as any).Dashboard || (m as any).default })));
+const ClientsPage = lazy(() => import('./pages/ClientsPage').then(m => ({ default: (m as any).ClientsPage || (m as any).default })));
+const InventoryPage = lazy(() => import('./pages/InventoryPage').then(m => ({ default: (m as any).InventoryPage || (m as any).default })));
+const SchedulesPage = lazy(() => import('./pages/SchedulesPage').then(m => ({ default: (m as any).SchedulesPage || (m as any).default })));
+const ServicesPage = lazy(() => import('./pages/ServicesPage').then(m => ({ default: (m as any).ServicesPage || (m as any).default })));
+const BookingPage = lazy(() => import('./pages/BookingPage').then(m => ({ default: (m as any).BookingPage || (m as any).default })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: (m as any).LoginPage || (m as any).default })));
+const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard').then(m => ({ default: (m as any).ProfessionalDashboard || (m as any).default })));
+const ClientPortal = lazy(() => import('./pages/ClientPortal').then(m => ({ default: (m as any).ClientPortal || (m as any).default })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: (m as any).ProfilePage || (m as any).default })));
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: (m as any).LandingPage || (m as any).default })));
+const POSPage = lazy(() => import('./pages/POSPage').then(m => ({ default: (m as any).POSPage || (m as any).default })));
+const MarketingPage = lazy(() => import('./pages/MarketingPage').then(m => ({ default: (m as any).MarketingPage || (m as any).default })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: (m as any).SettingsPage || (m as any).default })));
+const BranchesPage = lazy(() => import('./pages/BranchesPage').then(m => ({ default: (m as any).BranchesPage || (m as any).default })));
+const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: (m as any).InsightsPage || (m as any).default })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: (m as any).AnalyticsPage || (m as any).default })));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: (m as any).SuperAdminDashboard || (m as any).default })));
+const SuperAdminPage = lazy(() => import('./pages/SuperAdminPage').then(m => ({ default: (m as any).SuperAdminPage || (m as any).default })));
 
 // --- OPTIMIZACIÓN: Caché de consultas ---
 const queryClient = new QueryClient({
@@ -89,7 +73,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   }, [isAuthenticated, user, allowedRoles, location, navigate]);
 
   if (!isAuthenticated) return null;
-  
+
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <LoadingScreen />;
   }
@@ -100,16 +84,15 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
 const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  
+
   if (location.pathname === '/' || location.pathname === '/book' || location.pathname === '/login') return null;
-  if (maintenanceMode && !user) return null; 
+  if (maintenanceMode && !user) return null;
 
   const isActive = (path: string) => location.pathname === path;
 
   const NavLink = ({ to, children }: { to: string, children?: React.ReactNode }) => (
-    <Link to={to} className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] transition-all flex items-center gap-2 ${
-      isActive(to) ? 'text-[#D4AF37]' : 'text-zinc-300 hover:text-white hover:bg-white/5'
-    }`}>
+    <Link to={to} className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] transition-all flex items-center gap-2 ${isActive(to) ? 'text-[#D4AF37]' : 'text-zinc-300 hover:text-white hover:bg-white/5'
+      }`}>
       {children}
       {isActive(to) && <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#D4AF37] rounded-full shadow-[0_0_10px_#D4AF37]" />}
     </Link>
@@ -130,7 +113,7 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
               </div>
             </div>
           </Link>
-          
+
           {user && (user.role === 'STUDIO_OWNER' || user.role === 'GOD_MODE') && (
             <div className="hidden xl:flex items-center gap-1">
               {user.role === 'GOD_MODE' && <NavLink to="/nexus"><ShieldAlert size={14} className="text-red-500" /> Nexus God Mode</NavLink>}
@@ -144,14 +127,14 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
                 </button>
                 <div className="absolute top-full left-0 pt-2 opacity-0 translate-y-2 pointer-events-none group-hover/catalog:opacity-100 group-hover/catalog:translate-y-0 group-hover/catalog:pointer-events-auto transition-all duration-300">
                   <div className="glass-card w-64 rounded-[2rem] p-3 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-black/95 backdrop-blur-xl">
-                    <Link to="/insights" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><BarChart3 size={14}/> Estrategia AI</Link>
+                    <Link to="/insights" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><BarChart3 size={14} /> Estrategia AI</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
-                    <Link to="/branches" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><MapPin size={14}/> Sedes</Link>
-                    <Link to="/schedules" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Clock size={14}/> Personal</Link>
-                    <Link to="/services" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Scissors size={14}/> Servicios</Link>
-                    <Link to="/inventory" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Package size={14}/> Inventario</Link>
+                    <Link to="/branches" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><MapPin size={14} /> Sedes</Link>
+                    <Link to="/schedules" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Clock size={14} /> Personal</Link>
+                    <Link to="/services" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Scissors size={14} /> Servicios</Link>
+                    <Link to="/inventory" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Package size={14} /> Inventario</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
-                    <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/40 rounded-2xl transition-all"><Settings size={14}/> Configuración</Link>
+                    <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/40 rounded-2xl transition-all"><Settings size={14} /> Configuración</Link>
                   </div>
                 </div>
               </div>
@@ -162,24 +145,24 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
 
         <div className="flex items-center gap-6">
           {user?.isImpersonated && (
-             <button onClick={() => {
-               const original = localStorage.getItem('citaPlannerOriginalAuth');
-               if (original) {
-                 localStorage.setItem('citaPlannerUser', original);
-                 localStorage.removeItem('citaPlannerOriginalAuth');
-                 window.location.href = '/nexus';
-               }
-             }} className="flex items-center gap-2 text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">
-                <ArrowLeft size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Salir de Soporte</span>
-             </button>
+            <button onClick={() => {
+              const original = localStorage.getItem('citaPlannerOriginalAuth');
+              if (original) {
+                localStorage.setItem('citaPlannerUser', original);
+                localStorage.removeItem('citaPlannerOriginalAuth');
+                window.location.href = '/nexus';
+              }
+            }} className="flex items-center gap-2 text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">
+              <ArrowLeft size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Salir de Soporte</span>
+            </button>
           )}
           {user ? (
             <div className="flex items-center gap-5">
               <div className="hidden sm:block text-right">
                 <p className="text-[10px] font-black text-white uppercase tracking-tighter mb-0.5">{user.name}</p>
                 <div className="flex items-center gap-1 justify-end">
-                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{user.role}</p>
+                  <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{user.role}</p>
                 </div>
               </div>
               <Link to="/profile" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#333] to-[#111] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 hover:border-[#D4AF37] transition-all overflow-hidden shadow-xl">
@@ -226,7 +209,7 @@ const InternalFooter = () => {
           </a>
           <div className="w-1 h-1 rounded-full bg-white/10" />
           <a href="https://qhosting.com.mx" target="_blank" className="flex items-center gap-2 text-zinc-600 hover:text-white transition-all group">
-             <span>Infra</span><span className="text-zinc-400 group-hover:text-white">QHosting</span>
+            <span>Infra</span><span className="text-zinc-400 group-hover:text-white">QHosting</span>
           </a>
         </div>
       </div>
@@ -260,7 +243,7 @@ const MainLayout = () => {
 
   const isStaff = user && ['STUDIO_OWNER', 'GOD_MODE', 'STAFF'].includes(user.role);
   const isLoginPage = location.pathname === '/login';
-  
+
   if (maintenanceMode && !isStaff && !isLoginPage) {
     return <MaintenanceScreen contactPhone={settings?.contactPhone} brandName={settings?.businessName} />;
   }
@@ -274,7 +257,7 @@ const MainLayout = () => {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/book" element={<BookingPage />} /> 
+            <Route path="/book" element={<BookingPage />} />
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
             <Route path="/nexus" element={<ProtectedRoute allowedRoles={['GOD_MODE']}><SuperAdminDashboard /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute allowedRoles={['STUDIO_OWNER', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
@@ -303,33 +286,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MemoryRouter>
-          <div className="min-h-screen flex flex-col">
-            <Toaster richColors position="top-right" theme="dark" />
-            <Navbar />
-            <div className="flex-grow">
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/book" element={<BookingPage />} /> 
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
-                <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
-                <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-                <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
-                <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
-                <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN']}><BranchesPage /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN']}><ServicesPage /></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><InventoryPage /></ProtectedRoute>} />
-                <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN']}><SchedulesPage /></ProtectedRoute>} />
-                <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN']}><InsightsPage /></ProtectedRoute>} />
-                <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['PROFESSIONAL', 'ADMIN']}><ProfessionalDashboard /></ProtectedRoute>} />
-                <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT', 'ADMIN']}><ClientPortal /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                <Route path="/superadmin" element={<SuperAdminPage />} />
-              </Routes>
-            </div>
-            <InternalFooter />
-          </div>
+          <MainLayout />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>
