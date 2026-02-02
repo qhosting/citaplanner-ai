@@ -1,0 +1,20 @@
+{
+    email admin@citaplanner.ai
+}
+
+{$DOMAIN_URL} {
+    reverse_proxy citaplanner-app:3000
+    encode gzip
+    
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Xss-Protection "1; mode=block"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+    }
+
+    log {
+        output stdout
+    }
+}

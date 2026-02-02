@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String?        @default("demo") @map("organization_id") @db.VarChar(50)
+  name              String         @db.VarChar(100)
+  subdomain         String         @unique @db.VarChar(50)
+  status            String?        @default("ACTIVE") @db.VarChar(20)
+  planType          String?        @default("ELITE") @map("plan_type") @db.VarChar(20)
+  features          Json?          @default("{\"ai_scheduler\": true, \"marketing_pro\": true, \"inventory_advanced\": true, \"analytics_nexus\": true}")
+  bridgeEnabled     Boolean?       @default(false) @map("bridge_enabled")
+  bridgeWebhookUrl  String?        @map("bridge_webhook_url")
+  bridgeApiKey      String?        @default(dbgenerated("gen_random_uuid()")) @map("bridge_api_key") @db.Uuid
+  bridgeSatelliteId Int?           @default(3) @map("bridge_satellite_id")
+  createdAt         DateTime?      @default(now()) @map("created_at") @db.Timestamp(6)
+
+  professionals     Professional[]
+  services          Service[]
+  appointments      Appointment[]
+  settings          Setting[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("branches")
+}
+
+model User {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String?  @db.VarChar(100)
+  phone            String?  @unique @db.VarChar(20)
+  email            String?  @db.VarChar(100)
+  password         String?  @db.VarChar(100)
+  role             String?  @db.VarChar(20)
+  relatedId        String?  @map("related_id") @db.VarChar(100)
+  branchId         String?  @map("branch_id") @db.Uuid
+  organizationId   String?  @default("demo") @map("organization_id") @db.VarChar(50)
+  preferences      Json?    @default("{}")
+  pushSubscription Json?    @map("push_subscription")
+  skinType         String?  @map("skin_type") @db.VarChar(100)
+  allergies        String?
+  medicalConditions String? @map("medical_conditions")
+  loyaltyPoints    Int?     @default(0) @map("loyalty_points")
+  avatar           String?
+
+  @@unique([phone, organizationId]) // Approximated from index idx_users_phone_tenant on phone, tenant_id (using organizationId as proxy if tenant logic shifts, typically it's tenant_id but code used organization_id/tenant replacement. Sticking to code structure.)
+  // Note: The original index was on (phone, tenant_id). But the CREATE TABLE for users DOES NOT have tenant_id column in the first CREATE statement (line 225).
+  // Wait, line 319 adds organization_id. Line 328 adds branch_id. Line 296 creates index on users(phone, tenant_id).
+  // ERROR IN ORIGINAL SQL: users table does NOT have tenant_id column defined in CREATE or ALTER! It has 'branch_id'.
+  // server.js Line 296: CREATE UNIQUE INDEX ... ON users (phone, tenant_id). This would FAIL if tenant_id doesn't exist.
+  // Checking server.js again...
+  // Line 225: CREATE TABLE users ... no tenant_id.
+  // Maybe it was added silently? Or the code assumes it exists? 
+  // Line 669: SELECT * FROM users WHERE ... AND organization_id = $3. 
+  // It seems organization_id IS the tenant discriminator now.
+  // The index creation on line 296 might be legacy or broken code in server.js. 
+  // I will map it to organizationId for safety in Prisma, or verify if I should add tenantId.
+  // Given 'organization_id' is added in line 319, I will use that.
+
+  @@map("users")
+}
+
+model Professional {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  role           String?   @db.VarChar(255)
+  email          String?   @db.VarChar(255)
+  aurumEmployeeId String?  @map("aurum_employee_id") @db.VarChar(50)
+  weeklySchedule Json?     @default("[]") @map("weekly_schedule")
+  exceptions     Json?     @default("[]")
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  branchId       String?   @map("branch_id") @db.Uuid
+  serviceIds     String?   @map("service_ids")
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+  appointments   Appointment[]
+
+  @@map("professionals")
+}
+
+model Service {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  duration       Int
+  price          Decimal   @db.Decimal(12, 2)
+  category       String?   @db.VarChar(100)
+  status         String?   @default("ACTIVE") @db.VarChar(20)
+  description    String?
+  imageUrl       String?   @map("image_url")
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  branchId       String?   @map("branch_id") @db.Uuid
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+  appointments   Appointment[]
+
+  @@map("services")
+}
+
+model Appointment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title          String    @db.VarChar(255)
+  startDateTime  DateTime  @map("start_date_time") @db.Timestamp(6)
+  endDateTime    DateTime  @map("end_date_time") @db.Timestamp(6)
+  clientName     String?   @map("client_name") @db.VarChar(255)
+  clientPhone    String?   @map("client_phone") @db.VarChar(50)
+  status         String?   @default("SCHEDULED") @db.VarChar(20)
+  description    String?
+  notes          String?   // Added based on POST /api/appointments calls
+  professionalId String?   @map("professional_id") @db.Uuid
+  serviceId      String?   @map("service_id") @db.Uuid
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  branchId       String?   @map("branch_id") @db.Uuid
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+
+  professional   Professional? @relation(fields: [professionalId], references: [id])
+  service        Service?      @relation(fields: [serviceId], references: [id])
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
+
+  @@map("appointments")
+}
+
+model Product {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String?   @db.VarChar(255) 
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  branchId       String?   @map("branch_id") @db.Uuid
+  // Inferred columns
+  price          Decimal?  @db.Decimal(12, 2)
+  stock          Int?      @default(0)
+
+  @@map("products")
+}
+
+model Setting {
+  key            String    @db.VarChar(100)
+  value          Json
+  tenantId       String    @map("tenant_id") @db.Uuid
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@id([key, tenantId])
+  @@map("settings")
+}
+
+model LandingSetting {
+  id             Int       @id @default(1)
+  businessName   String?   @default("CitaPlanner Elite") @map("business_name") @db.VarChar(100)
+  primaryColor   String?   @default("#630E14") @map("primary_color") @db.VarChar(20)
+  secondaryColor String?   @default("#C5A028") @map("secondary_color") @db.VarChar(20)
+  templateId     String?   @default("citaplanner") @map("template_id") @db.VarChar(20)
+  slogan         String?
+  aboutText      String?   @map("about_text")
+  address        String?
+  contactPhone   String?   @map("contact_phone") @db.VarChar(20)
+  heroImageUrl   String?   @map("hero_image_url")
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  features       Json?     @default("{\"ai\": true, \"inventory\": true, \"marketing\": true}")
+
+  @@map("landing_settings")
+}
+
+model IntegrationLog {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Inferred ID
+  platform       String?
+  eventType      String?   @map("event_type")
+  payload        Json?
+  response       String?
+  status         String?
+  branchId       String?   @map("branch_id") @db.Uuid
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("integration_logs")
+}
+
+model Transaction {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Inferred
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  branchId       String?   @map("branch_id") @db.Uuid
+  mpPaymentId    String?   @map("mp_payment_id") @db.VarChar(100)
+  mpStatus       String?   @map("mp_status") @db.VarChar(50)
+  // Inferred
+  amount         Decimal?
+  createdAt      DateTime? @default(now()) @map("created_at")
+
+  @@map("transactions")
+}

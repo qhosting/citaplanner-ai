@@ -9,6 +9,14 @@ import webPush from 'web-push';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import prismaClientPkg from '@prisma/client';
+const { PrismaClient } = prismaClientPkg;
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +27,7 @@ const PORT = process.env.PORT || 3000;
 const ROOT_DOMAIN = (process.env.ROOT_DOMAIN || 'citaplanner.com').toLowerCase();
 const REDIS_URL = process.env.REDIS_URL;
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'aum-core-secure-2026-fix';
+const WAHA_URL = process.env.WAHA_URL || 'http://localhost:3000';
 
 // --- OPTIMIZACIÓN: CACHÉ DE TENANTS ---
 const tenantCache = new Map();
@@ -27,12 +36,12 @@ const CACHE_TTL = 1000 * 60 * 5; // 5 minutos
 // --- REDIS CONFIG ---
 let redisClient = null;
 const initRedis = async () => {
-  if (REDIS_URL) {
-    try {
-      redisClient = createClient({ url: REDIS_URL });
-      await redisClient.connect();
-    } catch (e) { console.error("⚠️ Redis offline"); }
-  }
+    if (REDIS_URL) {
+        try {
+            redisClient = createClient({ url: REDIS_URL });
+            await redisClient.connect();
+        } catch (e) { console.error("⚠️ Redis offline"); }
+    }
 };
 initRedis();
 
@@ -66,21 +75,25 @@ webPush.setVapidDetails(
 
 const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
 
-const pool = new Pool({ 
-  connectionString: connectionString,
-  ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
-  connectionTimeoutMillis: 5000, 
-  statement_timeout: 10000
+const pool = new Pool({
+    connectionString: connectionString,
+    ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 10000
 });
 
 pool.on('error', (err, client) => {
-  console.error('❌ Unexpected error on idle client', err);
+    console.error('❌ Unexpected error on idle client', err);
 });
 
 // Redis Client
-const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
+// Redis Client (Already declared above)
+// Ensure we use the global redisClient if not initialized by initRedis logic
+if (!redisClient) {
+    redisClient = createClient({
+        url: process.env.REDIS_URL || 'redis://localhost:6379'
+    });
+}
 
 redisClient.on('error', (err) => console.log('⚠️ Redis Client Error', err));
 
@@ -175,267 +188,309 @@ const sendEmail = async (to, subject, html, branchId) => {
     }
 };
 
+app.use(helmet());
 app.use(cors());
+
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
 
 const initDB = async () => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS tenants (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        organization_id VARCHAR(50) DEFAULT 'demo',
-        name VARCHAR(100) NOT NULL,
-        subdomain VARCHAR(50) NOT NULL,
-        status VARCHAR(20) DEFAULT 'ACTIVE',
-        plan_type VARCHAR(20) DEFAULT 'ELITE',
-        features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
-        bridge_enabled BOOLEAN DEFAULT FALSE,
-        bridge_webhook_url TEXT,
-        bridge_api_key UUID DEFAULT gen_random_uuid(),
-        bridge_satellite_id INTEGER DEFAULT 3,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-      
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(100),
-        phone VARCHAR(20) UNIQUE,
-        email VARCHAR(100),
-        password VARCHAR(100),
-        role VARCHAR(20),
-        related_id VARCHAR(100),
-        branch_id UUID,
-        preferences JSONB DEFAULT '{}',
-        push_subscription JSONB,
-        skin_type VARCHAR(100),
-        allergies TEXT,
-        medical_conditions TEXT,
-        loyalty_points INT DEFAULT 0,
-        avatar TEXT,
-        loyalty_points INTEGER DEFAULT 0
-      );
-
-    // Ensure column exists for existing DBs
-    try { await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB'); } catch (e) {}
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS professionals (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        role VARCHAR(255),
-        email VARCHAR(255),
-        aurum_employee_id VARCHAR(50),
-        weekly_schedule JSONB DEFAULT '[]',
-        exceptions JSONB DEFAULT '[]',
-        tenant_id UUID REFERENCES tenants(id),
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-
-      CREATE TABLE IF NOT EXISTS services (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        duration INTEGER NOT NULL,
-        price DECIMAL(12,2) NOT NULL,
-        category VARCHAR(100),
-        status VARCHAR(20) DEFAULT 'ACTIVE',
-        description TEXT,
-        image_url TEXT,
-        tenant_id UUID REFERENCES tenants(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS appointments (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title VARCHAR(255) NOT NULL,
-        start_date_time TIMESTAMP NOT NULL,
-        end_date_time TIMESTAMP NOT NULL,
-        client_name VARCHAR(255),
-        client_phone VARCHAR(50),
-        status VARCHAR(20) DEFAULT 'SCHEDULED',
-        description TEXT,
-        professional_id UUID REFERENCES professionals(id),
-        service_id UUID REFERENCES services(id),
-        tenant_id UUID REFERENCES tenants(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS settings (
-        key VARCHAR(100) NOT NULL,
-        value JSONB NOT NULL,
-        tenant_id UUID REFERENCES tenants(id),
-        PRIMARY KEY (key, tenant_id)
-      );
-    `);
-
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants (subdomain);
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_tenant ON users (phone, tenant_id);
-    `);
-
-    const masterIdRes = await client.query(`
-      INSERT INTO tenants (name, subdomain, status, plan_type) 
-      VALUES ('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY') 
-      ON CONFLICT (subdomain) DO UPDATE SET name = EXCLUDED.name 
-      RETURNING id
-    `);
-    
-    const masterId = masterIdRes.rows[0].id;
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS landing_settings (
-        id INT PRIMARY KEY DEFAULT 1,
-        business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
-        primary_color VARCHAR(20) DEFAULT '#630E14',
-        secondary_color VARCHAR(20) DEFAULT '#C5A028',
-        template_id VARCHAR(20) DEFAULT 'citaplanner',
-        slogan TEXT,
-        about_text TEXT,
-        address TEXT,
-        contact_phone VARCHAR(20),
-        hero_image_url TEXT
-      );
-    `);
-
-    const settingsCheck = await client.query("SELECT id FROM landing_settings WHERE id = 1");
-    if (settingsCheck.rowCount === 0) {
+        // 1. Fundamental Tables
         await client.query(`
-          INSERT INTO landing_settings (id, business_name, primary_color, secondary_color, template_id, slogan, about_text, address, contact_phone)
-          VALUES (1, 'CitaPlanner Elite', '#630E14', '#C5A028', 'citaplanner', 'Gestión de Lujo Simplificada', 'Plataforma líder en gestión de citas y negocios de belleza.', 'Av. Principal 123, CDMX', '+52 55 1234 5678');
-        `);
-    }
-
-    // --- MIGRATIONS (Run AFTER tables are created) ---
-    const runMigration = async (query) => {
-        try { await client.query(query); } catch (e) { /* Ignore if fails (e.g. column exists) or log debug */ }
-    };
-
-    // STRICT MULTI-TENANCY COLUMNS
-    await runMigration(`ALTER TABLE branches ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-
-    // Add organization_id to ALL tables for isolation
-    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE services ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE landing_settings ADD COLUMN IF NOT EXISTS organization_id VARCHAR(50) DEFAULT 'demo'`);
-    await runMigration(`ALTER TABLE landing_settings ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'`);
-
-    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB`);
-    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS service_ids TEXT`);
-    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS weekly_schedule JSONB`);
-    await runMigration(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS exceptions JSONB`);
-    await runMigration(`ALTER TABLE services ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE products ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS branch_id UUID`);
-    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(100)`);
-    await runMigration(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS mp_status VARCHAR(50)`);
-    await runMigration(`ALTER TABLE integration_logs ADD COLUMN IF NOT EXISTS branch_id UUID`);
-
-    // Seeding Services
-    const serviceCount = await client.query("SELECT count(*) FROM services");
-    if (parseInt(serviceCount.rows[0].count) === 0) {
-        const servicesToSeed = [
-          ['PESTAÑAS', 'TECNICA CLASICA', 550, 'NATURAL', 90],
-          ['UÑAS', 'GEL SEMIPERMANENTE', 120, '1 TONO', 45]
-        ];
-        for (const s of servicesToSeed) {
-            await client.query(
-                "INSERT INTO services (category, name, price, description, duration, branch_id, status) VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE')",
-                [s[0], s[1], s[2], s[3], s[4], defaultBranchId]
+            CREATE TABLE IF NOT EXISTS tenants (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                name VARCHAR(100) NOT NULL,
+                subdomain VARCHAR(50) NOT NULL,
+                status VARCHAR(20) DEFAULT 'ACTIVE',
+                plan_type VARCHAR(20) DEFAULT 'ELITE',
+                features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
+                bridge_enabled BOOLEAN DEFAULT FALSE,
+                bridge_webhook_url TEXT,
+                bridge_api_key UUID DEFAULT gen_random_uuid(),
+                bridge_satellite_id INTEGER DEFAULT 3,
+                created_at TIMESTAMP DEFAULT NOW()
             );
-        }
-    }
 
-    // Seeding Users
-    const userCount = await client.query("SELECT count(*) FROM users");
-    if (parseInt(userCount.rows[0].count) === 0) {
-        // ADMIN with password '123'
-        await client.query(`
-            INSERT INTO users (name, phone, email, password, role, branch_id, preferences, organization_id)
-            VALUES ('Admin Master', 'admin', 'admin@aurum.ai', '123', 'ADMIN', $1, '{"whatsapp":true,"email":true}', 'demo')
-        `, [defaultBranchId]);
+            CREATE TABLE IF NOT EXISTS branches (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                tenant_id UUID REFERENCES tenants(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
 
-        // PRO
-        const defaultSchedule = JSON.stringify([
-            {dayOfWeek:1,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]},
-            {dayOfWeek:2,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]},
-            {dayOfWeek:3,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]},
-            {dayOfWeek:4,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]},
-            {dayOfWeek:5,isEnabled:true,slots:[{start:"09:00",end:"18:00"}]}
-        ]);
-        const proRes = await client.query(`
-            INSERT INTO professionals (name, role, email, branch_id, weekly_schedule, exceptions, service_ids, organization_id)
-            VALUES ('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, '[]', '[]', 'demo')
+            CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(100),
+                phone VARCHAR(20),
+                email VARCHAR(100),
+                password VARCHAR(100),
+                role VARCHAR(20),
+                related_id VARCHAR(100),
+                branch_id UUID REFERENCES branches(id),
+                tenant_id UUID REFERENCES tenants(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                preferences JSONB DEFAULT '{}',
+                push_subscription JSONB,
+                skin_type VARCHAR(100),
+                allergies TEXT,
+                medical_conditions TEXT,
+                avatar TEXT,
+                loyalty_points INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS professionals (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                role VARCHAR(255),
+                email VARCHAR(255),
+                aurum_employee_id VARCHAR(50),
+                weekly_schedule JSONB DEFAULT '[]',
+                exceptions JSONB DEFAULT '[]',
+                service_ids TEXT,
+                tenant_id UUID REFERENCES tenants(id),
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS services (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                duration INTEGER NOT NULL,
+                price DECIMAL(12, 2) NOT NULL,
+                category VARCHAR(100),
+                status VARCHAR(20) DEFAULT 'ACTIVE',
+                description TEXT,
+                image_url TEXT,
+                tenant_id UUID REFERENCES tenants(id),
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo'
+            );
+
+            CREATE TABLE IF NOT EXISTS appointments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                title VARCHAR(255) NOT NULL,
+                start_date_time TIMESTAMP NOT NULL,
+                end_date_time TIMESTAMP NOT NULL,
+                client_name VARCHAR(255),
+                client_phone VARCHAR(50),
+                status VARCHAR(20) DEFAULT 'SCHEDULED',
+                description TEXT,
+                notes TEXT,
+                professional_id UUID REFERENCES professionals(id),
+                service_id UUID REFERENCES services(id),
+                tenant_id UUID REFERENCES tenants(id),
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo'
+            );
+
+            CREATE TABLE IF NOT EXISTS settings (
+                key VARCHAR(100) NOT NULL,
+                value JSONB NOT NULL,
+                tenant_id UUID REFERENCES tenants(id),
+                PRIMARY KEY(key, tenant_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS integration_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                platform VARCHAR(50),
+                event_type VARCHAR(100),
+                payload JSONB,
+                response TEXT,
+                status VARCHAR(20),
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS products (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                price DECIMAL(12, 2),
+                stock INTEGER DEFAULT 0,
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                amount DECIMAL(12, 2),
+                mp_payment_id VARCHAR(100),
+                mp_status VARCHAR(50),
+                branch_id UUID REFERENCES branches(id),
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS landing_settings (
+                id INT PRIMARY KEY DEFAULT 1,
+                business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
+                primary_color VARCHAR(20) DEFAULT '#630E14',
+                secondary_color VARCHAR(20) DEFAULT '#C5A028',
+                template_id VARCHAR(20) DEFAULT 'citaplanner',
+                slogan TEXT,
+                about_text TEXT,
+                address TEXT,
+                contact_phone VARCHAR(20),
+                hero_image_url TEXT,
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_org ON users(phone, organization_id);
+        `);
+
+        // 2. Seeding Master Tenant
+        const masterIdRes = await client.query(`
+            INSERT INTO tenants(name, subdomain, status, plan_type)
+            VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY') 
+            ON CONFLICT(subdomain) DO UPDATE SET name = EXCLUDED.name 
             RETURNING id
-        `, [defaultBranchId, defaultSchedule]);
-        await client.query(`
-            INSERT INTO users (name, phone, email, password, role, related_id, branch_id, organization_id)
-            VALUES ('Dra. Ana Elite', 'pro', 'ana@aurum.ai', 'pro123', 'PROFESSIONAL', $1, $2, 'demo')
-        `, [proRes.rows[0].id, defaultBranchId]);
+        `);
+        const masterId = masterIdRes.rows[0].id;
 
-        // CLIENT
-        await client.query(`
-            INSERT INTO users (name, phone, email, password, role, branch_id, skin_type, loyalty_points, organization_id)
-            VALUES ('Valeria Gold', 'client', 'valeria@client.com', 'client123', 'CLIENT', $1, 'Fitzpatrick III', 150, 'demo')
-        `, [defaultBranchId]);
+        // 3. Seeding Default Branch
+        const branchRes = await client.query(`
+            INSERT INTO branches(name, organization_id, tenant_id)
+            VALUES('Sucursal Central', 'demo', $1) 
+            ON CONFLICT DO NOTHING
+            RETURNING id
+        `, [masterId]);
+
+        let defaultBranchId = branchRes.rows[0]?.id;
+        if (!defaultBranchId) {
+            const b = await client.query("SELECT id FROM branches WHERE organization_id = 'demo' LIMIT 1");
+            defaultBranchId = b.rows[0].id;
+        }
+
+        // 4. Default Landing Settings
+        const settingsCheck = await client.query("SELECT id FROM landing_settings WHERE id = 1");
+        if (settingsCheck.rowCount === 0) {
+            await client.query(`
+                INSERT INTO landing_settings(id, business_name, primary_color, secondary_color, template_id, slogan, about_text, address, contact_phone)
+                VALUES(1, 'CitaPlanner Elite', '#630E14', '#C5A028', 'citaplanner', 'Gestión de Lujo Simplificada', 'Plataforma líder en gestión de citas.', 'Av. Principal 123, CDMX', '+52 55 1234 5678')
+            `);
+        }
+
+        // 5. Seeding Services
+        const serviceCount = await client.query("SELECT count(*) FROM services");
+        if (parseInt(serviceCount.rows[0].count) === 0) {
+            const servicesToSeed = [
+                ['PESTAÑAS', 'TECNICA CLASICA', 550, 'NATURAL', 90],
+                ['UÑAS', 'GEL SEMIPERMANENTE', 120, '1 TONO', 45]
+            ];
+            for (const s of servicesToSeed) {
+                await client.query(
+                    "INSERT INTO services (category, name, price, description, duration, branch_id, tenant_id, organization_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE')",
+                    [s[0], s[1], s[2], s[3], s[4], defaultBranchId, masterId, 'demo']
+                );
+            }
+        }
+
+        // 6. Seeding Users
+        const userCount = await client.query("SELECT count(*) FROM users");
+        if (parseInt(userCount.rows[0].count) === 0) {
+            // ADMIN
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                VALUES('Admin Master', 'admin', 'admin@aurum.ai', $1, 'ADMIN', $2, $3, 'demo', '{"whatsapp":true,"email":true}')
+            `, [bcrypt.hashSync('123', 10), defaultBranchId, masterId]);
+
+            // PRO
+            const defaultSchedule = JSON.stringify([
+                { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
+            ]);
+            const proRes = await client.query(`
+                INSERT INTO professionals(name, role, email, branch_id, tenant_id, weekly_schedule, exceptions, service_ids, organization_id)
+                VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
+                RETURNING id
+            `, [defaultBranchId, masterId, defaultSchedule]);
+
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
+                VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
+            `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
+        }
+
+        await client.query('COMMIT');
+        console.log("✅ Infraestructura Aurum Nexus v5.0 Operativa.");
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.error("❌ Error en initDB:", e.message);
+    } finally {
+        client.release();
     }
-
-    await client.query('COMMIT');
-    console.log("✅ Infraestructura Aurum Nexus v5.0 Operativa.");
-  } catch (e) { 
-    await client.query('ROLLBACK'); 
-    console.error("❌ Error en initDB:", e.message); 
-  } finally { 
-    client.release(); 
-  }
 };
 
 const tenantMiddleware = (req, res, next) => {
-    // 1. Detect Tenant from Subdomain
-    const host = req.headers.host || '';
-    const parts = host.split('.');
-    let tenantId = 'demo';
+    try {
+        // 1. Detect Tenant from Subdomain
+        const host = req.headers.host || '';
+        const parts = host.split('.');
+        let tenantId = 'demo';
 
-    // Check if subdomain exists (e.g. shula.citaplanner.com)
-    if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'citaplanner') {
-        tenantId = parts[0];
-    } else {
-        // Fallback to Header (Useful for dev/postman)
-        tenantId = req.headers['x-tenant-id'] || 'demo';
+        if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'citaplanner') {
+            tenantId = parts[0];
+        } else {
+            tenantId = req.headers['x-tenant-id'] || 'demo';
+        }
+
+        req.tenantId = tenantId;
+        req.branchId = req.headers['x-branch-id'];
+
+        console.log(`[CTX] Tenant: ${tenantId} | Branch: ${req.branchId || 'ALL'} `);
+        next();
+    } catch (e) {
+        res.status(500).json({ error: "Falla de red" });
     }
-
-    req.tenantId = tenantId;
-    req.branchId = req.headers['x-branch-id']; // Optional specific branch
-
-    // Log context for debugging
-    console.log(`[CTX] Tenant: ${tenantId} | Branch: ${req.branchId || 'ALL'}`);
-
-    next();
-  } catch (e) { 
-    res.status(500).json({ error: "Falla de red" }); 
-  }
 };
 
 app.use(tenantMiddleware);
 
 const checkGodMode = (req, res, next) => {
-  if (req.user.role !== 'GOD_MODE') return res.status(403).json({ error: "Privilegios insuficientes" });
-  next();
+    if (req.user?.role !== 'GOD_MODE') return res.status(403).json({ error: "Privilegios insuficientes" });
+    next();
+};
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: "No autorizado" });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: "Token inválido" });
+        req.user = user;
+        next();
+    });
 };
 
 // AURUM HUB INTEGRATION (PROXY)
 app.post('/api/integrations/aurum/sync', async (req, res) => {
     // Stub for syncing business identity with Master Hub
-    console.log(`[AURUM HUB] Syncing identity for tenant: ${req.tenantId}`);
-    res.json({ success: true, status: 'SYNCED', hubId: `hub_${req.tenantId}` });
+    console.log(`[AURUM HUB] Syncing identity for tenant: ${req.tenantId} `);
+    res.json({ success: true, status: 'SYNCED', hubId: `hub_${req.tenantId} ` });
 });
 
 app.get('/api/integrations/aurum/status', async (req, res) => {
@@ -449,9 +504,12 @@ app.get('/api/integrations/aurum/status', async (req, res) => {
 
 app.get('/api/branches', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM branches WHERE organization_id = $1 ORDER BY created_at ASC", [req.tenantId]);
-        res.json(result.rows);
-    } catch (e) { res.status(500).json({error: e.message}); }
+        const branches = await prisma.branch.findMany({
+            where: { organizationId: req.tenantId },
+            orderBy: { createdAt: 'asc' }
+        });
+        res.json(branches);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
@@ -470,17 +528,17 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
         const cleanPhone = sender.split('@')[0];
 
         if (message.includes('CONFIRM') || message.includes('CONFIRMAR')) {
-             // Find latest scheduled appointment for this phone (Scoped to Tenant NOT enforced here yet as webhook is global, but typically webhook url is tenant specific or payload has id)
-             // For now, simple lookup
-             const aptRes = await pool.query(
-                 "SELECT id FROM appointments WHERE client_phone LIKE $1 AND status = 'SCHEDULED' ORDER BY start_datetime DESC LIMIT 1",
-                 [`%${cleanPhone}%`]
-             );
-             if (aptRes.rows.length > 0) {
-                 await pool.query("UPDATE appointments SET status = 'CONFIRMED' WHERE id = $1", [aptRes.rows[0].id]);
-                 console.log(`✅ Appointment ${aptRes.rows[0].id} confirmed via WhatsApp`);
-                 sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null);
-             }
+            // Find latest scheduled appointment for this phone (Scoped to Tenant NOT enforced here yet as webhook is global, but typically webhook url is tenant specific or payload has id)
+            // For now, simple lookup
+            const aptRes = await pool.query(
+                "SELECT id FROM appointments WHERE client_phone LIKE $1 AND status = 'SCHEDULED' ORDER BY start_date_time DESC LIMIT 1",
+                [`%${cleanPhone}%`]
+            );
+            if (aptRes.rows.length > 0) {
+                await pool.query("UPDATE appointments SET status = 'CONFIRMED' WHERE id = $1", [aptRes.rows[0].id]);
+                console.log(`✅ Appointment ${aptRes.rows[0].id} confirmed via WhatsApp`);
+                sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null);
+            }
         }
 
         res.json({ success: true });
@@ -492,43 +550,44 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
 
 app.get('/api/appointments', async (req, res) => {
     try {
-        // Multi-tenant filter
-        let query = "SELECT * FROM appointments WHERE organization_id = $1";
-        let params = [req.tenantId];
-
+        const where = {
+            organizationId: req.tenantId
+        };
         if (req.branchId) {
-            query += " AND branch_id = $2";
-            params.push(req.branchId);
+            where.branchId = req.branchId;
         }
-        const result = await pool.query(query, params);
-        const mapped = result.rows.map(a => ({
-            id: a.id,
-            title: a.title,
-            startDateTime: a.start_datetime,
-            endDateTime: a.end_datetime,
-            clientName: a.client_name,
-            clientPhone: a.client_phone,
-            status: a.status,
-            professionalId: a.professional_id,
-            serviceId: a.service_id,
-            notes: a.notes
-        }));
-        res.json(mapped);
-    } catch (e) { res.status(500).json({error: e.message}); }
+
+        const appointments = await prisma.appointment.findMany({
+            where,
+            orderBy: { startDateTime: 'desc' }
+        });
+
+        // Prisma returns camelCase fields matching the schema, which matches the API response format
+        res.json(appointments);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/appointments', async (req, res) => {
     try {
         const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
 
-        const result = await pool.query(
-            `INSERT INTO appointments (title, start_datetime, end_datetime, client_name, client_phone, status, professional_id, service_id, notes, branch_id, organization_id)
-             VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7, $8, $9, $10)
-             RETURNING id`,
-            [title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, req.branchId, req.tenantId]
-        );
+        const newAppointment = await prisma.appointment.create({
+            data: {
+                title,
+                startDateTime: new Date(startDateTime),
+                endDateTime: new Date(endDateTime),
+                clientName,
+                clientPhone,
+                status: 'SCHEDULED',
+                professionalId,
+                serviceId,
+                notes,
+                branchId: req.branchId,
+                organizationId: req.tenantId
+            }
+        });
 
-        const newId = result.rows[0].id;
+        const newId = newAppointment.id;
 
         // Notify via WhatsApp
         if (clientPhone) {
@@ -540,21 +599,19 @@ app.post('/api/appointments', async (req, res) => {
         // Notify Professional via Web Push
         try {
             // Find User associated with Professional
-            const proUserRes = await pool.query(
-                "SELECT * FROM users WHERE related_id = $1 AND role = 'PROFESSIONAL'",
-                [professionalId]
-            );
+            const proUser = await prisma.user.findFirst({
+                where: { relatedId: professionalId, role: 'PROFESSIONAL' }
+            });
 
-            if (proUserRes.rows.length > 0) {
-                const proUser = proUserRes.rows[0];
+            if (proUser) {
                 if (proUser.push_subscription) {
                     const payload = JSON.stringify({
                         title: 'Nueva Cita Agendada',
-                        body: `Cliente: ${clientName} - ${new Date(startDateTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`,
+                        body: `Cliente: ${clientName} - ${new Date(startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} `,
                         url: '/professional-dashboard'
                     });
                     await webPush.sendNotification(proUser.push_subscription, payload);
-                    console.log(`🔔 Web Push Sent to Professional ${proUser.name}`);
+                    console.log(`🔔 Web Push Sent to Professional ${proUser.name} `);
                 }
             }
         } catch (e) {
@@ -562,7 +619,7 @@ app.post('/api/appointments', async (req, res) => {
         }
 
         res.json({ success: true, id: newId });
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/marketing/campaigns/send', async (req, res) => {
@@ -605,19 +662,19 @@ app.get('/api/integrations/status', async (req, res) => {
             [req.branchId || null, req.tenantId]
         );
         res.json(result.rows);
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM users WHERE tenant_id = $1 AND role = 'STUDIO_OWNER' LIMIT 1", [req.params.id]);
-    if (result.rows.length === 0) return res.status(404).json({ error: "No se encontró administrador en este nodo" });
-    const targetUser = result.rows[0];
-    const token = jwt.sign({ 
-      id: targetUser.id, role: targetUser.role, tenantId: targetUser.tenant_id, isImpersonated: true, originalGodId: req.user.id
-    }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ success: true, token, user: targetUser });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await pool.query("SELECT * FROM users WHERE tenant_id = $1 AND role = 'STUDIO_OWNER' LIMIT 1", [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: "No se encontró administrador en este nodo" });
+        const targetUser = result.rows[0];
+        const token = jwt.sign({
+            id: targetUser.id, role: targetUser.role, tenantId: targetUser.tenant_id, isImpersonated: true, originalGodId: req.user?.id
+        }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ success: true, token, user: targetUser });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/login', async (req, res) => {
@@ -643,61 +700,85 @@ app.post('/api/login', async (req, res) => {
     // --------------------------------
 
     try {
-        console.log(`[AUTH] Login Attempt: ${phone} | Tenant: ${req.tenantId}`);
-        // Ensure user belongs to tenant (or is global/demo if needed, but strict mode enforces tenant)
-        const result = await pool.query("SELECT * FROM users WHERE phone = $1 AND password = $2 AND organization_id = $3", [phone, password, req.tenantId]);
+        console.log(`[AUTH] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
+        const user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
 
-        if (result.rows.length > 0) {
-            console.log(`[AUTH] Success for: ${phone}`);
-            const user = result.rows[0];
-            const mappedUser = {
-                ...user,
-                relatedId: user.related_id,
+        if (user) {
+            const validPassword = await bcrypt.compare(password, user.password);
+            if (!validPassword) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+
+            console.log(`[AUTH] Success for: ${phone} `);
+
+            // Generate Token
+            const token = jwt.sign({
+                id: user.id,
                 role: user.role,
-                branchId: user.branch_id // EXPLICITLY RETURN BRANCH ID
+                tenantId: req.tenantId,
+                branchId: user.branchId
+            }, JWT_SECRET, { expiresIn: '8h' });
+
+            const mappedUser = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                branchId: user.branchId,
+                relatedId: user.relatedId
             };
-            res.json({ success: true, user: mappedUser });
+
+            res.json({ success: true, token, user: mappedUser });
         } else {
-            console.warn(`[AUTH] Failed for: ${phone}`);
+            console.warn(`[AUTH] Failed for: ${phone} `);
             res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
     } catch (e) {
         console.error('[AUTH] DB Error:', e.message);
-        res.status(500).json({error: e.message});
+        res.status(500).json({ error: e.message });
     }
 });
 
 app.get('/api/products', async (req, res) => {
     try {
         const branchKey = req.branchId || 'global';
-        const products = await getCached(`products:${branchKey}`, async () => {
-            let query = "SELECT * FROM products";
-            let params = [];
-            if (req.branchId) {
-                query += " WHERE branch_id = $1 OR branch_id IS NULL";
-                params.push(req.branchId);
-            }
-            query += " ORDER BY name ASC";
-            const result = await pool.query(query, params);
-            return result.rows;
+        const products = await getCached(`products:${branchKey} `, async () => {
+            const where = req.branchId ? { branchId: req.branchId } : {};
+            return await prisma.product.findMany({
+                where,
+                orderBy: { name: 'asc' }
+            });
         });
         res.json(products);
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/services', async (req, res) => {
     try {
         const services = await getCached('services', async () => {
-             const result = await pool.query("SELECT * FROM services ORDER BY name ASC");
-             return result.rows;
+            return await prisma.service.findMany({
+                orderBy: { name: 'asc' }
+            });
         });
         res.json(services);
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
-  const result = await pool.query("SELECT id, name, role, email, aurum_employee_id as \"aurum_employee_id\", weekly_schedule as \"weeklySchedule\", exceptions FROM professionals WHERE tenant_id = $1", [req.tenant.id]);
-  res.json(result.rows);
+    try {
+        const professionals = await prisma.professional.findMany({
+            where: { organizationId: req.tenantId },
+            select: {
+                id: true,
+                name: true,
+                role: true,
+                email: true,
+                aurumEmployeeId: true,
+                weeklySchedule: true,
+                exceptions: true
+            }
+        });
+        res.json(professionals);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/payments/create_preference', async (req, res) => {
@@ -767,22 +848,23 @@ app.post('/api/payments/webhook', async (req, res) => {
 
 app.get('/api/settings/landing', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM landing_settings WHERE id = 1");
-        let data = result.rows.length > 0 ? result.rows[0] : { };
-        
+        const data = await prisma.landingSetting.findUnique({
+            where: { id: 1 }
+        }) || {};
+
         const normalized = {
-            businessName: data.business_name || 'CitaPlanner Elite',
-            primaryColor: data.primary_color || '#630E14',
-            secondaryColor: data.secondary_color || '#C5A028',
-            templateId: data.template_id || 'citaplanner',
+            businessName: data.businessName || 'CitaPlanner Elite',
+            primaryColor: data.primaryColor || '#630E14',
+            secondaryColor: data.secondaryColor || '#C5A028',
+            templateId: data.templateId || 'citaplanner',
             slogan: data.slogan || 'Gestión de Lujo Simplificada',
-            aboutText: data.about_text || 'Plataforma líder.',
+            aboutText: data.aboutText || 'Plataforma líder.',
             address: data.address || 'Ubicación Central',
-            contactPhone: data.contact_phone || '+52 55 0000 0000',
-            heroImageUrl: data.hero_image_url || ''
+            contactPhone: data.contactPhone || '+52 55 0000 0000',
+            heroImageUrl: data.heroImageUrl || ''
         };
         res.json(normalized);
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/notifications/vapid-public-key', (req, res) => {
@@ -797,16 +879,17 @@ app.post('/api/notifications/subscribe', async (req, res) => {
             [subscription, userId]
         );
         res.json({ success: true });
-    } catch (e) { res.status(500).json({error: e.message}); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
-
-app.use(express.static(path.join(__dirname, 'dist'), { maxAge: '1d' })); // Cachear archivos estáticos
-app.get(/.*/, (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
 // INITIALIZE INFRASTRUCTURE
 connectRedis();
-initDB();
+initDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+    });
+});

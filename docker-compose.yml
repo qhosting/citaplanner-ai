@@ -33,9 +33,30 @@ services:
     networks:
       - citaplanner_internal
 
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: citaplanner-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - DOMAIN_URL=${DOMAIN_URL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - citaplanner_internal
+    depends_on:
+      - citaplanner-app
+
 volumes:
   postgres_data:
   uploads_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   citaplanner_internal:
