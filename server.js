@@ -35,14 +35,39 @@ const CACHE_TTL = 1000 * 60 * 5; // 5 minutos
 
 // --- REDIS CONFIG ---
 let redisClient = null;
+
 const initRedis = async () => {
-    if (REDIS_URL) {
-        try {
-            redisClient = createClient({ url: REDIS_URL });
-            await redisClient.connect();
-        } catch (e) { console.error("⚠️ Redis offline"); }
+    const redisUrl = REDIS_URL || (process.env.NODE_ENV === 'development' ? 'redis://localhost:6379' : null);
+
+    if (!redisUrl) {
+        console.warn("⚠️ Redis URL not configured. Caching disabled.");
+        return;
+    }
+
+    try {
+        redisClient = createClient({ url: redisUrl });
+
+        redisClient.on('error', (err) => {
+            console.error('⚠️ Redis Client Error:', err.message);
+        });
+
+        redisClient.on('connect', () => {
+            console.log('🔄 Redis connecting...');
+        });
+
+        redisClient.on('ready', () => {
+            console.log('✅ Redis Connected and Ready');
+        });
+
+        await redisClient.connect();
+    } catch (e) {
+        console.error("❌ Redis Connection Failed:", e.message);
+        console.warn("⚠️ Continuing without Redis. Caching disabled.");
+        redisClient = null;
     }
 };
+
+// Initialize Redis on startup
 initRedis();
 
 // --- DATABASE & REDIS SETUP ---
@@ -86,38 +111,31 @@ pool.on('error', (err, client) => {
     console.error('❌ Unexpected error on idle client', err);
 });
 
-// Redis Client
-// Redis Client (Already declared above)
-// Ensure we use the global redisClient if not initialized by initRedis logic
-if (!redisClient) {
-    redisClient = createClient({
-        url: process.env.REDIS_URL || 'redis://localhost:6379'
-    });
-}
-
-redisClient.on('error', (err) => console.log('⚠️ Redis Client Error', err));
-
-const connectRedis = async () => {
-    if (process.env.REDIS_URL || process.env.NODE_ENV === 'development') {
-        try {
-            await redisClient.connect();
-            console.log("✅ Redis Connected");
-        } catch (e) {
-            console.warn("⚠️ Redis Connection Failed (Caching Disabled):", e.message);
-        }
-    }
-};
+// Redis Client initialized by initRedis() above
 
 const getCached = async (key, fetchFn, ttl = 300) => {
-    if (!redisClient.isOpen) return fetchFn();
+    // Check if Redis is available and connected
+    if (!redisClient || !redisClient.isOpen) {
+        return fetchFn();
+    }
+
     try {
         const cached = await redisClient.get(key);
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+            console.log(`📦 Cache HIT: ${key}`);
+            return JSON.parse(cached);
+        }
+
+        console.log(`📭 Cache MISS: ${key}`);
         const data = await fetchFn();
-        if (data) await redisClient.setEx(key, ttl, JSON.stringify(data));
+
+        if (data) {
+            await redisClient.setEx(key, ttl, JSON.stringify(data));
+        }
+
         return data;
     } catch (e) {
-        console.warn(`Cache Error for ${key}:`, e.message);
+        console.warn(`⚠️ Cache Error for ${key}:`, e.message);
         return fetchFn();
     }
 };
