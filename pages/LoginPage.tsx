@@ -19,9 +19,10 @@ export const LoginPage: React.FC = () => {
     console.log('[LOGIN PAGE] Auth State Change:', { isAuthenticated, user });
     if (isAuthenticated && user) {
       console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
-      if (user.role === 'ADMIN') navigate('/admin');
-      else if (user.role === 'PROFESSIONAL') navigate('/professional-dashboard');
-      else if (user.role === 'CLIENT') navigate('/client-portal');
+      if (user.role === 'ADMIN' || user.role === 'STUDIO_OWNER') navigate('/admin');
+      else if (user.role === 'PROFESSIONAL' || user.role === 'STAFF') navigate('/professional-dashboard');
+      else if (user.role === 'CLIENT' || user.role === 'MEMBER') navigate('/client-portal');
+      else if (user.role === 'GOD_MODE') navigate('/nexus');
       else {
         console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
         navigate('/');

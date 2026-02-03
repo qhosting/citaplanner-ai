@@ -549,6 +549,12 @@ const initDB = async () => {
                 VALUES('Admin Master', 'admin', 'admin@aurum.ai', $1, 'ADMIN', $2, $3, 'demo', '{"whatsapp":true,"email":true}')
             `, [bcrypt.hashSync('123', 10), defaultBranchId, masterId]);
 
+            // QHOSTING ADMIN
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                VALUES('Admin QHosting', 'admin@qhosting.net', 'admin@qhosting.net', $1, 'ADMIN', $2, $3, 'demo', '{"whatsapp":true,"email":true}')
+            `, [bcrypt.hashSync('x0420EZS*', 10), defaultBranchId, masterId]);
+
             // PRO
             const defaultSchedule = JSON.stringify([
                 { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
@@ -559,14 +565,14 @@ const initDB = async () => {
             ]);
             const proRes = await client.query(`
                 INSERT INTO professionals(name, role, email, branch_id, tenant_id, weekly_schedule, exceptions, service_ids, organization_id)
-                VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
+            VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
                 RETURNING id
-            `, [defaultBranchId, masterId, defaultSchedule]);
+                `, [defaultBranchId, masterId, defaultSchedule]);
 
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
-                VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
-            `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
+            VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
+                `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
         }
 
         await client.query('COMMIT');
@@ -889,14 +895,14 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
     // --------------------------------
 
     try {
-        console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId}`);
+        console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
         const user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
 
         console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
 
         if (user) {
             const validPassword = await bcrypt.compare(password, user.password);
-            console.log(`[AUTH DEBUG] Password Valid: ${validPassword ? 'YES' : 'NO'}`);
+            console.log(`[AUTH DEBUG] Password Valid: ${validPassword ? 'YES' : 'NO'} `);
 
             if (!validPassword) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
 
