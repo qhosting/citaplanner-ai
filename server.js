@@ -546,14 +546,30 @@ const initDB = async () => {
             // ADMIN
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES('Admin Master', 'admin', 'admin@aurum.ai', $1, 'ADMIN', $2, $3, 'demo', '{"whatsapp":true,"email":true}')
-            `, [bcrypt.hashSync('123', 10), defaultBranchId, masterId]);
+                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+            `, [
+                process.env.SEED_ADMIN_NAME || 'Admin Master',
+                process.env.SEED_ADMIN_PHONE || 'admin',
+                process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
+                bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
+                defaultBranchId,
+                masterId
+            ]);
 
             // QHOSTING ADMIN
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES('Admin QHosting', 'admin@qhosting.net', 'admin@qhosting.net', $1, 'ADMIN', $2, $3, 'demo', '{"whatsapp":true,"email":true}')
-            `, [bcrypt.hashSync('x0420EZS*', 10), defaultBranchId, masterId]);
+            if (process.env.QHOSTING_ADMIN_PHONE) {
+                await client.query(`
+                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                    VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                `, [
+                    process.env.QHOSTING_ADMIN_NAME || 'Admin QHosting',
+                    process.env.QHOSTING_ADMIN_PHONE,
+                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                    bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
+                    defaultBranchId,
+                    masterId
+                ]);
+            }
 
             // PRO
             const defaultSchedule = JSON.stringify([

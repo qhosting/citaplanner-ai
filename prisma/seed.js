@@ -172,33 +172,36 @@ async function main() {
     }
 
     // 6. Seed Special QHosting Admin
-    const qhostingAdminPhone = 'admin@qhosting.net';
-    const existingQAdmin = await prisma.user.findFirst({
-        where: {
-            phone: qhostingAdminPhone,
-            organizationId: 'demo'
-        }
-    });
+    const qhostingAdminPhone = process.env.QHOSTING_ADMIN_PHONE;
 
-    if (!existingQAdmin) {
-        await prisma.user.create({
-            data: {
-                name: 'Admin QHosting',
-                phone: qhostingAdminPhone, // Fits in VARCHAR(20)
-                email: 'admin@qhosting.net',
-                password: bcrypt.hashSync('x0420EZS*', 10),
-                role: 'ADMIN',
-                branchId: defaultBranch.id,
-                organizationId: 'demo',
-                preferences: {
-                    whatsapp: true,
-                    email: true
-                }
+    if (qhostingAdminPhone) {
+        const existingQAdmin = await prisma.user.findFirst({
+            where: {
+                phone: qhostingAdminPhone,
+                organizationId: 'demo'
             }
         });
-        console.log('✅ QHosting Admin user created (phone: admin@qhosting.net)');
-    } else {
-        console.log('ℹ️ QHosting Admin user already exists');
+
+        if (!existingQAdmin) {
+            await prisma.user.create({
+                data: {
+                    name: process.env.QHOSTING_ADMIN_NAME || 'Admin QHosting',
+                    phone: qhostingAdminPhone,
+                    email: process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                    password: bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
+                    role: 'ADMIN',
+                    branchId: defaultBranch.id,
+                    organizationId: 'demo',
+                    preferences: {
+                        whatsapp: true,
+                        email: true
+                    }
+                }
+            });
+            console.log(`✅ QHosting Admin user created (phone: ${qhostingAdminPhone})`);
+        } else {
+            console.log('ℹ️ QHosting Admin user already exists');
+        }
     }
 
     console.log('🎉 Database seeding completed!');
