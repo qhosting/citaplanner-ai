@@ -344,6 +344,15 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='aurum_employee_id') THEN
                         ALTER TABLE professionals ADD COLUMN aurum_employee_id VARCHAR(50);
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='service_ids') THEN
+                        ALTER TABLE professionals ADD COLUMN service_ids TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='weekly_schedule') THEN
+                        ALTER TABLE professionals ADD COLUMN weekly_schedule JSONB DEFAULT '[]';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='exceptions') THEN
+                        ALTER TABLE professionals ADD COLUMN exceptions JSONB DEFAULT '[]';
+                    END IF;
                 END IF;
 
                 -- Services
@@ -620,7 +629,7 @@ const initDB = async () => {
             `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
         }
 
-        // QHOSTING ADMIN (UPSERT LOGIC) - Moved OUTSIDE the if(count===0) to allow updates via .env
+        // QHOSTING ADMIN (UPSERT LOGIC)
         if (process.env.QHOSTING_ADMIN_PHONE) {
             const existingAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
 
@@ -637,56 +646,23 @@ const initDB = async () => {
                     masterId
                 ]);
             } else {
-                // Update existing admin with potential new info from .env
                 await client.query(`
                     UPDATE users SET 
                         name = COALESCE($1, name),
                         email = COALESCE($2, email),
-                        password = CASE WHEN $3 IS NOT NULL THEN $4 ELSE password END
+                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END
                     WHERE phone = $5 AND organization_id = 'demo'
                 `, [
                     process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
                     process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                    process.env.QHOSTING_ADMIN_PASSWORD,
+                    process.env.QHOSTING_ADMIN_PASSWORD || null,
                     process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10) : null,
                     process.env.QHOSTING_ADMIN_PHONE
                 ]);
             }
         }
 
-        // QHOSTING ADMIN (UPSERT LOGIC) - Moved OUTSIDE the if(count===0) to allow updates via .env
-        if (process.env.QHOSTING_ADMIN_PHONE) {
-            const existingAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
 
-            if (existingAdmin.rows.length === 0) {
-                await client.query(`
-                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                    VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-                `, [
-                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
-                    process.env.QHOSTING_ADMIN_PHONE,
-                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                    bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
-                    defaultBranchId,
-                    masterId
-                ]);
-            } else {
-                // Update existing admin with potential new info from .env
-                await client.query(`
-                    UPDATE users SET 
-                        name = COALESCE($1, name),
-                        email = COALESCE($2, email),
-                        password = CASE WHEN $3 IS NOT NULL THEN $4 ELSE password END
-                    WHERE phone = $5 AND organization_id = 'demo'
-                `, [
-                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
-                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                    process.env.QHOSTING_ADMIN_PASSWORD,
-                    process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10) : null,
-                    process.env.QHOSTING_ADMIN_PHONE
-                ]);
-            }
-        }
 
         console.log("✅ Infraestructura Aurum Nexus v5.1 Operativa.");
     } catch (e) {
