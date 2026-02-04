@@ -626,17 +626,28 @@ const initDB = async () => {
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
                     VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
                 `, [
-                    process.env.QHOSTING_ADMIN_NAME || 'Admin QHosting',
+                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
                     process.env.QHOSTING_ADMIN_PHONE,
                     process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
                     bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
                     defaultBranchId,
                     masterId
                 ]);
-            } else if (process.env.QHOSTING_ADMIN_PASSWORD) {
+            } else {
+                // Update existing admin with potential new info from .env
                 await client.query(`
-                    UPDATE users SET password = $1 WHERE phone = $2 AND organization_id = 'demo'
-                `, [bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10), process.env.QHOSTING_ADMIN_PHONE]);
+                    UPDATE users SET 
+                        name = COALESCE($1, name),
+                        email = COALESCE($2, email),
+                        password = CASE WHEN $3 IS NOT NULL THEN $4 ELSE password END
+                    WHERE phone = $5 AND organization_id = 'demo'
+                `, [
+                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
+                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                    process.env.QHOSTING_ADMIN_PASSWORD,
+                    process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10) : null,
+                    process.env.QHOSTING_ADMIN_PHONE
+                ]);
             }
         }
 
