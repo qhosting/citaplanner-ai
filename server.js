@@ -314,6 +314,21 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='push_subscription') THEN
                         ALTER TABLE users ADD COLUMN push_subscription JSONB;
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='skin_type') THEN
+                        ALTER TABLE users ADD COLUMN skin_type VARCHAR(100);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='allergies') THEN
+                        ALTER TABLE users ADD COLUMN allergies TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='medical_conditions') THEN
+                        ALTER TABLE users ADD COLUMN medical_conditions TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='loyalty_points') THEN
+                        ALTER TABLE users ADD COLUMN loyalty_points INTEGER DEFAULT 0;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='avatar') THEN
+                        ALTER TABLE users ADD COLUMN avatar TEXT;
+                    END IF;
                 END IF;
 
                 -- Professionals
@@ -326,6 +341,9 @@ const initDB = async () => {
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='tenant_id') THEN
                         ALTER TABLE professionals ADD COLUMN tenant_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='aurum_employee_id') THEN
+                        ALTER TABLE professionals ADD COLUMN aurum_employee_id VARCHAR(50);
                     END IF;
                 END IF;
 
@@ -352,6 +370,16 @@ const initDB = async () => {
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='branch_id') THEN
                         ALTER TABLE appointments ADD COLUMN branch_id UUID;
+                    END IF;
+                END IF;
+
+                -- Integration Logs
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'integration_logs') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='organization_id') THEN
+                        ALTER TABLE integration_logs ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='branch_id') THEN
+                        ALTER TABLE integration_logs ADD COLUMN branch_id UUID;
                     END IF;
                 END IF;
             END $$;
