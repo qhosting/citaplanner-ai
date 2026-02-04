@@ -272,7 +272,6 @@ app.use(express.static(path.join(__dirname, 'dist')));
 const initDB = async () => {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
         await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
 
         // --- MIGRACIÓN: ASEGURAR COLUMNAS ---
@@ -383,6 +382,24 @@ const initDB = async () => {
                     END IF;
                 END IF;
             END $$;
+        `);
+
+        // 0. Preliminary Tables (Independent of others)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS landing_settings (
+                id INT PRIMARY KEY DEFAULT 1,
+                business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
+                primary_color VARCHAR(20) DEFAULT '#630E14',
+                secondary_color VARCHAR(20) DEFAULT '#C5A028',
+                template_id VARCHAR(20) DEFAULT 'citaplanner',
+                slogan TEXT,
+                about_text TEXT,
+                address TEXT,
+                contact_phone VARCHAR(20),
+                hero_image_url TEXT,
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
+            );
         `);
 
         // 1. Fundamental Tables
@@ -516,20 +533,6 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT NOW()
             );
 
-            CREATE TABLE IF NOT EXISTS landing_settings (
-                id INT PRIMARY KEY DEFAULT 1,
-                business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
-                primary_color VARCHAR(20) DEFAULT '#630E14',
-                secondary_color VARCHAR(20) DEFAULT '#C5A028',
-                template_id VARCHAR(20) DEFAULT 'citaplanner',
-                slogan TEXT,
-                about_text TEXT,
-                address TEXT,
-                contact_phone VARCHAR(20),
-                hero_image_url TEXT,
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
-            );
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
             CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_org ON users(phone, organization_id);
@@ -651,10 +654,42 @@ const initDB = async () => {
             }
         }
 
-        await client.query('COMMIT');
-        console.log("✅ Infraestructura Aurum Nexus v5.0 Operativa.");
+        // QHOSTING ADMIN (UPSERT LOGIC) - Moved OUTSIDE the if(count===0) to allow updates via .env
+        if (process.env.QHOSTING_ADMIN_PHONE) {
+            const existingAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
+
+            if (existingAdmin.rows.length === 0) {
+                await client.query(`
+                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                    VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                `, [
+                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
+                    process.env.QHOSTING_ADMIN_PHONE,
+                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                    bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
+                    defaultBranchId,
+                    masterId
+                ]);
+            } else {
+                // Update existing admin with potential new info from .env
+                await client.query(`
+                    UPDATE users SET 
+                        name = COALESCE($1, name),
+                        email = COALESCE($2, email),
+                        password = CASE WHEN $3 IS NOT NULL THEN $4 ELSE password END
+                    WHERE phone = $5 AND organization_id = 'demo'
+                `, [
+                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
+                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                    process.env.QHOSTING_ADMIN_PASSWORD,
+                    process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10) : null,
+                    process.env.QHOSTING_ADMIN_PHONE
+                ]);
+            }
+        }
+
+        console.log("✅ Infraestructura Aurum Nexus v5.1 Operativa.");
     } catch (e) {
-        await client.query('ROLLBACK');
         console.error("❌ Error en initDB:", e.message);
     } finally {
         client.release();
