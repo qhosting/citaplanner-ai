@@ -280,64 +280,78 @@ const initDB = async () => {
         await client.query(`
             DO $$ 
             BEGIN 
-                -- Agregar organization_id a tablas existentes si no existe
+                -- Tenants
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
                         ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
                 END IF;
 
+                -- Branches
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'branches') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='organization_id') THEN
                         ALTER TABLE branches ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
                 END IF;
 
+                -- Users
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='organization_id') THEN
                         ALTER TABLE users ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='related_id') THEN
+                        ALTER TABLE users ADD COLUMN related_id VARCHAR(100);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='branch_id') THEN
+                        ALTER TABLE users ADD COLUMN branch_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='tenant_id') THEN
+                        ALTER TABLE users ADD COLUMN tenant_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='preferences') THEN
+                        ALTER TABLE users ADD COLUMN preferences JSONB DEFAULT '{}';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='push_subscription') THEN
+                        ALTER TABLE users ADD COLUMN push_subscription JSONB;
+                    END IF;
                 END IF;
 
+                -- Professionals
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'professionals') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='organization_id') THEN
                         ALTER TABLE professionals ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='branch_id') THEN
+                        ALTER TABLE professionals ADD COLUMN branch_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='tenant_id') THEN
+                        ALTER TABLE professionals ADD COLUMN tenant_id UUID;
+                    END IF;
                 END IF;
 
+                -- Services
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'services') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='organization_id') THEN
                         ALTER TABLE services ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='branch_id') THEN
+                        ALTER TABLE services ADD COLUMN branch_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='tenant_id') THEN
+                        ALTER TABLE services ADD COLUMN tenant_id UUID;
+                    END IF;
                 END IF;
 
+                -- Appointments
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'appointments') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='organization_id') THEN
                         ALTER TABLE appointments ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
-                END IF;
-
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'landing_settings') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='organization_id') THEN
-                        ALTER TABLE landing_settings ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='notes') THEN
+                        ALTER TABLE appointments ADD COLUMN notes TEXT;
                     END IF;
-                END IF;
-
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'integration_logs') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='organization_id') THEN
-                        ALTER TABLE integration_logs ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                END IF;
-
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'products') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='organization_id') THEN
-                        ALTER TABLE products ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                END IF;
-
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transactions') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='organization_id') THEN
-                        ALTER TABLE transactions ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='branch_id') THEN
+                        ALTER TABLE appointments ADD COLUMN branch_id UUID;
                     END IF;
                 END IF;
             END $$;
