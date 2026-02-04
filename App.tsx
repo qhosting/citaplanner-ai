@@ -56,22 +56,30 @@ const LoadingScreen = () => (
 );
 
 const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode, allowedRoles?: Role[] }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    // Si todavía estamos cargando el estado inicial, no hacemos nada
+    if (isLoading) return;
+
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: location }, replace: true });
+      // Solo redirigir si la ruta actual no es excluyente
+      if (!['/login', '/', '/book'].includes(location.pathname)) {
+        navigate('/login', { state: { from: location }, replace: true });
+      }
     } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+      // Lógica de redirección por rol si el usuario no tiene permisos para esta ruta
       if (user.role === 'GOD_MODE') navigate('/nexus', { replace: true });
-      else if (user.role === 'ADMIN' || user.role === 'STUDIO_OWNER') navigate('/admin', { replace: true });
-      else if (user.role === 'STAFF' || user.role === 'PROFESSIONAL') navigate('/professional-dashboard', { replace: true });
-      else if (user.role === 'MEMBER' || user.role === 'CLIENT') navigate('/client-portal', { replace: true });
+      else if (['ADMIN', 'STUDIO_OWNER'].includes(user.role)) navigate('/admin', { replace: true });
+      else if (['STAFF', 'PROFESSIONAL'].includes(user.role)) navigate('/professional-dashboard', { replace: true });
+      else if (['MEMBER', 'CLIENT'].includes(user.role)) navigate('/client-portal', { replace: true });
       else navigate('/', { replace: true });
     }
-  }, [isAuthenticated, user, allowedRoles, location, navigate]);
+  }, [isAuthenticated, user, allowedRoles, location.pathname, navigate, isLoading]);
 
+  if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return null;
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
