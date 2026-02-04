@@ -43,6 +43,11 @@
 ## 🟠 **PRIORIDAD ALTA (MEDIA)**
 
 ### **📱 Features de Producción Faltantes**
+- [x] **Preparar DB para SaaS Multi-tenant (Custom Domains)**
+  - **Motivo**: Requerimiento clave del modelo de negocio (CEO -> Negocios)
+  - **Impacto**: Habilita estructura SaaS (negocio2.citaplanner.com vs negocio2.com)
+  - **Estimación**: Completado (Schema actualizado)
+
 - [ ] **Recuperación de contraseña vía email**
   - **Motivo**: Funcionalidad básica ausente
   - **Impacto**: UX deficiente

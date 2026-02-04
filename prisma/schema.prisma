@@ -15,6 +15,7 @@ model Tenant {
   organizationId    String?        @default("demo") @map("organization_id") @db.VarChar(50)
   name              String         @db.VarChar(100)
   subdomain         String         @unique @db.VarChar(50)
+  customDomain      String?        @unique @map("custom_domain") @db.VarChar(100)
   status            String?        @default("ACTIVE") @db.VarChar(20)
   planType          String?        @default("ELITE") @map("plan_type") @db.VarChar(20)
   features          Json?          @default("{\"ai_scheduler\": true, \"marketing_pro\": true, \"inventory_advanced\": true, \"analytics_nexus\": true}")
@@ -28,8 +29,25 @@ model Tenant {
   services          Service[]
   appointments      Appointment[]
   settings          Setting[]
+  subscriptions     Subscription[]
 
   @@map("tenants")
+}
+
+model Subscription {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  planId            String   @map("plan_id") // BASIC, PRO, ELITE
+  status            String   @default("INACTIVE") // ACTIVE, CANCELLED, PAST_DUE
+  mercadopagoId     String?  @unique @map("mercadopago_id") 
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  
+  @@map("subscriptions")
 }
 
 model Branch {

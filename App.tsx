@@ -35,6 +35,7 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ defa
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: (m as any).AnalyticsPage || (m as any).default })));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: (m as any).SuperAdminDashboard || (m as any).default })));
 const SuperAdminPage = lazy(() => import('./pages/SuperAdminPage').then(m => ({ default: (m as any).SuperAdminPage || (m as any).default })));
+const PlansPage = lazy(() => import('./pages/PlansPage').then(m => ({ default: (m as any).PlansPage || (m as any).default })));
 
 // --- OPTIMIZACIÓN: Caché de consultas ---
 const queryClient = new QueryClient({
@@ -297,6 +298,7 @@ const MainLayout = () => {
             <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF', 'STUDIO_OWNER', 'GOD_MODE']}><ProfessionalDashboard /></ProtectedRoute>} />
             <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER', 'STUDIO_OWNER', 'GOD_MODE']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/plans-billing" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><PlansPage /></ProtectedRoute>} />
           </Routes>
         </Suspense>
       </div>

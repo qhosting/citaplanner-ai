@@ -1027,12 +1027,22 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
 app.get('/api/products', async (req, res) => {
     try {
         const branchKey = req.branchId || 'global';
-        const products = await getCached(`products:${branchKey} `, async () => {
-            const where = req.branchId ? { branchId: req.branchId } : {};
-            return await prisma.product.findMany({
+        const products = await getCached(`products:${req.tenantId}:${branchKey} `, async () => {
+            const where = {
+                organizationId: req.tenantId
+            };
+            if (req.branchId) {
+                where.branchId = req.branchId;
+            }
+            const rawProducts = await prisma.product.findMany({
                 where,
                 orderBy: { name: 'asc' }
             });
+            return rawProducts.map(p => ({
+                ...p,
+                price: p.price ? parseFloat(p.price.toString()) : 0,
+                stock: p.stock || 0
+            }));
         });
         res.json(products);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1040,12 +1050,91 @@ app.get('/api/products', async (req, res) => {
 
 app.get('/api/services', async (req, res) => {
     try {
-        const services = await getCached('services', async () => {
-            return await prisma.service.findMany({
+        const services = await getCached(`services:${req.tenantId} `, async () => {
+            const rawServices = await prisma.service.findMany({
+                where: { organizationId: req.tenantId },
                 orderBy: { name: 'asc' }
             });
+            return rawServices.map(s => ({
+                ...s,
+                price: s.price ? parseFloat(s.price.toString()) : 0
+            }));
         });
         res.json(services);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, duration, price, category, status, description, imageUrl, tenantId } = req.body;
+
+        // Ensure tenantId matches (security)
+        const targetTenant = req.user.role === 'GOD_MODE' ? (tenantId || req.tenantId) : req.tenantId;
+
+        const newService = await prisma.service.create({
+            data: {
+                name,
+                duration: parseInt(duration),
+                price: parseFloat(price),
+                category,
+                status,
+                description,
+                imageUrl,
+                organizationId: targetTenant,
+                tenantId: targetTenant // Linking both for now as per schema confusion
+            }
+        });
+
+        // Invalidate Cache
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.del(`services:${targetTenant} `);
+        }
+
+        res.json({ success: true, service: newService });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, duration, price, category, status, description, imageUrl } = req.body;
+
+        const updatedService = await prisma.service.update({
+            where: { id },
+            data: {
+                name,
+                duration: parseInt(duration),
+                price: parseFloat(price),
+                category,
+                status,
+                description,
+                imageUrl
+            }
+        });
+
+        // Invalidate Cache
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.del(`services:${req.tenantId} `);
+        }
+
+        res.json({ success: true, service: updatedService });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.service.delete({
+            where: { id }
+        });
+
+        // Invalidate Cache
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.del(`services:${req.tenantId} `);
+        }
+
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1114,24 +1203,140 @@ app.post('/api/payments/create_preference', async (req, res) => {
     }
 });
 
+// --- SAAS PLANS CONFIGURATION ---
+const SAAS_PLANS = {
+    'BASIC': {
+        id: 'BASIC',
+        title: 'Plan Básico (Start)',
+        price: 499,
+        currency: 'MXN',
+        description: 'Ideal para independientes.',
+        features: { ai_scheduler: true, marketing_pro: false, inventory_advanced: false }
+    },
+    'PRO': {
+        id: 'PRO',
+        title: 'Plan Profesional (Growth)',
+        price: 899,
+        currency: 'MXN',
+        description: 'Para salones en expansión.',
+        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: false }
+    },
+    'ELITE': {
+        id: 'ELITE',
+        title: 'Plan Elite (Nexus)',
+        price: 1499,
+        currency: 'MXN',
+        description: 'Control total y máxima potencia IA.',
+        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: true }
+    }
+};
+
+app.get('/api/saas/plans', (req, res) => {
+    res.json(Object.values(SAAS_PLANS));
+});
+
+app.post('/api/saas/subscribe', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { planId } = req.body;
+        const tenantId = req.tenantId;
+
+        const plan = SAAS_PLANS[planId];
+        if (!plan) return res.status(400).json({ error: "Plan inválido" });
+
+        const user = await prisma.user.findFirst({ where: { id: req.user.id } });
+        if (!user || !user.email) return res.status(400).json({ error: "Usuario o email no válido" });
+
+        // Create Preapproval (Subscription) in Mercado Pago
+        // Using axios directly or generic client if specific class not imported.
+        // Assuming SDK v2 structure for PreApproval might detailed, falling back to direct API check or generic fetch if needed.
+        // But let's try to use the SDK's PreApproval if we import it, otherwise fallback to simple fetch to MP API if SDK is tricky without docs.
+        // Let's use axios against MP API for certainty given the context limitations on SDK docs here.
+
+        // However, we have mpClient. Let's rely on standard endpoints.
+        // POST /preapproval
+
+        if (!process.env.MP_ACCESS_TOKEN) {
+            return res.json({ mock: true, init_point: '#', id: 'mock_sub_123' });
+        }
+
+        const response = await axios.post('https://api.mercadopago.com/preapproval', {
+            reason: `Suscripción Aurum - ${plan.title}`,
+            external_reference: tenantId,
+            payer_email: user.email,
+            auto_recurring: {
+                frequency: 1,
+                frequency_type: 'months',
+                transaction_amount: plan.price,
+                currency_id: 'MXN'
+            },
+            back_url: `https://${req.headers.host}/admin/settings/billing`,
+            status: 'pending'
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const preapproval = response.data;
+
+        // Save Pending Subscription
+        await prisma.subscription.create({
+            data: {
+                tenantId: tenantId,
+                planId: planId,
+                status: 'PENDING',
+                mercadopagoId: preapproval.id,
+                currentPeriodStart: new Date(), // Provisional
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Provisional
+            }
+        });
+
+        res.json({
+            init_point: preapproval.init_point,
+            id: preapproval.id
+        });
+
+    } catch (e) {
+        console.error("MP Subscription Error:", e.response?.data || e.message);
+        res.status(500).json({ error: "Error creando suscripción" });
+    }
+});
+
+// WEBHOOK UPDATE
 app.post('/api/payments/webhook', async (req, res) => {
     try {
-        const { type, data } = req.body;
-        if (type === 'payment') {
-            // Here you would check payment status with MP API using data.id
-            // For now we just log it
-            await prisma.integrationLog.create({
-                data: {
-                    platform: 'MERCADOPAGO',
-                    eventType: 'WEBHOOK_PAYMENT',
-                    payload: JSON.stringify(req.body),
-                    status: 'RECEIVED'
-                }
-            });
+        const { type, data, action } = req.body;
+        console.log(`🪝 Webhook: ${type || action} | ID: ${data?.id}`);
+
+        await prisma.integrationLog.create({
+            data: {
+                platform: 'MERCADOPAGO',
+                eventType: type || action || 'UNKNOWN',
+                payload: JSON.stringify(req.body),
+                status: 'RECEIVED'
+            }
+        });
+
+        // Handle Subscription Action (created, updated)
+        if (type === 'subscription_preapproval') {
+            const preapprovalId = data.id;
+            // Fetch status from MP
+            // const subStatus = await axios.get(...) 
+            // For now, assuming if we get a notification of 'authorized' type logic would go here.
+            // Usually MP sends `action: 'updated'` or `action: 'created'`.
         }
+
+        // Handle Payment (Recurring or One-Time)
+        if (type === 'payment' || action === 'payment.created') {
+            // Retrieve Payment
+            // Verify if it belongs to a storage Subscription (by external_reference maybe?)
+            // For now logging is sufficient for Phase 1 Step 1 validation.
+        }
+
         res.sendStatus(200);
     } catch (e) {
-        console.error('MP Webhook Error:', e);
+        console.error('MP Webhook Error:', e.message);
         res.sendStatus(500);
     }
 });

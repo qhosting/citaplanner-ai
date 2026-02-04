@@ -257,3 +257,12 @@ export interface AurumResponse<T> {
   data?: T;
   error?: string;
 }
+
+export interface SaasPlan {
+  id: string;
+  title: string;
+  price: number;
+  currency: string;
+  description: string;
+  features: TenantFeatures;
+}

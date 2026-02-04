@@ -297,6 +297,28 @@ export const api = {
     return res.ok;
   },
 
+  createService: async (s: Omit<Service, 'id'>): Promise<Service | null> => {
+    try {
+      const res = await fetch(`${API_URL}/services`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(s)
+      });
+      const data = await res.json();
+      return data.success ? data.service : null;
+    } catch { return null; }
+  },
+
+  deleteService: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/services/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
   getVapidPublicKey: async (): Promise<string | null> => {
     try {
       const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
@@ -329,5 +351,23 @@ export const api = {
       if (!res.ok) return { success: false };
       return res.json();
     } catch { return { success: false }; }
+  },
+
+  getSaasPlans: async (): Promise<SaasPlan[]> => {
+    try {
+      const res = await fetch(`${API_URL}/saas/plans`, { headers: getHeaders() });
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  subscribeToPlan: async (planId: string): Promise<{ init_point?: string, id?: string, error?: string }> => {
+    try {
+      const res = await fetch(`${API_URL}/saas/subscribe`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ planId })
+      });
+      return await res.json();
+    } catch { return { error: "Error de red" }; }
   }
 };
