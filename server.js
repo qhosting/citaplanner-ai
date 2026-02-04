@@ -555,9 +555,31 @@ const initDB = async () => {
                 defaultBranchId,
                 masterId
             ]);
+            // PRO
+            const defaultSchedule = JSON.stringify([
+                { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
+            ]);
+            const proRes = await client.query(`
+                INSERT INTO professionals(name, role, email, branch_id, tenant_id, weekly_schedule, exceptions, service_ids, organization_id)
+                VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
+                RETURNING id
+            `, [defaultBranchId, masterId, defaultSchedule]);
 
-            // QHOSTING ADMIN
-            if (process.env.QHOSTING_ADMIN_PHONE) {
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
+                VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
+            `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
+        }
+
+        // QHOSTING ADMIN (UPSERT LOGIC) - Moved OUTSIDE the if(count===0) to allow updates via .env
+        if (process.env.QHOSTING_ADMIN_PHONE) {
+            const existingAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
+
+            if (existingAdmin.rows.length === 0) {
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
                     VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
@@ -569,26 +591,11 @@ const initDB = async () => {
                     defaultBranchId,
                     masterId
                 ]);
+            } else if (process.env.QHOSTING_ADMIN_PASSWORD) {
+                await client.query(`
+                    UPDATE users SET password = $1 WHERE phone = $2 AND organization_id = 'demo'
+                `, [bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10), process.env.QHOSTING_ADMIN_PHONE]);
             }
-
-            // PRO
-            const defaultSchedule = JSON.stringify([
-                { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
-            ]);
-            const proRes = await client.query(`
-                INSERT INTO professionals(name, role, email, branch_id, tenant_id, weekly_schedule, exceptions, service_ids, organization_id)
-            VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
-                RETURNING id
-                `, [defaultBranchId, masterId, defaultSchedule]);
-
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
-            VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
-                `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
         }
 
         await client.query('COMMIT');
