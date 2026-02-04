@@ -20,8 +20,11 @@
 - [x] **Node.js 20** (Alpine) - Runtime
 - [x] **Express 5.2.1** - Framework HTTP
 - [x] **PostgreSQL 15** - Base de datos principal
+- [x] **Prisma ORM 6.3.0** - Gestión de base de datos e Introspección
 - [x] **Redis 5.10.0** - Caché y sesiones
 - [x] **CORS 2.8.5** - Seguridad cross-origin
+- [x] **Bcryptjs 2.4.3** - Hash de seguridad para contraseñas
+- [x] **Express Rate Limit 7.5.0** - Protección contra fuerza bruta
 
 ### **Integraciones**
 - [x] **Google GenAI 1.33.0** - IA conversacional (Gemini 2.5 Flash)
@@ -44,6 +47,8 @@
 
 ### **Módulo de Autenticación**
 - [x] Sistema de Login con JWT
+- [x] **Seguridad**: Hash de contraseñas (Bcrypt) y Validación de Inputs (Zod)
+- [x] **Protección**: Rate limiting activo en /api/login
 - [x] Bypass de desarrollo (modo dev)
 - [x] Gestión de sesiones con Redis
 - [x] Multi-tenant con caché de tenants (TTL: 5 min)
@@ -119,7 +124,8 @@
 - [x] Build Multi-Stage (builder + runner)
 - [x] Frontend servido desde `/app/dist`
 - [x] Backend en Node.js (server.js)
-- [x] Auto-migraciones incluidas
+- [x] Prisma Client regenerado en cada despliegue
+- [x] Sistema de auto-migraciones atómico (Aurum Nexus v5.1)
 - [x] Volumen de uploads: `uploads_data`
 - [x] Puerto expuesto: **3000**
 
@@ -134,10 +140,10 @@ citaplanner-ai/
 ├── services/           # 6 servicios (API, Gemini, Backup, Cloudflare, etc.)
 ├── context/            # AuthContext (gestión de estado global)
 ├── utils/              # Utilidades (webPush)
-├── prisma/             # Esquema de base de datos (vacío - migraciones en server.js)
+├── prisma/             # Esquema sincronizado (schema.prisma)
 ├── public/             # Manifest PWA
-├── server.js           # Backend Express monolítico (813 líneas)
-├── Dockerfile          # Multi-stage optimizado
+├── server.js           # Backend robusto con validaciones y Prisma (891+ líneas)
+├── Dockerfile          # Multi-stage optimizado con 'prisma generate'
 ├── docker-compose.yml  # Orquestación local
 └── vite.config.ts      # Configuración de build
 ```
@@ -203,5 +209,5 @@ DOMAIN_URL=https://citaplanner.ai
 
 ---
 
-**Última actualización**: 2026-02-01  
-**Estado**: ✅ En producción parcial (falta completar integraciones críticas)
+**Última actualización**: 2026-02-03 (v5.1 Aurum Nexus)  
+**Estado**: ✅ En producción funcional (Seguridad y Base de Datos reforzadas)

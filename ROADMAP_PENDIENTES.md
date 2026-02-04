@@ -6,37 +6,17 @@
 ## 🔴 **PRIORIDAD CRÍTICA (ALTA)**
 
 ### **🔐 Seguridad & Compliance**
-- [ ] **Implementar rate limiting** en endpoints de autenticación
-  - **Motivo**: Prevenir ataques de fuerza bruta
-  - **Impacto**: Alto riesgo de seguridad
-  - **Estimación**: 2 horas
-
-- [ ] **Encriptar contraseñas con bcrypt/argon2**
-  - **Motivo**: Actualmente no se observa hashing en el código de login
-  - **Impacto**: Violación crítica de seguridad
-  - **Estimación**: 4 horas
-
-- [ ] **Validar y sanitizar inputs del usuario**
-  - **Motivo**: Prevenir SQL injection y XSS
-  - **Impacto**: Vulnerabilidad crítica
-  - **Estimación**: 8 horas (revisar todos los endpoints)
-
+- [x] **Implementar rate limiting** en endpoints de autenticación
+- [x] **Encriptar contraseñas con bcrypt/argon2**
+- [x] **Validar y sanitizar inputs del usuario** (Zod Schemas implementados)
 - [ ] **Implementar refresh tokens**
-  - **Motivo**: JWT expiración fija (1h) sin renovación
+  - **Motivo**: JWT expiración fija (8h) sin renovación
   - **Impacto**: UX deficiente (sesiones cortas)
   - **Estimación**: 6 horas
 
 ### **🗄️ Base de Datos**
-- [ ] **Migrar de SQL raw a un ORM (Prisma/TypeORM)**
-  - **Motivo**: `prisma/schema.prisma` está vacío, pero se usa PostgreSQL raw
-  - **Impacto**: Alto riesgo de errores y difícil mantenimiento
-  - **Estimación**: 16 horas
-
-- [ ] **Crear sistema de migraciones versionado**
-  - **Motivo**: Actualmente las migraciones están hardcoded en `server.js`
-  - **Impacto**: Imposible revertir cambios o rastrear evolución del schema
-  - **Estimación**: 8 horas
-
+- [x] **Migrar de SQL raw a un ORM (Prisma)**
+- [x] **Crear sistema de migraciones versionado** (Aurum Nexus v5.1 integrado)
 - [ ] **Implementar transacciones ACID en operaciones críticas**
   - **Motivo**: Bookings + Pagos deben ser atómicos
   - **Impacto**: Inconsistencias en la base de datos
@@ -200,10 +180,10 @@
 
 | Prioridad | Cantidad de Tareas | Estimación Total |
 |-----------|-------------------|------------------|
-| 🔴 CRÍTICA | 10 tareas | ~65 horas |
+| 🔴 CRÍTICA | 4 tareas | ~22 horas |
 | 🟠 ALTA | 12 tareas | ~116 horas |
 | 🟡 MEDIA | 11 tareas | ~91 horas |
-| **TOTAL** | **33 tareas** | **~272 horas (~6.8 semanas a 40h/sem)** |
+| **TOTAL** | **27 tareas** | **~229 horas** |
 
 ---
 
@@ -216,5 +196,5 @@
 
 ---
 
-**Última actualización**: 2026-02-01  
-**Estado**: 🚧 Sistema funcional pero con deuda técnica significativa
+**Última actualización**: 2026-02-03 (v5.1 Aurum Nexus)  
+**Estado**: 🚀 Sistema robusto y funcional. Login desbloqueado y seguro.
