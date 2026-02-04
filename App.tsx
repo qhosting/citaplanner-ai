@@ -60,24 +60,40 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Usamos una referencia para saber si ya estamos redirigiendo y evitar bucles
   React.useEffect(() => {
-    // Si todavía estamos cargando el estado inicial, no hacemos nada
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      // Solo redirigir si la ruta actual no es excluyente
       if (!['/login', '/', '/book'].includes(location.pathname)) {
+        console.log('[AUTH] Not authenticated, redirecting to login from:', location.pathname);
         navigate('/login', { state: { from: location }, replace: true });
       }
-    } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-      // Lógica de redirección por rol si el usuario no tiene permisos para esta ruta
-      if (user.role === 'GOD_MODE') navigate('/nexus', { replace: true });
-      else if (['ADMIN', 'STUDIO_OWNER'].includes(user.role)) navigate('/admin', { replace: true });
-      else if (['STAFF', 'PROFESSIONAL'].includes(user.role)) navigate('/professional-dashboard', { replace: true });
-      else if (['MEMBER', 'CLIENT'].includes(user.role)) navigate('/client-portal', { replace: true });
-      else navigate('/', { replace: true });
+      return;
     }
-  }, [isAuthenticated, user, allowedRoles, location.pathname, navigate, isLoading]);
+
+    // Validación de roles
+    if (allowedRoles && user) {
+      const hasPermission = allowedRoles.includes(user.role);
+
+      if (!hasPermission) {
+        console.warn('[AUTH] Access denied for role:', user.role, 'on path:', location.pathname);
+
+        // Redirección inteligente basada en rol para evitar que se quede atrapado
+        if (user.role === 'GOD_MODE' && location.pathname !== '/nexus') {
+          navigate('/nexus', { replace: true });
+        } else if (['ADMIN', 'STUDIO_OWNER'].includes(user.role) && location.pathname !== '/admin') {
+          navigate('/admin', { replace: true });
+        } else if (['STAFF', 'PROFESSIONAL'].includes(user.role) && location.pathname !== '/professional-dashboard') {
+          navigate('/professional-dashboard', { replace: true });
+        } else if (['MEMBER', 'CLIENT'].includes(user.role) && location.pathname !== '/client-portal') {
+          navigate('/client-portal', { replace: true });
+        } else if (!['/nexus', '/admin', '/professional-dashboard', '/client-portal'].includes(location.pathname)) {
+          navigate('/', { replace: true });
+        }
+      }
+    }
+  }, [isAuthenticated, user?.role, location.pathname, navigate, isLoading, JSON.stringify(allowedRoles)]);
 
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return null;
