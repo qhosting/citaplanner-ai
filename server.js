@@ -1332,45 +1332,45 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
 
             console.log(`[AUTH] Success for: ${phone} `);
 
-            // Generate Token
-            id: user.id,
+            const token = jwt.sign({
+                id: user.id,
                 role: user.role,
-                    tenantId: req.tenantId,
-                        branchId: user.branchId
-        }, JWT_SECRET, { expiresIn: '15m' }); // Short-lived access token
+                tenantId: req.tenantId,
+                branchId: user.branchId
+            }, JWT_SECRET, { expiresIn: '15m' }); // Short-lived access token
 
-// Generate Refresh Token
-const refreshToken = jwt.sign({
-    id: user.id,
-    role: user.role,
-    tenantId: req.tenantId
-}, JWT_SECRET, { expiresIn: '7d' });
+            // Generate Refresh Token
+            const refreshToken = jwt.sign({
+                id: user.id,
+                role: user.role,
+                tenantId: req.tenantId
+            }, JWT_SECRET, { expiresIn: '7d' });
 
-// Store Refresh Token
-await prisma.user.update({
-    where: { id: user.id },
-    data: { refreshToken }
-});
+            // Store Refresh Token
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { refreshToken }
+            });
 
-const mappedUser = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    branchId: user.branchId,
-    relatedId: user.relatedId
-};
+            const mappedUser = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                branchId: user.branchId,
+                relatedId: user.relatedId
+            };
 
-res.json({ success: true, token, refreshToken, user: mappedUser });
+            res.json({ success: true, token, refreshToken, user: mappedUser });
         } else {
-    console.warn(`[AUTH] Failed for: ${phone} `);
-    res.status(401).json({ success: false, message: 'Credenciales inválidas' });
-}
+            console.warn(`[AUTH] Failed for: ${phone} `);
+            res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+        }
     } catch (e) {
-    console.error('[AUTH] DB Error:', e.message);
-    res.status(500).json({ error: e.message });
-}
+        console.error('[AUTH] DB Error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // --- GOOGLE CALENDAR HELPERS ---
