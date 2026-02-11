@@ -719,7 +719,14 @@ const initDB = async () => {
                 INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
                 VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
             `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
+
+            // GOD_MODE (Nexus Superintendent)
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                VALUES('Superintendente Nexus', 'nexus', 'nexus@aurum.ai', $1, 'GOD_MODE', $2, $3, 'master', '{"whatsapp":true,"email":true}')
+            `, [bcrypt.hashSync('nexus123', 10), defaultBranchId, masterId]);
         }
+
 
         // QHOSTING ADMIN (UPSERT LOGIC)
         if (process.env.QHOSTING_ADMIN_PHONE) {
@@ -833,11 +840,113 @@ app.get('/api/branches', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- SAAS PAYMENT ENDPOINTS ---
-
+// --- SAAS PLANS CONFIGURATION ---
 app.get('/api/saas/plans', (req, res) => {
     res.json(SAAS_PLANS);
 });
+
+// --- SAAS TENANT MANAGEMENT (GOD MODE ONLY) ---
+
+app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const tenants = await prisma.tenant.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(tenants);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { name, subdomain, planType } = req.body;
+
+        const existing = await prisma.tenant.findUnique({ where: { subdomain } });
+        if (existing) return res.status(400).json({ error: "Subdominio ya en uso" });
+
+        const planRef = SAAS_PLANS.find(p => p.id === planType) || SAAS_PLANS[0];
+
+        const newTenant = await prisma.tenant.create({
+            data: {
+                name,
+                subdomain,
+                planType,
+                features: planRef.features,
+                status: 'ACTIVE',
+                organizationId: subdomain // Using subdomain as organizationId for now
+            }
+        });
+
+        res.json(newTenant);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/saas/tenants/:id/features', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { features } = req.body;
+
+        const updated = await prisma.tenant.update({
+            where: { id },
+            data: { features }
+        });
+
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- PUBLIC SAAS REGISTRATION ---
+
+app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, res) => {
+    try {
+        const { name, subdomain, adminPhone, adminPassword } = req.body;
+
+        const existing = await prisma.tenant.findUnique({ where: { subdomain } });
+        if (existing) return res.status(400).json({ error: "Este subdominio ya está reservado" });
+
+        // ACID Transaction: Create Tenant + Default Branch + Admin User
+        const result = await prisma.$transaction(async (tx) => {
+            const tenant = await tx.tenant.create({
+                data: {
+                    name,
+                    subdomain,
+                    planType: 'BASIC', // Start with basic
+                    features: SAAS_PLANS[0].features,
+                    status: 'PENDINGPAYMENT',
+                    organizationId: subdomain
+                }
+            });
+
+            const branch = await tx.branch.create({
+                data: {
+                    name: "Sucursal Principal",
+                    tenantId: tenant.id,
+                    organizationId: subdomain
+                }
+            });
+
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
+            const user = await tx.user.create({
+                data: {
+                    name: "Administrador de " + name,
+                    phone: adminPhone,
+                    password: hashedPassword,
+                    role: 'STUDIO_OWNER',
+                    branchId: branch.id,
+                    organizationId: subdomain
+                }
+            });
+
+            return { tenant, user };
+        });
+
+        res.json({ success: true, message: "Estudio creado con éxito", tenantId: result.tenant.id });
+
+    } catch (e) {
+        console.error("Registration Error:", e);
+        res.status(500).json({ error: "Falla en el aprovisionamiento masivo: " + e.message });
+    }
+});
+
 
 app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
     try {
