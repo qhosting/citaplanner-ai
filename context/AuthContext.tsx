@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { api } from '../services/api';
+import { socketService } from '../services/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Verificar integridad básica (token existe)
           if (parsedUser.token) {
             setUser(parsedUser);
+            if (parsedUser.tenantId) {
+              socketService.connect(parsedUser.tenantId);
+            }
           } else {
             localStorage.removeItem('citaPlannerUser'); // Limpiar auth corrupta
           }
@@ -51,6 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           setUser(apiUser);
           localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
+          if (apiUser.tenantId) {
+            socketService.connect(apiUser.tenantId);
+          }
         } catch (e) {
           console.warn('Storage Error:', e);
         }
@@ -67,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    socketService.disconnect();
     try {
       localStorage.removeItem('citaPlannerUser');
     } catch (e) {

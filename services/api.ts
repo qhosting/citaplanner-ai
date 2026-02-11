@@ -1,5 +1,5 @@
 
-import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule } from "../types";
+import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule, SaasPlan } from "../types";
 import { AurumConnectorService } from "./aurumConnector";
 
 const API_URL = '/api';
@@ -18,7 +18,6 @@ const safeFetch = async (url: string, options: RequestInit = {}) => {
   }
 };
 
-// HELPER DE SEGURIDAD
 const getHeaders = (isUpload = false) => {
   const userStr = localStorage.getItem('citaPlannerUser');
   const token = userStr ? JSON.parse(userStr).token : null;
@@ -30,6 +29,66 @@ const getHeaders = (isUpload = false) => {
     headers['Content-Type'] = 'application/json';
   }
   return headers;
+};
+
+// --- AUTH INTELLIGENCE (INTERCEPTOR) ---
+const refreshAccessToken = async (): Promise<string | null> => {
+  try {
+    const userStr = localStorage.getItem('citaPlannerUser');
+    if (!userStr) return null;
+
+    const user = JSON.parse(userStr);
+    if (!user.refreshToken) return null;
+
+    console.log("🔄 Attempting Token Refresh...");
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: user.refreshToken })
+    });
+
+    const data = await res.json();
+    if (data.success && data.token) {
+      console.log("✅ Token Refreshed Successfully");
+      const newUser = { ...user, token: data.token };
+      localStorage.setItem('citaPlannerUser', JSON.stringify(newUser));
+      return data.token;
+    }
+
+    // Fail: Clear session
+    console.warn("⚠️ Refresh Failed: Session Expired");
+    localStorage.removeItem('citaPlannerUser');
+    return null;
+  } catch (e) {
+    console.error("❌ Refresh Error:", e);
+    return null;
+  }
+};
+
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  let headers = getHeaders(options.body instanceof FormData);
+
+  // 1. Try Original Request
+  let res = await fetch(url, { ...options, headers });
+
+  // 2. Handle 401 / 403 (Token Expired)
+  if (res.status === 401 || res.status === 403) {
+    const newToken = await refreshAccessToken();
+
+    if (newToken) {
+      // Retry with new token
+      headers['Authorization'] = `Bearer ${newToken}`;
+      res = await fetch(url, { ...options, headers });
+    } else {
+      // Force Logout if refresh fails
+      if (window.location.pathname !== '/login') {
+        // Optional: Redirect to login or just let the app handle the auth state change next reload
+        // window.location.href = '/login'; 
+      }
+    }
+  }
+
+  return res;
 };
 
 export const api = {
@@ -68,7 +127,7 @@ export const api = {
       });
       const data = await res.json();
       if (data.success && data.user && data.token) {
-        return { ...data.user, token: data.token };
+        return { ...data.user, token: data.token, refreshToken: data.refreshToken };
       }
       return null;
     } catch { return null; }
@@ -78,7 +137,18 @@ export const api = {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch(`${API_URL}/upload`, { method: 'POST', headers: getHeaders(true), body: formData });
+      // fetchWithAuth handles FormData headers automatically via getHeaders check? 
+      // Actually my implementation of fetchWithAuth calls getHeaders which checks body type, 
+      // BUT getHeaders was defined to take bool. fetchWithAuth should be careful.
+      // Re-implementing simplified upload logic locally or fixing fetchWithAuth.
+      // For upload we need careful header handling (no Content-Type).
+
+      const userStr = localStorage.getItem('citaPlannerUser');
+      const token = userStr ? JSON.parse(userStr).token : null;
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_URL}/upload`, { method: 'POST', headers, body: formData });
       const data = await res.json();
       return data.success ? data.url : null;
     } catch { return null; }
@@ -93,9 +163,8 @@ export const api = {
 
   updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/settings/landing`, {
+      const res = await fetchWithAuth(`${API_URL}/settings/landing`, {
         method: 'PUT',
-        headers: getHeaders(),
         body: JSON.stringify(s)
       });
 
@@ -113,9 +182,8 @@ export const api = {
   },
 
   updateSubdomain: async (subdomain: string) => {
-    const res = await fetch(`${API_URL}/settings/subdomain`, {
+    const res = await fetchWithAuth(`${API_URL}/settings/subdomain`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify({ subdomain })
     });
     return await res.json();
@@ -123,9 +191,8 @@ export const api = {
 
   addCustomDomain: async (domain: string) => {
     try {
-      const res = await fetch(`${API_URL}/settings/domain`, {
+      const res = await fetchWithAuth(`${API_URL}/settings/domain`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ domain })
       });
       return await res.json();
@@ -133,165 +200,153 @@ export const api = {
   },
 
   checkDomainStatus: async () => {
-    const res = await fetch(`${API_URL}/settings/domain/status`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/settings/domain/status`);
     return await res.json();
   },
 
   removeCustomDomain: async (): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/settings/domain`, { method: 'DELETE', headers: getHeaders() });
+      const res = await fetchWithAuth(`${API_URL}/settings/domain`, { method: 'DELETE' });
       return res.ok;
     } catch { return false; }
   },
 
   getClients: async (): Promise<Client[]> => {
-    const res = await fetch(`${API_URL}/clients`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/clients`);
     return res.ok ? await res.json() : [];
   },
 
   updateClient: async (c: Client): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/clients/${c.id}`, {
+    const res = await fetchWithAuth(`${API_URL}/clients/${c.id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(c)
     });
     return res.ok;
   },
 
   createClient: async (c: Partial<Client>): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/clients`, {
+    const res = await fetchWithAuth(`${API_URL}/clients`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(c)
     });
     return res.ok;
   },
 
   deleteClient: async (id: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/clients/${id}`, { method: 'DELETE', headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/clients/${id}`, { method: 'DELETE' });
     return res.ok;
   },
 
   getServices: async (): Promise<Service[]> => {
-    const res = await fetch(`${API_URL}/services`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/services`);
     return res.ok ? await res.json() : [];
   },
 
   getAppointments: async (): Promise<Appointment[]> => {
-    const res = await fetch(`${API_URL}/appointments`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/appointments`);
     return res.ok ? await res.json() : [];
   },
 
   createAppointment: async (a: Omit<Appointment, 'id' | 'tenantId'>) => {
-    const res = await fetch(`${API_URL}/appointments`, {
+    const res = await fetchWithAuth(`${API_URL}/appointments`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(a)
     });
     return await res.json();
   },
 
   getProducts: async (): Promise<Product[]> => {
-    const res = await fetch(`${API_URL}/products`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/products`);
     return res.ok ? await res.json() : [];
   },
 
   getInventoryMovements: async (): Promise<InventoryMovement[]> => {
-    const res = await fetch(`${API_URL}/inventory/movements`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/inventory/movements`);
     return res.ok ? await res.json() : [];
   },
 
   createProduct: async (p: Product): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/products`, {
+    const res = await fetchWithAuth(`${API_URL}/products`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(p)
     });
     return res.ok;
   },
 
   updateProduct: async (p: Product): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/products/${p.id}`, {
+    const res = await fetchWithAuth(`${API_URL}/products/${p.id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(p)
     });
     return res.ok;
   },
 
   getProfessionals: async (): Promise<Professional[]> => {
-    const res = await fetch(`${API_URL}/professionals`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/professionals`);
     return res.ok ? await res.json() : [];
   },
 
   createProfessional: async (p: Omit<Professional, 'id' | 'tenantId'>): Promise<{ success: boolean; id?: string }> => {
-    const res = await fetch(`${API_URL}/professionals`, {
+    const res = await fetchWithAuth(`${API_URL}/professionals`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify(p)
     });
     return await res.json();
   },
 
   updateProfessional: async (p: Professional): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/professionals/${p.id}`, {
+    const res = await fetchWithAuth(`${API_URL}/professionals/${p.id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(p)
     });
     return res.ok;
   },
 
   updatePassword: async (id: string, current: string, next: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/users/${id}/password`, {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/password`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify({ current, next })
     });
     return res.ok;
   },
 
   updateProfile: async (id: string, data: any): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/users/${id}/profile`, {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/profile`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(data)
     });
     return res.ok;
   },
 
   updatePreferences: async (id: string, prefs: NotificationPreferences): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/users/${id}/preferences`, {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/preferences`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(prefs)
     });
     return res.ok;
   },
 
   getProfessionalAppointments: async (proId: string): Promise<Appointment[]> => {
-    const res = await fetch(`${API_URL}/professionals/${proId}/appointments`, { headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/appointments`);
     return res.ok ? await res.json() : [];
   },
 
   completeAppointment: async (id: string, notes: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/appointments/${id}/complete`, {
+    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/complete`, {
       method: 'POST',
-      headers: getHeaders(),
       body: JSON.stringify({ notes })
     });
     return res.ok;
   },
 
   cancelAppointment: async (id: string): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/appointments/${id}/cancel`, { method: 'POST', headers: getHeaders() });
+    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/cancel`, { method: 'POST' });
     return res.ok;
   },
 
   updateService: async (s: Service): Promise<boolean> => {
-    const res = await fetch(`${API_URL}/services/${s.id}`, {
+    const res = await fetchWithAuth(`${API_URL}/services/${s.id}`, {
       method: 'PUT',
-      headers: getHeaders(),
       body: JSON.stringify(s)
     });
     return res.ok;
@@ -299,9 +354,8 @@ export const api = {
 
   createService: async (s: Omit<Service, 'id'>): Promise<Service | null> => {
     try {
-      const res = await fetch(`${API_URL}/services`, {
+      const res = await fetchWithAuth(`${API_URL}/services`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify(s)
       });
       const data = await res.json();
@@ -311,9 +365,8 @@ export const api = {
 
   deleteService: async (id: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/services/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
+      const res = await fetchWithAuth(`${API_URL}/services/${id}`, {
+        method: 'DELETE'
       });
       return res.ok;
     } catch { return false; }
@@ -321,7 +374,7 @@ export const api = {
 
   getVapidPublicKey: async (): Promise<string | null> => {
     try {
-      const res = await safeFetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
+      const res = await fetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
         return data.publicKey;
@@ -332,9 +385,8 @@ export const api = {
 
   subscribeToNotifications: async (subscription: any, userId: string): Promise<boolean> => {
     try {
-      const res = await safeFetch(`${API_URL}/notifications/subscribe`, {
+      const res = await fetchWithAuth(`${API_URL}/notifications/subscribe`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ subscription, userId })
       });
       return res.ok;
@@ -343,9 +395,8 @@ export const api = {
 
   processSale: async (saleData: any): Promise<{ success: boolean, saleId?: string, date?: string }> => {
     try {
-      const res = await safeFetch(`${API_URL}/sales`, {
+      const res = await fetchWithAuth(`${API_URL}/sales`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify(saleData)
       });
       if (!res.ok) return { success: false };
@@ -362,12 +413,43 @@ export const api = {
 
   subscribeToPlan: async (planId: string): Promise<{ init_point?: string, id?: string, error?: string }> => {
     try {
-      const res = await fetch(`${API_URL}/saas/subscribe`, {
+      const res = await fetchWithAuth(`${API_URL}/saas/subscribe`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify({ planId })
       });
       return await res.json();
     } catch { return { error: "Error de red" }; }
+  },
+
+  // NEW: Forgot Password Methods
+  requestPasswordReset: async (email: string, tenantId?: string) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, tenantId })
+      });
+      return await res.json();
+    } catch { return { success: false, error: "Error de red" }; }
+  },
+
+  resetPassword: async (email: string, token: string, newPassword: string) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, newPassword })
+      });
+      return await res.json();
+    } catch { return { success: false, error: "Error de red" }; }
+  },
+
+  // NEW: Calendar Sync Methods
+  getCalendarLink: async (proId: string): Promise<{ url: string, icalToken: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/calendar/link`);
+      if (!res.ok) throw new Error("Falla al obtener link");
+      return await res.json();
+    } catch { return { url: '', icalToken: '' }; }
   }
 };

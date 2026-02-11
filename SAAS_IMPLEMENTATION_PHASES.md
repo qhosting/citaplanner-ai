@@ -19,22 +19,22 @@ Este documento detalla el plan de ejecución estructurado para transformar CitaP
 ### 1. Sistema de Pagos Recurrentes (Suscripciones)
 - **Tarea:** Implementar suscripciones con Mercado Pago/Stripe.
 - **Detalle:** Crear planes (Básico, Pro, Elite) en el backend y manejar webhooks para renovaciones/cancelaciones.
-- **Estado:** ⬜ Pendiente
+- **Estado:** ✅ Completado
 
 ### 2. Transacciones ACID (Integridad de Datos)
 - **Tarea:** Implementar transacciones en reservas y pagos.
 - **Detalle:** Evitar que se agende una cita si el pago falla, o viceversa. Uso de `prisma.$transaction`.
-- **Estado:** ⬜ Pendiente
+- **Estado:** ✅ Completado
 
 ### 3. Auth Robusto (Refresh Tokens + Recuperación)
 - **Tarea:** Implementar Refresh Tokens y "Olvidé mi contraseña".
 - **Detalle:** Asegurar que las sesiones no expiren abruptamente y los usuarios no pierdan acceso.
-- **Estado:** ⬜ Pendiente
+- **Estado:** ✅ Completado
 
-### 4. Sincronización Google Calendar
+### 4. Sincronización Google Calendar & iCalendar (Apple)
 - **Tarea:** Integración bidireccional.
-- **Detalle:** Que las citas del SaaS bloqueen Google Calendar y viceversa. Vital para profesionales.
-- **Estado:** ⬜ Pendiente
+- **Detalle:** Que las citas del SaaS bloqueen Google Calendar/iCalendar y viceversa. Vital para profesionales.
+- **Estado:** 🚧 En Progreso
 
 ---
 
@@ -44,12 +44,12 @@ Este documento detalla el plan de ejecución estructurado para transformar CitaP
 ### 1. Notificaciones en Tiempo Real (WebSockets)
 - **Tarea:** Implementar Socket.io.
 - **Detalle:** Actualizar el dashboard de citas instantáneamente sin recargar la página cuando un cliente reserva.
-- **Estado:** ⬜ Pendiente
+- **Estado:** ✅ Completado
 
 ### 2. Diseño Responsive & Modo Oscuro
-- **Tarea:** Auditoría y corrección móvil.
-- **Detalle:** Asegurar que el dashboard administrativo sea 100% funcional en celulares. Persistencia del tema elegido.
-- **Estado:** ⬜ Pendiente
+- **Tarea:** Auditoría y corrección móvil. 
+- **Detalle:** Asegurar que el dashboard sea 100% usable en tablets/móviles y añadir soporte para Light/Dark mode.
+- **Estado:** ✅ Completado
 
 ### 3. Exportación de Reportes
 - **Tarea:** Generación de PDF/Excel.

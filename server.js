@@ -4,9 +4,11 @@ import pg from 'pg';
 import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import nodemailer from 'nodemailer';
 import webPush from 'web-push';
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment, PreApproval } from 'mercadopago';
 import { createClient } from 'redis';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
@@ -15,6 +17,18 @@ import helmet from 'helmet';
 import prismaClientPkg from '@prisma/client';
 const { PrismaClient } = prismaClientPkg;
 import jwt from 'jsonwebtoken';
+import { google } from 'googleapis';
+import ics from 'ics';
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${process.env.ROOT_DOMAIN}/api/auth/google/callback`;
+
+const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI
+);
 import { validateRequest } from './middleware/validation.js';
 import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema } from './schemas/index.js';
 
@@ -25,6 +39,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: { origin: "*", methods: ["GET", "POST"] }
+});
+
+// Socket Rooms and Real-time logic
+io.on('connection', (socket) => {
+    socket.on('join-tenant', (tenantId) => {
+        if (tenantId) {
+            socket.join(tenantId);
+            console.log(`📡 Socket: Client joined room [${tenantId}]`);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        // Optional: cleanup
+    });
+});
+
+const emitTenantEvent = (tenantId, event, data) => {
+    if (tenantId) {
+        io.to(tenantId).emit(event, data);
+        console.log(`📤 Socket Emit: [${event}] -> Room [${tenantId}]`);
+    }
+};
+
 // Trust proxy is required when running behind a reverse proxy (Caddy/Nginx)
 // to correctly identify client IP addresses for rate limiting.
 app.set('trust proxy', 1);
@@ -34,6 +74,34 @@ const ROOT_DOMAIN = (process.env.ROOT_DOMAIN || 'citaplanner.com').toLowerCase()
 const REDIS_URL = process.env.REDIS_URL;
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'aum-core-secure-2026-fix';
 const WAHA_URL = process.env.WAHA_URL || 'http://localhost:3000';
+
+const SAAS_PLANS = [
+    {
+        id: 'BASIC',
+        title: 'Básico (Starter)',
+        price: 299,
+        currency: 'MXN',
+        description: 'Ideal para independientes',
+        features: { ai_scheduler: true, marketing_pro: false, inventory_advanced: false, analytics_nexus: false }
+    },
+    {
+        id: 'PRO',
+        title: 'Pro (Growth)',
+        price: 599,
+        currency: 'MXN',
+        description: 'Para pequeños equipos',
+        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: false }
+    },
+    {
+        id: 'ELITE',
+        title: 'Elite (Enterprise)',
+        price: 999,
+        currency: 'MXN',
+        description: 'Poder total sin límites',
+        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: true }
+    }
+];
+
 
 // --- OPTIMIZACIÓN: CACHÉ DE TENANTS ---
 const tenantCache = new Map();
@@ -328,6 +396,15 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='avatar') THEN
                         ALTER TABLE users ADD COLUMN avatar TEXT;
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='refresh_token') THEN
+                        ALTER TABLE users ADD COLUMN refresh_token TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='reset_token') THEN
+                        ALTER TABLE users ADD COLUMN reset_token TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='reset_token_expiry') THEN
+                        ALTER TABLE users ADD COLUMN reset_token_expiry TIMESTAMP;
+                    END IF;
                 END IF;
 
                 -- Professionals
@@ -352,6 +429,21 @@ const initDB = async () => {
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='exceptions') THEN
                         ALTER TABLE professionals ADD COLUMN exceptions JSONB DEFAULT '[]';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_access_token') THEN
+                        ALTER TABLE professionals ADD COLUMN google_access_token TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_refresh_token') THEN
+                        ALTER TABLE professionals ADD COLUMN google_refresh_token TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_calendar_id') THEN
+                        ALTER TABLE professionals ADD COLUMN google_calendar_id TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='calendar_sync_enabled') THEN
+                        ALTER TABLE professionals ADD COLUMN calendar_sync_enabled BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='ical_token') THEN
+                        ALTER TABLE professionals ADD COLUMN ical_token TEXT;
                     END IF;
                 END IF;
 
@@ -741,6 +833,162 @@ app.get('/api/branches', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- SAAS PAYMENT ENDPOINTS ---
+
+app.get('/api/saas/plans', (req, res) => {
+    res.json(SAAS_PLANS);
+});
+
+app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
+    try {
+        const { planId } = req.body;
+        const plan = SAAS_PLANS.find(p => p.id === planId);
+
+        if (!plan) return res.status(400).json({ error: "Plan inválido" });
+
+        const user = await prisma.user.findFirst({ where: { id: req.user.id } });
+        // Use user email or generic default if local development
+        const payerEmail = user?.email || "test_user@test.com";
+
+        // Verify if MP is configured
+        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
+            console.warn("⚠️ MP_ACCESS_TOKEN not set or is test. Returning mock subscription.");
+            return res.json({
+                id: "mock_preapproval_id",
+                init_point: "#/mock-checkout?plan=" + planId
+            });
+        }
+
+        const preapproval = new PreApproval(mpClient);
+
+        const result = await preapproval.create({
+            body: {
+                reason: `Suscripción CitaPlanner - ${plan.title}`,
+                external_reference: req.user.tenantId || "demo",
+                payer_email: payerEmail,
+                auto_recurring: {
+                    frequency: 1,
+                    frequency_type: 'months',
+                    transaction_amount: plan.price,
+                    currency_id: 'MXN'
+                },
+                back_url: `${ROOT_DOMAIN}/settings?status=success`,
+                status: 'pending'
+            }
+        });
+
+        // Save PENDING Subscription
+        await prisma.subscription.create({
+            data: {
+                tenantId: req.user.tenantId || 'demo', // Fallback for safety
+                planId: plan.id,
+                status: 'PENDING',
+                mercadopagoId: result.id,
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            }
+        });
+
+        res.json({
+            id: result.id,
+            init_point: result.init_point
+        });
+
+    } catch (e) {
+        console.error("❌ Mercado Pago Sub Error:", e);
+        res.status(500).json({ error: "Error al crear suscripción" });
+    }
+});
+
+
+
+app.post('/api/saas/webhook', async (req, res) => {
+    const { type, data, action } = req.body;
+
+    // Respond fast to avoid timeouts
+    res.status(200).json({ received: true });
+
+    // Handle Subscription Logic (PreApproval)
+    if (type === 'subscription_preapproval' || (data && data.id && !type)) {
+        // Sometimes webhooks come with just data.id for subscriptions
+        const preapprovalId = data?.id;
+        if (!preapprovalId) return;
+
+        try {
+            console.log(`🔔 Webhook Sub ID: ${preapprovalId}`);
+            const preapproval = new PreApproval(mpClient);
+            const subData = await preapproval.get({ id: preapprovalId });
+
+            if (!subData) return;
+
+            const { status, external_reference } = subData;
+
+            // ACID Transaction for Subscription Activation
+            if (status === 'authorized') {
+                await prisma.$transaction(async (tx) => {
+                    const pendingSub = await tx.subscription.findUnique({
+                        where: { mercadopagoId: preapprovalId }
+                    });
+
+                    if (pendingSub) {
+                        // Activate Subscription
+                        await tx.subscription.update({
+                            where: { id: pendingSub.id },
+                            data: { status: 'ACTIVE' }
+                        });
+
+                        // Upgrade Tenant
+                        const planRef = SAAS_PLANS.find(p => p.id === pendingSub.planId) || SAAS_PLANS[0];
+                        await tx.tenant.update({
+                            where: { id: pendingSub.tenantId },
+                            data: {
+                                planType: pendingSub.planId,
+                                features: planRef.features,
+                                status: 'ACTIVE' // Ensure tenant is active
+                            }
+                        });
+                        console.log(`✅ Subscription Authorized for Tenant: ${pendingSub.tenantId}`);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("❌ Sub Webhook Error:", e);
+        }
+        return;
+    }
+
+    // Handle Payments (Invoice Paid)
+    if (type === 'payment' && data?.id) {
+        try {
+            console.log(`🔔 Webhook Payment ID: ${data.id}`);
+            const paymentClient = new Payment(mpClient);
+            const payment = await paymentClient.get({ id: data.id });
+
+            if (!payment) return;
+
+            const { status, transaction_amount, external_reference } = payment;
+
+            // Log Transaction (ACID not strictly needed for just logging, but good practice if linking)
+            await prisma.transaction.create({
+                data: {
+                    mpPaymentId: String(data.id),
+                    mpStatus: status,
+                    amount: transaction_amount,
+                    organizationId: external_reference || 'demo'
+                }
+            });
+
+            // WebSocket Notification for Payment
+            emitTenantEvent(external_reference || 'demo', 'payment-confirmed', { status, amount: transaction_amount, id: data.id });
+
+            console.log(`💰 Payment Recorded: ${status}`);
+
+        } catch (e) {
+            console.error("❌ Pay Webhook Error:", e);
+        }
+    }
+});
+
 app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
     try {
         const data = req.body;
@@ -863,6 +1111,12 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
             console.error("Web Push Error:", e.message);
         }
 
+        // Notify Google Calendar
+        syncToGoogleCalendar(newAppointment);
+
+        // Real-time Update via Socket.io
+        emitTenantEvent(req.tenantId, 'new-appointment', newAppointment);
+
         res.json({ success: true, id: newId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -933,6 +1187,89 @@ app.get('/api/integrations/status', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- CALENDAR INTEGRATION ENDPOINTS ---
+
+app.get('/api/professionals/:id/calendar/link', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const professional = await prisma.professional.findUnique({ where: { id } });
+        if (!professional) return res.status(404).json({ error: "Profesional no encontrado" });
+
+        if (!professional.icalToken) {
+            await prisma.professional.update({
+                where: { id },
+                data: { icalToken: Array.from(Array(24), () => Math.floor(Math.random() * 36).toString(36)).join('') }
+            });
+        }
+
+        const url = oauth2Client.generateAuthUrl({
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: ['https://www.googleapis.com/auth/calendar.events'],
+            state: id
+        });
+
+        res.json({ url, icalToken: professional.icalToken || 'pending' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/auth/google/callback', async (req, res) => {
+    const { code, state } = req.query;
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        await prisma.professional.update({
+            where: { id: state },
+            data: {
+                googleAccessToken: tokens.access_token,
+                googleRefreshToken: tokens.refresh_token,
+                calendarSyncEnabled: true
+            }
+        });
+        res.send(`
+            <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1 style="color: #2e7d32;">✅ Sincronización Exitosa</h1>
+                <p>Tu calendario de Google ha sido vinculado correctamente con CitaPlanner.</p>
+                <p>Puedes cerrar esta pestaña y regresar al dashboard.</p>
+            </div>
+        `);
+    } catch (e) { res.status(500).send("Error en callback de Google: " + e.message); }
+});
+
+app.get('/api/calendar/feed/:token.ics', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const professional = await prisma.professional.findUnique({
+            where: { icalToken: token },
+            include: { appointments: true }
+        });
+
+        if (!professional) return res.status(404).send('Feed no encontrado');
+
+        const events = professional.appointments.map(app => {
+            const startStr = app.startDateTime.toISOString();
+            const endStr = app.endDateTime.toISOString();
+            const s = new Date(startStr);
+            const e = new Date(endStr);
+
+            return {
+                start: [s.getFullYear(), s.getMonth() + 1, s.getDate(), s.getHours(), s.getMinutes()],
+                end: [e.getFullYear(), e.getMonth() + 1, e.getDate(), e.getHours(), e.getMinutes()],
+                title: app.title,
+                description: `Cliente: ${app.clientName}\nNotas: ${app.notes || ''} `,
+                status: 'CONFIRMED',
+                busyStatus: 'BUSY'
+            };
+        });
+
+        const { error, value } = ics.createEvents(events);
+        if (error) throw error;
+
+        res.set('Content-Type', 'text/calendar');
+        res.send(value);
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+
 app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
     try {
         const targetUser = await prisma.user.findFirst({
@@ -996,30 +1333,178 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
             console.log(`[AUTH] Success for: ${phone} `);
 
             // Generate Token
-            const token = jwt.sign({
-                id: user.id,
+            id: user.id,
                 role: user.role,
-                tenantId: req.tenantId,
-                branchId: user.branchId
-            }, JWT_SECRET, { expiresIn: '8h' });
+                    tenantId: req.tenantId,
+                        branchId: user.branchId
+        }, JWT_SECRET, { expiresIn: '15m' }); // Short-lived access token
 
-            const mappedUser = {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                phone: user.phone,
-                role: user.role,
-                branchId: user.branchId,
-                relatedId: user.relatedId
-            };
+// Generate Refresh Token
+const refreshToken = jwt.sign({
+    id: user.id,
+    role: user.role,
+    tenantId: req.tenantId
+}, JWT_SECRET, { expiresIn: '7d' });
 
-            res.json({ success: true, token, user: mappedUser });
+// Store Refresh Token
+await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken }
+});
+
+const mappedUser = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    branchId: user.branchId,
+    relatedId: user.relatedId
+};
+
+res.json({ success: true, token, refreshToken, user: mappedUser });
         } else {
-            console.warn(`[AUTH] Failed for: ${phone} `);
-            res.status(401).json({ success: false, message: 'Credenciales inválidas' });
-        }
+    console.warn(`[AUTH] Failed for: ${phone} `);
+    res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+}
     } catch (e) {
-        console.error('[AUTH] DB Error:', e.message);
+    console.error('[AUTH] DB Error:', e.message);
+    res.status(500).json({ error: e.message });
+}
+});
+
+// --- GOOGLE CALENDAR HELPERS ---
+async function syncToGoogleCalendar(appointment) {
+    if (!appointment.professionalId) return;
+    try {
+        const professional = await prisma.professional.findUnique({
+            where: { id: appointment.professionalId }
+        });
+        if (!professional || !professional.calendarSyncEnabled || !professional.googleRefreshToken) return;
+
+        const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+        auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+
+        const calendar = google.calendar({ version: 'v3', auth });
+        await calendar.events.insert({
+            calendarId: professional.googleCalendarId || 'primary',
+            requestBody: {
+                summary: `Cita: ${appointment.title} `,
+                description: `Cliente: ${appointment.clientName}\nNotas: ${appointment.notes || ''} `,
+                start: { dateTime: appointment.startDateTime.toISOString() },
+                end: { dateTime: appointment.endDateTime.toISOString() }
+            }
+        });
+        console.log(`✅ Google Sync Success for App: ${appointment.id} `);
+    } catch (e) {
+        console.error("❌ Google Sync Error:", e.message);
+    }
+}
+
+
+// --- AUTH ENDPOINTS (REFRESH & RESET) ---
+
+app.post('/api/auth/refresh', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(401).json({ error: "Refresh Token requerido" });
+
+    try {
+        const payload = jwt.verify(refreshToken, JWT_SECRET);
+
+        const user = await prisma.user.findFirst({
+            where: { id: payload.id, refreshToken: refreshToken }
+        });
+
+        if (!user) return res.status(403).json({ error: "Refresh Token inválido o revocado" });
+
+        // Issue new Access Token
+        const newToken = jwt.sign({
+            id: user.id,
+            role: user.role,
+            tenantId: payload.tenantId,
+            branchId: user.branchId // Assuming branch stays same
+        }, JWT_SECRET, { expiresIn: '15m' });
+
+        res.json({ success: true, token: newToken });
+
+    } catch (e) {
+        return res.status(403).json({ error: "Token inválido/expirado" });
+    }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+    const { email, tenantId } = req.body;
+    // Check tenant context if needed, or find user globally. 
+    // Usually user is unique by (phone/email, organizationId).
+    // Modest assumption: email is unique per tenant.
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: {
+                email,
+                organizationId: tenantId || req.tenantId || 'demo'
+            }
+        });
+
+        if (!user) {
+            // Fake success to prevent enumeration
+            return res.json({ success: true, message: "Si el correo existe, se enviarán instrucciones." });
+        }
+
+        // Generate Reset Token (Random string)
+        const resetToken = Array.from(Array(32), () => Math.floor(Math.random() * 36).toString(36)).join('');
+        const expires = new Date(Date.now() + 3600000); // 1 Hour
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                resetToken,
+                resetTokenExpiry: expires
+            }
+        });
+
+        const resetLink = `https://${req.headers.host}/reset-password?token=${resetToken}&email=${email}`;
+
+        await sendEmail(email, "Recuperación de Contraseña - CitaPlanner",
+            `<p>Hola ${user.name},</p><p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace:</p><a href="${resetLink}">${resetLink}</a><p>Expira en 1 hora.</p>`,
+            user.branchId
+        );
+
+        res.json({ success: true, message: "Enlace enviado." });
+
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+    const { email, token, newPassword } = req.body;
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: {
+                email,
+                resetToken: token,
+                resetTokenExpiry: { gt: new Date() }
+            }
+        });
+
+        if (!user) return res.status(400).json({ error: "Token inválido o expirado" });
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpiry: null
+            }
+        });
+
+        res.json({ success: true, message: "Contraseña actualizada correctamente" });
+
+    } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
@@ -1204,142 +1689,6 @@ app.post('/api/payments/create_preference', async (req, res) => {
 });
 
 // --- SAAS PLANS CONFIGURATION ---
-const SAAS_PLANS = {
-    'BASIC': {
-        id: 'BASIC',
-        title: 'Plan Básico (Start)',
-        price: 499,
-        currency: 'MXN',
-        description: 'Ideal para independientes.',
-        features: { ai_scheduler: true, marketing_pro: false, inventory_advanced: false }
-    },
-    'PRO': {
-        id: 'PRO',
-        title: 'Plan Profesional (Growth)',
-        price: 899,
-        currency: 'MXN',
-        description: 'Para salones en expansión.',
-        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: false }
-    },
-    'ELITE': {
-        id: 'ELITE',
-        title: 'Plan Elite (Nexus)',
-        price: 1499,
-        currency: 'MXN',
-        description: 'Control total y máxima potencia IA.',
-        features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: true }
-    }
-};
-
-app.get('/api/saas/plans', (req, res) => {
-    res.json(Object.values(SAAS_PLANS));
-});
-
-app.post('/api/saas/subscribe', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const { planId } = req.body;
-        const tenantId = req.tenantId;
-
-        const plan = SAAS_PLANS[planId];
-        if (!plan) return res.status(400).json({ error: "Plan inválido" });
-
-        const user = await prisma.user.findFirst({ where: { id: req.user.id } });
-        if (!user || !user.email) return res.status(400).json({ error: "Usuario o email no válido" });
-
-        // Create Preapproval (Subscription) in Mercado Pago
-        // Using axios directly or generic client if specific class not imported.
-        // Assuming SDK v2 structure for PreApproval might detailed, falling back to direct API check or generic fetch if needed.
-        // But let's try to use the SDK's PreApproval if we import it, otherwise fallback to simple fetch to MP API if SDK is tricky without docs.
-        // Let's use axios against MP API for certainty given the context limitations on SDK docs here.
-
-        // However, we have mpClient. Let's rely on standard endpoints.
-        // POST /preapproval
-
-        if (!process.env.MP_ACCESS_TOKEN) {
-            return res.json({ mock: true, init_point: '#', id: 'mock_sub_123' });
-        }
-
-        const response = await axios.post('https://api.mercadopago.com/preapproval', {
-            reason: `Suscripción Aurum - ${plan.title}`,
-            external_reference: tenantId,
-            payer_email: user.email,
-            auto_recurring: {
-                frequency: 1,
-                frequency_type: 'months',
-                transaction_amount: plan.price,
-                currency_id: 'MXN'
-            },
-            back_url: `https://${req.headers.host}/admin/settings/billing`,
-            status: 'pending'
-        }, {
-            headers: {
-                'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const preapproval = response.data;
-
-        // Save Pending Subscription
-        await prisma.subscription.create({
-            data: {
-                tenantId: tenantId,
-                planId: planId,
-                status: 'PENDING',
-                mercadopagoId: preapproval.id,
-                currentPeriodStart: new Date(), // Provisional
-                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Provisional
-            }
-        });
-
-        res.json({
-            init_point: preapproval.init_point,
-            id: preapproval.id
-        });
-
-    } catch (e) {
-        console.error("MP Subscription Error:", e.response?.data || e.message);
-        res.status(500).json({ error: "Error creando suscripción" });
-    }
-});
-
-// WEBHOOK UPDATE
-app.post('/api/payments/webhook', async (req, res) => {
-    try {
-        const { type, data, action } = req.body;
-        console.log(`🪝 Webhook: ${type || action} | ID: ${data?.id}`);
-
-        await prisma.integrationLog.create({
-            data: {
-                platform: 'MERCADOPAGO',
-                eventType: type || action || 'UNKNOWN',
-                payload: JSON.stringify(req.body),
-                status: 'RECEIVED'
-            }
-        });
-
-        // Handle Subscription Action (created, updated)
-        if (type === 'subscription_preapproval') {
-            const preapprovalId = data.id;
-            // Fetch status from MP
-            // const subStatus = await axios.get(...) 
-            // For now, assuming if we get a notification of 'authorized' type logic would go here.
-            // Usually MP sends `action: 'updated'` or `action: 'created'`.
-        }
-
-        // Handle Payment (Recurring or One-Time)
-        if (type === 'payment' || action === 'payment.created') {
-            // Retrieve Payment
-            // Verify if it belongs to a storage Subscription (by external_reference maybe?)
-            // For now logging is sufficient for Phase 1 Step 1 validation.
-        }
-
-        res.sendStatus(200);
-    } catch (e) {
-        console.error('MP Webhook Error:', e.message);
-        res.sendStatus(500);
-    }
-});
 
 app.get('/api/settings/landing', async (req, res) => {
     try {
@@ -1387,8 +1736,9 @@ const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
     initDB().then(() => {
-        app.listen(PORT, () => {
+        httpServer.listen(PORT, () => {
             console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+            console.log(`📡 WebSockets enabled on same port`);
         });
     });
 }

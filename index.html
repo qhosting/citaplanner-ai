@@ -11,77 +11,39 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap"
     rel="stylesheet">
 
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            gold: {
+              DEFAULT: '#D4AF37',
+              dark: '#8C6F1B',
+            },
+            luxury: {
+              black: '#050505',
+              card: 'rgba(255, 255, 255, 0.03)',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            playfair: ['Playfair Display', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-      --primary-gold: #D4AF37;
-      --deep-black: #050505;
-      --transition-fluid: 1200ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
+    /* Critical resets or base styles that index.css might take a sec to load */
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #050505;
-      color: #FFFFFF;
-      margin: 0;
-      overflow-x: hidden;
-    }
-
-    .font-playfair {
-      font-family: 'Playfair Display', serif;
-    }
-
-    .gold-btn {
-      background: linear-gradient(135deg, var(--primary-gold) 0%, #8C6F1B 100%);
-      color: #000;
-      font-weight: 800;
-      transition: var(--transition-fluid);
-    }
-
-    .gold-btn:hover {
-      transform: translateY(-5px) scale(1.02);
-      box-shadow: 0 40px 80px -20px rgba(197, 160, 40, 0.5);
-    }
-
-    .glass-card {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .gold-text-gradient {
-      background: linear-gradient(135deg, var(--primary-gold) 0%, #B8860B 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    @keyframes fade-in-up {
-      from {
-        opacity: 0;
-        transform: translateY(50px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .animate-entrance {
-      animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    ::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    ::-webkit-scrollbar-track {
       background: #050505;
+      color: white;
     }
 
-    ::-webkit-scrollbar-thumb {
-      background: var(--primary-gold);
-      border-radius: 10px;
+    [data-theme='light'] body {
+      background: #F8FAFC;
+      color: #0F172A;
     }
   </style>
 

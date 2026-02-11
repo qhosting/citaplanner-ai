@@ -63,6 +63,8 @@ export interface Professional {
   exceptions: any[];
   serviceIds?: string[];
   tenantId?: string;
+  calendarSyncEnabled?: boolean;
+  icalToken?: string;
 }
 
 export interface Product {
@@ -119,6 +121,7 @@ export interface User {
   phone: string;
   role: Role;
   token?: string;
+  refreshToken?: string;
   tenantId?: string;
   avatar?: string;
   preferences?: NotificationPreferences;

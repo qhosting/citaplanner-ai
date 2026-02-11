@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Role } from './types';
 import { api } from './services/api';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { LogoCitaplanner } from './pages/LandingPage';
 
@@ -50,7 +51,7 @@ const queryClient = new QueryClient({
 });
 
 const LoadingScreen = () => (
-  <div className="h-screen flex flex-col items-center justify-center bg-[#050505]">
+  <div className="h-screen flex flex-col items-center justify-center bg-transparent">
     <Loader2 className="animate-spin text-[#D4AF37] mb-4" size={40} />
     <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Nodo...</p>
   </div>
@@ -106,9 +107,22 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   return <>{children}</>;
 };
 
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/40 transition-all text-zinc-400 hover:text-[#D4AF37]"
+    >
+      {theme === 'dark' ? <Sparkles size={18} /> : <div className="w-4.5 h-4.5 rounded-full border-2 border-current" />}
+    </button>
+  );
+};
+
 const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
 
   if (location.pathname === '/' || location.pathname === '/book' || location.pathname === '/login') return null;
   if (maintenanceMode && !user) return null;
@@ -124,7 +138,8 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
   );
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-black/90 backdrop-blur-2xl border-b border-white/10 h-20 shadow-2xl">
+    <nav className={`sticky top-0 z-50 w-full backdrop-blur-2xl border-b h-20 shadow-2xl transition-all ${theme === 'dark' ? 'bg-black/90 border-white/10' : 'bg-white/90 border-slate-200'
+      }`}>
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to={user?.role === 'GOD_MODE' ? '/nexus' : user?.role === 'MEMBER' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : '/admin'}>
@@ -133,7 +148,7 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tighter text-white uppercase leading-none">Cita<span className="gold-text-gradient">Planner</span></span>
+                <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Cita<span className="gold-text-gradient">Planner</span></span>
                 <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'GOD_MODE' ? 'Nexus Infrastructure' : 'Aurum Ecosystem'}</span>
               </div>
             </div>
@@ -168,7 +183,8 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <ThemeToggle />
           {user?.isImpersonated && (
             <button onClick={() => {
               const original = localStorage.getItem('citaPlannerOriginalAuth');
@@ -184,13 +200,14 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
           {user ? (
             <div className="flex items-center gap-5">
               <div className="hidden sm:block text-right">
-                <p className="text-[10px] font-black text-white uppercase tracking-tighter mb-0.5">{user.name}</p>
+                <p className={`text-[10px] font-black uppercase tracking-tighter mb-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{user.name}</p>
                 <div className="flex items-center gap-1 justify-end">
                   <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                   <p className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.2em]">{user.role}</p>
                 </div>
               </div>
-              <Link to="/profile" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#333] to-[#111] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 hover:border-[#D4AF37] transition-all overflow-hidden shadow-xl">
+              <Link to="/profile" className={`w-10 h-10 rounded-xl bg-gradient-to-tr from-[#333] to-[#111] border flex items-center justify-center text-[#D4AF37] font-black text-xs hover:scale-105 transition-all overflow-hidden shadow-xl ${theme === 'dark' ? 'border-[#D4AF37]/40' : 'border-slate-200'
+                }`}>
                 {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : user.name.charAt(0)}
               </Link>
               <button onClick={logout} className="p-2.5 text-zinc-500 hover:text-[#D4AF37] hover:bg-white/5 rounded-xl transition-all">
@@ -202,16 +219,18 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
           )}
         </div>
       </div>
-    </nav>
+    </nav >
   );
 };
 
 const InternalFooter = () => {
   const location = useLocation();
+  const { theme } = useTheme();
   if (location.pathname === '/' || location.pathname === '/login') return null;
 
   return (
-    <footer className="w-full bg-[#050505] border-t border-white/5 py-8 px-10">
+    <footer className={`w-full border-t py-8 px-10 transition-colors ${theme === 'dark' ? 'bg-[#050505] border-white/5' : 'bg-white border-slate-100'
+      }`}>
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-10">
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-3">
@@ -244,6 +263,7 @@ const InternalFooter = () => {
 
 const MainLayout = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [settings, setSettings] = useState<any>(null);
@@ -274,8 +294,8 @@ const MainLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505]">
-      <Toaster richColors position="top-right" theme="dark" />
+    <div className="min-h-screen flex flex-col transition-colors">
+      <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
       <Navbar maintenanceMode={maintenanceMode} />
       <div className="flex-grow">
         <Suspense fallback={<LoadingScreen />}>
@@ -310,11 +330,13 @@ const MainLayout = () => {
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <MainLayout />
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <MainLayout />
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

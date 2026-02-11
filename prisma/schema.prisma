@@ -77,6 +77,9 @@ model User {
   medicalConditions String? @map("medical_conditions")
   loyaltyPoints    Int?     @default(0) @map("loyalty_points")
   avatar           String?
+  refreshToken     String?  @map("refresh_token")
+  resetToken       String?  @map("reset_token")
+  resetTokenExpiry DateTime? @map("reset_token_expiry")
 
   @@unique([phone, organizationId]) // Approximated from index idx_users_phone_tenant on phone, tenant_id (using organizationId as proxy if tenant logic shifts, typically it's tenant_id but code used organization_id/tenant replacement. Sticking to code structure.)
   // Note: The original index was on (phone, tenant_id). But the CREATE TABLE for users DOES NOT have tenant_id column in the first CREATE statement (line 225).
@@ -108,6 +111,12 @@ model Professional {
   serviceIds     String?   @map("service_ids")
   organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  googleAccessToken   String? @map("google_access_token")
+  googleRefreshToken  String? @map("google_refresh_token")
+  googleCalendarId    String? @map("google_calendar_id")
+  calendarSyncEnabled Boolean @default(false) @map("calendar_sync_enabled")
+  icalToken           String? @unique @map("ical_token") // For Apple Calendar feed subscriptions
 
   tenant         Tenant?   @relation(fields: [tenantId], references: [id])
   appointments   Appointment[]
