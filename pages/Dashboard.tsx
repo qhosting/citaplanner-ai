@@ -13,7 +13,10 @@ import { AppointmentModal } from '../components/AppointmentModal';
 import { VoiceAssistant } from '../components/VoiceAssistant';
 import { EnergyMonitor } from '../components/EnergyMonitor';
 import { Skeleton } from '../components/Skeleton';
-import { Appointment, AppointmentStatus } from '../types';
+import { StatGrid } from '../components/dashboard/StatGrid';
+import { SystemMonitor } from '../components/dashboard/SystemMonitor';
+import { OperationsAgenda } from '../components/dashboard/OperationsAgenda';
+import { Appointment, AppointmentStatus, Client } from '../types';
 import { api } from '../services/api';
 
 export const Dashboard: React.FC = () => {
@@ -23,10 +26,17 @@ export const Dashboard: React.FC = () => {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
   // Agenda Real
-  const { data: appointments = [], isLoading } = useQuery({
+  const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments,
   });
+
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+    queryKey: ['clients'],
+    queryFn: api.getClients,
+  });
+
+  const isLoading = isLoadingAppointments || isLoadingClients;
 
   // Monitor de Integraciones Real
   const { data: integrationStatus = [] } = useQuery({
@@ -86,6 +96,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="mb-16">
+        <StatGrid appointments={appointments} clients={clients} />
+      </div>
+
+      <div className="mb-16">
         <EnergyMonitor />
       </div>
 
@@ -95,69 +109,18 @@ export const Dashboard: React.FC = () => {
             <SmartScheduler onAddAppointment={(apt) => createMutation.mutate(apt)} />
           </div>
 
-          <section>
-            <div className="flex justify-between items-center mb-10 px-4">
-              <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-4 text-main">
-                <CalendarIcon className="text-[#D4AF37]" size={28} /> Agenda de Operaciones
-              </h2>
-              <button onClick={() => navigate('/schedules')} className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 hover:text-[#D4AF37] transition-all">Ver Matriz Completa</button>
+          {isLoading ? (
+            <div className="space-y-6">
+              <Skeleton className="h-32 w-full rounded-[3rem]" />
+              <Skeleton className="h-32 w-full rounded-[3rem]" />
             </div>
-
-            {isLoading ? (
-              <div className="space-y-6"><Skeleton className="h-32 w-full rounded-[3rem]" /><Skeleton className="h-32 w-full rounded-[3rem]" /></div>
-            ) : (
-              <div className="space-y-6">
-                {filteredAppointments.length === 0 ? (
-                  <div className="text-center py-24 glass-card rounded-[3.5rem] border-dashed border-white/10">
-                    <p className="text-slate-600 font-bold uppercase tracking-[0.3em] text-[10px]">Esperando sincronización de datos...</p>
-                  </div>
-                ) : (
-                  filteredAppointments.map((apt) => (
-                    <div key={apt.id} className="glass-card p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col sm:flex-row gap-6 md:gap-10 items-center group relative overflow-hidden transition-all hover:scale-[1.02]">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37]" />
-                      <div className="flex-grow">
-                        <h3 className="font-black text-xl md:text-2xl tracking-tight text-main">{apt.title}</h3>
-                        <p className="text-[11px] font-bold text-muted uppercase tracking-widest mt-1">{apt.clientName}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-[#D4AF37]">{new Date(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </section>
+          ) : (
+            <OperationsAgenda appointments={filteredAppointments} />
+          )}
         </div>
 
-        <div className="lg:col-span-1 space-y-10">
-          {/* Integrations Monitor Real */}
-          <div className="glass-card rounded-[3.5rem] p-10 relative overflow-hidden group border border-emerald-500/10 h-full">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-[80px]" />
-            <h3 className="font-black text-[10px] uppercase tracking-[0.5em] mb-10 flex items-center gap-3 text-main">
-              <Link2 size={20} className="text-emerald-500" /> Monitor de Integraciones
-            </h3>
-            <div className="space-y-6 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-              {integrationStatus.map((log: any, idx: number) => (
-                <div key={idx} className="p-5 bg-black/5 dark:bg-white/5 rounded-[2rem] border border-black/5 dark:border-white/5 transition-all">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {log.event_type.includes('AI') ? <BrainCircuit size={16} className="text-[#D4AF37]" /> : <MessageSquare size={16} className="text-emerald-500" />}
-                      <span className="text-[9px] font-black text-white uppercase tracking-widest">{log.platform}</span>
-                    </div>
-                    <span className="text-[8px] text-slate-600 font-bold">{new Date(log.created_at).toLocaleTimeString()}</span>
-                  </div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-2">{log.event_type.replace(/_/g, ' ')}</p>
-                  <div className="p-3 bg-black/40 rounded-xl border border-white/5">
-                    <p className="text-[10px] text-slate-300 italic leading-relaxed">"{log.response || 'Sincronización OK'}"</p>
-                  </div>
-                </div>
-              ))}
-              {integrationStatus.length === 0 && (
-                <p className="text-center text-slate-600 text-[10px] font-black uppercase py-20">Escaneando red de integraciones...</p>
-              )}
-            </div>
-          </div>
+        <div className="lg:col-span-1 h-full">
+          <SystemMonitor logs={integrationStatus} />
         </div>
       </div>
 
