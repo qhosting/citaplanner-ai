@@ -686,53 +686,43 @@ const initDB = async () => {
             }
         }
 
-        // 6. Seeding Users
-        const userCount = await client.query("SELECT count(*) FROM users");
-        if (parseInt(userCount.rows[0].count) === 0) {
-            // ADMIN
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-            `, [
-                process.env.SEED_ADMIN_NAME || 'Admin Master',
-                process.env.SEED_ADMIN_PHONE || 'admin',
-                process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
-                bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
-                defaultBranchId,
-                masterId
-            ]);
-            // PRO
-            const defaultSchedule = JSON.stringify([
-                { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-                { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
-            ]);
-            const proRes = await client.query(`
-                INSERT INTO professionals(name, role, email, branch_id, tenant_id, weekly_schedule, exceptions, service_ids, organization_id)
-                VALUES('Dra. Ana Elite', 'Dermatología', 'ana@aurum.ai', $1, $2, $3, '[]', '[]', 'demo')
-                RETURNING id
-            `, [defaultBranchId, masterId, defaultSchedule]);
+        // 6. User Seeding & Persistence
+        // We ensure critical users (Nexus & QHosting) exist regardless of previous state
 
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, related_id, branch_id, tenant_id, organization_id)
-                VALUES('Dra. Ana Elite', 'pro', 'ana@aurum.ai', $1, 'PROFESSIONAL', $2, $3, $4, 'demo')
-            `, [bcrypt.hashSync('pro123', 10), proRes.rows[0].id, defaultBranchId, masterId]);
-
-            // GOD_MODE (Nexus Superintendent)
+        // Nexus God Mode (Master Overseer)
+        const nexusExists = await client.query("SELECT id FROM users WHERE phone = 'nexus' AND organization_id = 'master'");
+        if (nexusExists.rows.length === 0) {
+            console.log("🛠️ Seeding Nexus Superintendent...");
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
                 VALUES('Superintendente Nexus', 'nexus', 'nexus@aurum.ai', $1, 'GOD_MODE', $2, $3, 'master', '{"whatsapp":true,"email":true}')
             `, [bcrypt.hashSync('nexus123', 10), defaultBranchId, masterId]);
         }
 
+        // Default Admin (Demo Tenant)
+        const adminPhone = process.env.SEED_ADMIN_PHONE || 'admin';
+        const adminExists = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [adminPhone]);
+        if (adminExists.rows.length === 0) {
+            console.log(`🛠️ Seeding Default Admin (${adminPhone})...`);
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+            `, [
+                process.env.SEED_ADMIN_NAME || 'Admin Master',
+                adminPhone,
+                process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
+                bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
+                defaultBranchId,
+                masterId
+            ]);
+        }
 
         // QHOSTING ADMIN (UPSERT LOGIC)
         if (process.env.QHOSTING_ADMIN_PHONE) {
-            const existingAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
+            const existingQAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
 
-            if (existingAdmin.rows.length === 0) {
+            if (existingQAdmin.rows.length === 0) {
+                console.log("🛠️ Seeding QHosting Admin...");
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
                     VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
@@ -760,6 +750,7 @@ const initDB = async () => {
                 ]);
             }
         }
+
 
 
 
