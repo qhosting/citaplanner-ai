@@ -1420,7 +1420,14 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
 
     try {
         console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
-        const user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
+
+        let user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
+
+        // Fallback for Global SuperAdmin (nexus) if logging in from root domain
+        if (!user && (req.tenantId === 'demo' || !req.tenantId) && phone === 'nexus') {
+            console.log(`[AUTH DEBUG] Global Admin detected, redirecting search to 'master' tenant`);
+            user = await prisma.user.findFirst({ where: { phone, organizationId: 'master' } });
+        }
 
         console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
 
