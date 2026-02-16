@@ -214,7 +214,7 @@ model Setting {
 }
 
 model LandingSetting {
-  id             Int       @id @default(1)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   businessName   String?   @default("CitaPlanner Elite") @map("business_name") @db.VarChar(100)
   primaryColor   String?   @default("#630E14") @map("primary_color") @db.VarChar(20)
   secondaryColor String?   @default("#C5A028") @map("secondary_color") @db.VarChar(20)
@@ -224,11 +224,12 @@ model LandingSetting {
   address        String?
   contactPhone   String?   @map("contact_phone") @db.VarChar(20)
   heroImageUrl   String?   @map("hero_image_url")
-  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  organizationId String?   @unique @default("demo") @map("organization_id") @db.VarChar(50)
   features       Json?     @default("{\"ai\": true, \"inventory\": true, \"marketing\": true}")
 
   @@map("landing_settings")
 }
+
 
 model IntegrationLog {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Inferred ID

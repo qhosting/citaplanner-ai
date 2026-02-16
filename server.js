@@ -490,13 +490,29 @@ const initDB = async () => {
                         ALTER TABLE integration_logs ADD COLUMN branch_id UUID;
                     END IF;
                 END IF;
+
+                -- Custom Domain Migration
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='custom_domain') THEN
+                        ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
+                    END IF;
+                END IF;
+
+                -- Landing Settings Multi-Tenancy
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'landing_settings') THEN
+                    -- Change id from INT to UUID if needed, but keeping simple: Ensure organization_id is unique
+                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'landing_settings' AND indexname = 'idx_landing_org_unique') THEN
+                        CREATE UNIQUE INDEX idx_landing_org_unique ON landing_settings(organization_id);
+                    END IF;
+                END IF;
+
             END $$;
         `);
 
         // 0. Preliminary Tables (Independent of others)
         await client.query(`
             CREATE TABLE IF NOT EXISTS landing_settings (
-                id INT PRIMARY KEY DEFAULT 1,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
                 primary_color VARCHAR(20) DEFAULT '#630E14',
                 secondary_color VARCHAR(20) DEFAULT '#C5A028',
@@ -506,7 +522,7 @@ const initDB = async () => {
                 address TEXT,
                 contact_phone VARCHAR(20),
                 hero_image_url TEXT,
-                organization_id VARCHAR(50) DEFAULT 'demo',
+                organization_id VARCHAR(50) UNIQUE DEFAULT 'demo',
                 features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
             );
         `);
@@ -518,6 +534,7 @@ const initDB = async () => {
                 organization_id VARCHAR(50) DEFAULT 'demo',
                 name VARCHAR(100) NOT NULL,
                 subdomain VARCHAR(50) NOT NULL,
+                custom_domain VARCHAR(255),
                 status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED, TRIAL
                 plan_type VARCHAR(20) DEFAULT 'ELITE',
                 features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
@@ -791,13 +808,41 @@ const initDB = async () => {
 
 
 
-        console.log("✅ Infraestructura Aurum Nexus v5.1 Operativa.");
+        // 7. Shula Studio High-Authority Seeding
+        const shulaExists = await client.query("SELECT id FROM tenants WHERE subdomain = 'shula'");
+        if (shulaExists.rows.length === 0) {
+            console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
+            const shulaIdRes = await client.query(`
+                INSERT INTO tenants(name, subdomain, custom_domain, status, plan_type, organization_id)
+                VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
+                RETURNING id
+            `);
+            const shulaId = shulaIdRes.rows[0].id;
+
+            // Seed Shula Landing
+            await client.query(`
+                INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url)
+                VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada', 
+                'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.', 
+                'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
+                ON CONFLICT(organization_id) DO NOTHING
+            `);
+
+            // Seed Shula Branch
+            await client.query(`
+                INSERT INTO branches(name, organization_id, tenant_id)
+                VALUES('Shula Studio Matriz', 'shula', $1)
+            `, [shulaId]);
+        }
+
+        console.log("✅ Infraestructura Aurum Nexus v5.2 Operativa.");
     } catch (e) {
         console.error("❌ Error en initDB:", e.message);
     } finally {
         client.release();
     }
 };
+
 
 const tenantMiddleware = async (req, res, next) => {
     try {
@@ -2077,9 +2122,24 @@ app.post('/api/payments/create_preference', async (req, res) => {
 
 app.get('/api/settings/landing', async (req, res) => {
     try {
-        const data = await prisma.landingSetting.findUnique({
-            where: { id: 1 }
-        }) || {};
+        const organizationId = req.tenantId || 'demo';
+        let data = await prisma.landingSetting.findUnique({
+            where: { organizationId }
+        });
+
+        // Initialize default if not exists
+        if (!data) {
+            data = await prisma.landingSetting.create({
+                data: {
+                    organizationId,
+                    businessName: organizationId === 'demo' ? 'CitaPlanner Elite' : organizationId.toUpperCase(),
+                    primaryColor: '#630E14',
+                    secondaryColor: '#C5A028',
+                    templateId: 'citaplanner',
+                    slogan: 'Gestión de Lujo Simplificada'
+                }
+            });
+        }
 
         const normalized = {
             businessName: data.businessName || 'CitaPlanner Elite',
@@ -2095,6 +2155,43 @@ app.get('/api/settings/landing', async (req, res) => {
         res.json(normalized);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const organizationId = req.tenantId;
+        const settings = req.body;
+
+        const updated = await prisma.landingSetting.upsert({
+            where: { organizationId },
+            update: {
+                businessName: settings.businessName,
+                primaryColor: settings.primaryColor,
+                secondaryColor: settings.secondaryColor,
+                templateId: settings.templateId,
+                slogan: settings.slogan,
+                aboutText: settings.aboutText,
+                address: settings.address,
+                contactPhone: settings.contactPhone,
+                heroImageUrl: settings.heroImageUrl
+            },
+            create: {
+                organizationId,
+                businessName: settings.businessName,
+                primaryColor: settings.primaryColor,
+                secondaryColor: settings.secondaryColor,
+                templateId: settings.templateId,
+                slogan: settings.slogan,
+                aboutText: settings.aboutText,
+                address: settings.address,
+                contactPhone: settings.contactPhone,
+                heroImageUrl: settings.heroImageUrl
+            }
+        });
+
+        res.json({ success: true, settings: updated });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 
 app.get('/api/notifications/vapid-public-key', (req, res) => {
     res.json({ publicKey: vapidKeys.publicKey });
