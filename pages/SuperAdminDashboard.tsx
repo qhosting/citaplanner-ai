@@ -20,6 +20,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [view, setView] = useState<'NODES' | 'BILLING' | 'LOGS'>('NODES');
 
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', customDomain: '', planType: 'ELITE' });
 
   // 1. Fetch Global Stats
@@ -56,6 +57,30 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   });
 
+  // 4. Fetch Real Audit Logs
+  const { data: clusterLogs = [] } = useQuery({
+    queryKey: ['saas-logs'],
+    queryFn: async () => {
+      const res = await fetch('/api/saas/logs', {
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      return res.json();
+    },
+    enabled: view === 'LOGS'
+  });
+
+  // 5. Deep Diagnostics Check
+  const { data: healthCheck, refetch: runDiagnostic } = useQuery({
+    queryKey: ['saas-health'],
+    queryFn: async () => {
+      const res = await fetch('/api/saas/health/deep', {
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      return res.json();
+    },
+    enabled: view === 'DIAGS'
+  });
+
   const createTenantMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await fetch('/api/saas/tenants', {
@@ -73,6 +98,41 @@ export const SuperAdminDashboard: React.FC = () => {
       setIsCreating(false);
       toast.success("Nodo maestro aprovisionado con éxito.");
     }
+  });
+
+  // FEATURE GATING MUTATION
+  const updateFeaturesMutation = useMutation({
+    mutationFn: async ({ id, features }: { id: string, features: any }) => {
+      const res = await fetch(`/api/saas/tenants/${id}/features`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}`
+        },
+        body: JSON.stringify({ features })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-tenants'] });
+      toast.success("Permisos de infraestructura actualizados.");
+    }
+  });
+
+  const deleteTenantMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/saas/tenants/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-tenants'] });
+      toast.success("Nodo destruido permanentemente.");
+    },
+    onError: (e) => toast.error(`Falla en des-aprovisionamiento: ${e.message}`)
   });
 
   const updateStatusMutation = useMutation({
@@ -116,6 +176,10 @@ export const SuperAdminDashboard: React.FC = () => {
     t.subdomain.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredBillingLogs = selectedTenantId
+    ? billingLogs.filter((log: any) => log.tenantId === selectedTenantId)
+    : billingLogs;
+
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
@@ -147,12 +211,15 @@ export const SuperAdminDashboard: React.FC = () => {
           {[
             { id: 'NODES', label: 'Nodes', icon: Server },
             { id: 'BILLING', label: 'Master Billing', icon: CreditCard },
-            { id: 'LOGS', label: 'Audit Logs', icon: Terminal },
+            { id: 'LOGS', label: 'Cluster Logs', icon: Terminal },
             { id: 'DIAGS', label: 'Diagnostics', icon: Zap }
           ].map(btn => (
             <button
               key={btn.id}
-              onClick={() => setView(btn.id as any)}
+              onClick={() => {
+                setView(btn.id as any);
+                if (btn.id !== 'BILLING') setSelectedTenantId(null);
+              }}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${view === btn.id ? 'bg-[#D4AF37] text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]' : 'text-slate-500 hover:text-white'}`}
             >
               <btn.icon size={16} /> {btn.label}
@@ -217,16 +284,22 @@ export const SuperAdminDashboard: React.FC = () => {
               </h2>
               <div className="space-y-4">
                 {[
-                  { label: 'Tenants Primary ID', status: 'OK' },
-                  { label: 'IDX_Subdomain', status: 'Verifying...' },
-                  { label: 'BillingLog FKs', status: 'OK' },
-                  { label: 'Subscription Provider Mapping', status: 'OK' }
+                  { label: 'Engine Connectivity', status: healthCheck?.database?.connected ? 'HEALHY' : 'CHECKING...' },
+                  { label: 'DB Latency (Disk)', status: healthCheck?.database?.latency || 'Verifying...' },
+                  { label: 'Active Node Count', status: healthCheck?.database?.tenants || '--' },
+                  { label: 'Cluster Engine', status: healthCheck?.engine?.version || 'NEXUS CORE' }
                 ].map((idx, i) => (
                   <div key={i} className="flex justify-between items-center p-4 border-b border-white/5">
                     <span className="text-[10px] font-bold text-slate-500 uppercase">{idx.label}</span>
                     <span className="text-[10px] font-black text-white">{idx.status}</span>
                   </div>
                 ))}
+                <button
+                  onClick={() => runDiagnostic()}
+                  className="w-full mt-4 py-4 bg-white/5 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all border border-white/5"
+                >
+                  Run Deep Diagnostic
+                </button>
               </div>
             </div>
           </div>
@@ -286,10 +359,23 @@ export const SuperAdminDashboard: React.FC = () => {
                       >
                         {t.status === 'ACTIVE' ? <Power size={24} /> : <RefreshCw size={24} />}
                       </button>
+                      {t.subdomain !== 'master' && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`⚠️ ADVERTENCIA CRÍTICA: ¿Destruir permanentemente el nodo ${t.name}? Esta acción es irreversible.`)) {
+                              deleteTenantMutation.mutate(t.id);
+                            }
+                          }}
+                          className="w-14 h-14 bg-red-600/10 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all border border-red-600/20 flex items-center justify-center shadow-xl"
+                          title="Purge Node (Destruction)"
+                        >
+                          <X size={24} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* 🔧 FEATURE GATING MINI PANEL */}
+                  {/* 🔧 FEATURE GATING PANEL (LIVE) */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
                     {[
                       { id: 'ai_scheduler', label: 'Nexus AI', icon: Wand2 },
@@ -297,13 +383,17 @@ export const SuperAdminDashboard: React.FC = () => {
                       { id: 'inventory_advanced', label: 'Inventory X', icon: ShoppingBag },
                       { id: 'analytics_nexus', label: 'Global BI', icon: BarChart3 },
                     ].map(feat => (
-                      <div
+                      <button
                         key={feat.id}
-                        className={`flex flex-col items-center gap-3 p-5 rounded-3xl border transition-all ${t.features[feat.id as keyof TenantFeatures] ? 'bg-white/5 border-[#D4AF37]/20 text-[#D4AF37]' : 'bg-black/40 border-white/5 text-slate-800'}`}
+                        onClick={() => {
+                          const updated = { ...t.features, [feat.id]: !t.features[feat.id as keyof TenantFeatures] };
+                          updateFeaturesMutation.mutate({ id: t.id, features: updated });
+                        }}
+                        className={`flex flex-col items-center gap-3 p-5 rounded-3xl border transition-all active:scale-95 ${t.features[feat.id as keyof TenantFeatures] ? 'bg-[#D4AF37]/5 border-[#D4AF37]/30 text-[#D4AF37]' : 'bg-black/40 border-white/5 text-slate-800'}`}
                       >
                         <feat.icon size={22} className={t.features[feat.id as keyof TenantFeatures] ? 'animate-pulse' : ''} />
                         <span className="text-[8px] font-black uppercase tracking-[0.2em]">{feat.label}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
 
@@ -317,11 +407,17 @@ export const SuperAdminDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Vencimiento</p>
-                        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">En suscripción</p>
+                        <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">Suscripción</p>
+                        <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">{t.planType} TIER</p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-3 bg-white/5 hover:bg-white/10 px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-all border border-white/5">
+                    <button
+                      onClick={() => {
+                        setSelectedTenantId(t.id);
+                        setView('BILLING');
+                      }}
+                      className="flex items-center gap-3 bg-white/5 hover:bg-[#D4AF37] px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-black transition-all border border-white/5"
+                    >
                       <History size={14} /> Facturación & Pagos
                     </button>
                   </div>
@@ -334,9 +430,17 @@ export const SuperAdminDashboard: React.FC = () => {
         {view === 'BILLING' && (
           <div className="glass-card rounded-[4rem] border-white/5 overflow-hidden p-12">
             <div className="flex justify-between items-center mb-12">
-              <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-4">
-                <CreditCard size={32} className="text-[#D4AF37]" /> Global Revenue Master
-              </h2>
+              <div className="flex items-center gap-8">
+                <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-4">
+                  <CreditCard size={32} className="text-[#D4AF37]" /> Global Revenue Master
+                </h2>
+                {selectedTenantId && (
+                  <div className="px-6 py-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full flex items-center gap-4">
+                    <span className="text-[10px] font-black text-[#D4AF37] uppercase">Filtrando Nodo: {tenants.find((t: any) => t.id === selectedTenantId)?.name}</span>
+                    <button onClick={() => setSelectedTenantId(null)} className="text-[#D4AF37] hover:text-white"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-4">
                 <div className="bg-white/5 border border-white/5 px-6 py-3 rounded-xl">
                   <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Total Procesado</p>
@@ -357,7 +461,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.02]">
-                  {billingLogs.map((log: any) => (
+                  {filteredBillingLogs.map((log: any) => (
                     <tr key={log.id} className="group hover:bg-white/[0.01] transition-all">
                       <td className="py-6 pl-4">
                         <span className="text-[10px] font-mono font-bold text-slate-400">{log.id.slice(0, 8)}...</span>
@@ -380,8 +484,8 @@ export const SuperAdminDashboard: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {billingLogs.length === 0 && (
-                    <tr><td colSpan={5} className="py-20 text-center text-slate-600 font-bold uppercase tracking-widest text-[10px]">Sin transacciones recientes</td></tr>
+                  {filteredBillingLogs.length === 0 && (
+                    <tr><td colSpan={5} className="py-20 text-center text-slate-600 font-bold uppercase tracking-widest text-[10px]">Sin transacciones registradas</td></tr>
                   )}
                 </tbody>
               </table>
@@ -392,29 +496,21 @@ export const SuperAdminDashboard: React.FC = () => {
         {view === 'LOGS' && (
           <div className="bg-black/40 rounded-[3rem] border border-white/5 p-12 font-mono text-sm">
             <div className="flex items-center gap-3 mb-10 pb-6 border-b border-white/5">
-              <Terminal size={24} className="text-emerald-500" />
-              <h2 className="text-white font-black uppercase text-xl leading-none">Cluster Global Event Stream</h2>
+              <Terminal size={24} className="text-[#D4AF37]" />
+              <h2 className="text-white font-black uppercase text-xl leading-none">Global Infrastructure Audit Trail</h2>
             </div>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 scrollbar-custom">
-              {/* Simulate some system logs if needed */}
-              <div className="flex gap-6 text-emerald-500/80">
-                <span className="shrink-0 opacity-50">[{new Date().toISOString().split('T')[1].split('.')[0]}]</span>
-                <span className="text-white font-bold">[SYS] Cluster Nexus v5.1 is stable.</span>
-              </div>
-              <div className="flex gap-6 text-emerald-500/80">
-                <span className="shrink-0 opacity-50">[{new Date().toISOString().split('T')[1].split('.')[0]}]</span>
-                <span>[AUTH] Master SuperAdmin authenticated successfully.</span>
-              </div>
-              {tenants.slice(0, 5).map((t: any) => (
-                <div key={t.id} className="flex gap-6 text-blue-400/80">
-                  <span className="shrink-0 opacity-50">[{new Date(t.createdAt).toLocaleTimeString()}]</span>
-                  <span>[NODO] Aprovisionamiento detectado: <span className="text-white font-bold">{t.subdomain}</span> (Status: {t.status})</span>
+              {clusterLogs.length > 0 ? clusterLogs.map((log: any) => (
+                <div key={log.id} className="flex gap-6 border-b border-white/[0.03] pb-3 text-xs">
+                  <span className="shrink-0 text-[#D4AF37] opacity-60">[{new Date(log.createdAt).toLocaleTimeString()}]</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-emerald-500 font-black uppercase">[{log.platform || 'CORE'}] {log.eventType}</span>
+                    <span className="text-slate-500 text-[10px]">{log.response?.slice(0, 100) || 'Evento de sistema procesado.'}</span>
+                  </div>
                 </div>
-              ))}
-              <div className="flex gap-6 text-emerald-300">
-                <span className="shrink-0 opacity-50">[{new Date().toLocaleTimeString()}]</span>
-                <span>[LOG] Real-time session monitoring active in room [global_master]</span>
-              </div>
+              )) : (
+                <p className="text-slate-700 uppercase font-black text-[10px] text-center py-20">No system events recorded in current cluster.</p>
+              )}
             </div>
           </div>
         )}

@@ -1129,6 +1129,53 @@ app.put('/api/saas/tenants/:id/features', authenticateToken, checkGodMode, async
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/saas/tenants/:id', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Basic protection: don't delete 'master' via API easily if logic requires it
+        const tenant = await prisma.tenant.findUnique({ where: { id } });
+        if (tenant?.subdomain === 'master') return res.status(403).json({ error: "No se puede destruir el nodo Nexus Core" });
+
+        await prisma.tenant.delete({ where: { id } });
+        res.json({ success: true, message: "Nodo destruido de la infraestructura" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- CLUSTER CLOUD LOGS (AUDIT) ---
+app.get('/api/saas/logs', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const logs = await prisma.integrationLog.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: 100
+        });
+        res.json(logs);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- DEEP SYSTEM HEALTH ---
+app.get('/api/saas/health/deep', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const start = Date.now();
+        await prisma.$queryRaw`SELECT 1`;
+        const dbLatency = Date.now() - start;
+
+        const tenantCount = await prisma.tenant.count();
+
+        res.json({
+            status: 'HEALTHY',
+            database: {
+                connected: true,
+                latency: `${dbLatency}ms`,
+                tenants: tenantCount
+            },
+            engine: {
+                version: 'Aurum Nexus v5.3',
+                uptime: process.uptime()
+            }
+        });
+    } catch (e) { res.status(500).json({ status: 'DEGRADED', error: e.message }); }
+});
+
 // --- OPENPAY INFRASTRUCTURE MONITOR ---
 app.get('/api/saas/openpay/plans', authenticateToken, checkGodMode, async (req, res) => {
     try {
