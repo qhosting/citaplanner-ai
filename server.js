@@ -840,12 +840,18 @@ app.get('/api/saas/plans', (req, res) => {
 
 app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
+        console.log(`[MASTER] Global Tenant List requested by: ${req.user.phone} (${req.user.id})`);
         const tenants = await prisma.tenant.findMany({
             orderBy: { createdAt: 'desc' }
         });
+        console.log(`[MASTER] Found ${tenants.length} tenants in database.`);
         res.json(tenants);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error(`[MASTER ERROR] Failed to fetch tenants:`, e);
+        res.status(500).json({ error: e.message });
+    }
 });
+
 
 app.post('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
@@ -1433,27 +1439,27 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
 
         if (user) {
             const validPassword = await bcrypt.compare(password, user.password);
-            console.log(`[AUTH DEBUG] Password Valid: ${validPassword ? 'YES' : 'NO'} `);
 
             if (!validPassword) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
 
-            console.log(`[AUTH] Success for: ${phone} `);
+            // Use the user's actual organizationId for the token/session to represent their identity accurately
+            const userTenantId = user.organizationId || req.tenantId;
+
+            console.log(`[AUTH] Success for: ${phone} | Assigned Tenant: ${userTenantId}`);
 
             const token = jwt.sign({
                 id: user.id,
                 role: user.role,
-                tenantId: req.tenantId,
+                tenantId: userTenantId,
                 branchId: user.branchId
-            }, JWT_SECRET, { expiresIn: '15m' }); // Short-lived access token
+            }, JWT_SECRET, { expiresIn: '1h' });
 
-            // Generate Refresh Token
             const refreshToken = jwt.sign({
                 id: user.id,
                 role: user.role,
-                tenantId: req.tenantId
+                tenantId: userTenantId
             }, JWT_SECRET, { expiresIn: '7d' });
 
-            // Store Refresh Token
             await prisma.user.update({
                 where: { id: user.id },
                 data: { refreshToken }
@@ -1466,11 +1472,13 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
                 phone: user.phone,
                 role: user.role,
                 branchId: user.branchId,
-                relatedId: user.relatedId
+                relatedId: user.relatedId,
+                tenantId: userTenantId // CRITICAL: Frontend needs this to know its current tenant context
             };
 
             res.json({ success: true, token, refreshToken, user: mappedUser });
         } else {
+
             console.warn(`[AUTH] Failed for: ${phone} `);
             res.status(401).json({ success: false, message: 'Credenciales inválidas' });
         }
