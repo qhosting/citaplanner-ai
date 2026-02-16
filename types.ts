@@ -38,7 +38,7 @@ export interface LandingSettings {
   businessName: string;
   primaryColor: string;
   secondaryColor?: string;
-  templateId?: 'beauty' | 'medical' | 'spa';
+  templateId?: 'beauty' | 'medical' | 'spa' | 'citaplanner' | 'aurum_minimal' | 'luxury_white' | 'shula_dark';
   slogan?: string;
   aboutText?: string;
   address?: string;

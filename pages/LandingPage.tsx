@@ -163,7 +163,7 @@ export const LandingPage: React.FC = () => {
             <div className="w-px h-4 bg-white/10 mx-2" />
             <Link to="/login" className="font-black text-[10px] uppercase tracking-[0.3em] transition-all text-white/60 hover:text-[#C5A028] px-4 py-2 rounded-xl hover:bg-white/5">Staff</Link>
             <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 bg-white text-black">
-              Agendar Ritual <ArrowRight size={14} />
+              Mi Cita <ArrowRight size={14} />
             </Link>
           </div>
 

@@ -218,6 +218,7 @@ model LandingSetting {
   address        String?
   contactPhone   String?   @map("contact_phone") @db.VarChar(20)
   heroImageUrl   String?   @map("hero_image_url")
+  logoUrl        String?   @map("logo_url")
   organizationId String?   @unique @default("demo") @map("organization_id") @db.VarChar(50)
   
   // SEO & Meta

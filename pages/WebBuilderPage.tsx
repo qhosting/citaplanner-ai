@@ -81,15 +81,15 @@ export const WebBuilderPage: React.FC = () => {
         }
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'heroImageUrl' | 'logoUrl') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        toast.info("Transfiriendo imagen editorial...");
+        toast.info("Transfiriendo activo digital...");
         const url = await api.uploadImage(file);
         if (url) {
-            setSettings({ ...settings, heroImageUrl: url });
-            toast.success("Imagen sincronizada.");
+            setSettings({ ...settings, [field]: url });
+            toast.success("Activo sincronizado.");
         } else {
             toast.error("Falla al subir imagen.");
         }
@@ -166,6 +166,30 @@ export const WebBuilderPage: React.FC = () => {
 
                             <section className="space-y-6">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                    <Sparkles size={16} /> Identidad Gráfica (Logo)
+                                </h3>
+                                <div
+                                    className="group relative w-32 h-32 rounded-full bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all mx-auto"
+                                    onClick={() => document.getElementById('logo-upload')?.click()}
+                                >
+                                    {settings.logoUrl ? (
+                                        <>
+                                            <img src={settings.logoUrl} className="w-full h-full object-contain p-4 group-hover:scale-110 transition-all duration-300" />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <RefreshCw className="text-white" size={16} />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center">
+                                            <Sparkles className="text-muted mx-auto" size={20} />
+                                        </div>
+                                    )}
+                                    <input type="file" id="logo-upload" className="hidden" accept="image/*" onChange={(e) => handleMediaUpload(e, 'logoUrl')} />
+                                </div>
+                            </section>
+
+                            <section className="space-y-6">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <ImageIcon size={16} /> Imagen Editorial
                                 </h3>
                                 <div
@@ -185,7 +209,7 @@ export const WebBuilderPage: React.FC = () => {
                                             <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Multimedia</p>
                                         </div>
                                     )}
-                                    <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                    <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={(e) => handleMediaUpload(e, 'heroImageUrl')} />
                                 </div>
                             </section>
 
@@ -228,7 +252,7 @@ export const WebBuilderPage: React.FC = () => {
                             <section className="space-y-6">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Layout de Red</h3>
                                 <div className="space-y-3">
-                                    {['citaplanner', 'aurum_minimal', 'luxury_white'].map(template => (
+                                    {['citaplanner', 'aurum_minimal', 'luxury_white', 'shula_dark'].map(template => (
                                         <button
                                             key={template}
                                             onClick={() => setSettings({ ...settings, templateId: template as any })}
@@ -365,10 +389,14 @@ export const WebBuilderPage: React.FC = () => {
                         }`}>
 
                         {/* Mock Website Content */}
-                        <div className="flex flex-col min-h-full bg-white">
-                            <nav className="p-8 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-zinc-100">
-                                <span className="font-black text-2xl tracking-tighter uppercase" style={{ color: settings.primaryColor }}>{settings.businessName || 'BRAND'}</span>
-                                <div className="hidden md:flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                        <div className={`flex flex-col min-h-full ${settings.templateId === 'shula_dark' ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900'}`}>
+                            <nav className={`p-8 flex justify-between items-center backdrop-blur-md sticky top-0 z-10 border-b ${settings.templateId === 'shula_dark' ? 'bg-zinc-950/80 border-white/10' : 'bg-white/80 border-zinc-100'}`}>
+                                {settings.logoUrl ? (
+                                    <img src={settings.logoUrl} className="h-10 object-contain" alt="Logo" />
+                                ) : (
+                                    <span className="font-black text-2xl tracking-tighter uppercase" style={{ color: settings.primaryColor }}>{settings.businessName || 'BRAND'}</span>
+                                )}
+                                <div className={`hidden md:flex gap-8 text-[10px] font-black uppercase tracking-widest ${settings.templateId === 'shula_dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
                                     <span>Home</span>
                                     <span>Servicios</span>
                                     <span>Nosotros</span>
@@ -397,8 +425,8 @@ export const WebBuilderPage: React.FC = () => {
                                 </div>
                             </section>
 
-                            <footer className="mt-auto p-16 bg-zinc-950 text-white">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-white/5 pb-16">
+                            <footer className={`mt-auto p-16 ${settings.templateId === 'shula_dark' ? 'bg-black border-t border-white/10' : 'bg-zinc-950 text-white'}`}>
+                                <div className={`grid grid-cols-1 md:grid-cols-3 gap-12 border-b pb-16 ${settings.templateId === 'shula_dark' ? 'border-white/10' : 'border-white/5'}`}>
                                     <div className="space-y-6">
                                         <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">{settings.businessName}</h4>
                                         <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || 'Experimenta el estándar de oro en gestión de servicios y belleza.'}</p>

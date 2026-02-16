@@ -21,9 +21,9 @@ async function main() {
         where: { organizationId: tenantId },
         update: {
             businessName: 'Shula Studio',
-            primaryColor: '#1A1A1A',
-            secondaryColor: '#D4AF37',
-            templateId: 'luxury_white',
+            primaryColor: '#CE4676', // Bugambilia
+            secondaryColor: '#D4AF37', // Gold
+            templateId: 'shula_dark',
             slogan: 'El Arte de Resaltar tu Belleza Natural',
             aboutText: 'Santuario de belleza líder en alta tecnología y diseño de autor. En Shula Studio Polanco, fusionamos el arte de la micropigmentación con rituales de cuidado premium para ofrecerte resultados excepcionales y naturales.',
             address: 'Lope de Vega 123, Polanco, Ciudad de México',
@@ -40,9 +40,9 @@ async function main() {
         create: {
             organizationId: tenantId,
             businessName: 'Shula Studio',
-            primaryColor: '#1A1A1A',
-            secondaryColor: '#D4AF37',
-            templateId: 'luxury_white',
+            primaryColor: '#CE4676', // Bugambilia
+            secondaryColor: '#D4AF37', // Gold
+            templateId: 'shula_dark',
             slogan: 'El Arte de Resaltar tu Belleza Natural',
             aboutText: 'Santuario de belleza líder en alta tecnología y diseño de autor. En Shula Studio Polanco, fusionamos el arte de la micropigmentación con rituales de cuidado premium para ofrecerte resultados excepcionales y naturales.',
             address: 'Lope de Vega 123, Polanco, Ciudad de México',
