@@ -451,5 +451,45 @@ export const api = {
       if (!res.ok) throw new Error("Falla al obtener link");
       return await res.json();
     } catch { return { url: '', icalToken: '' }; }
+  },
+
+  // Branches CRUD
+  getBranches: async (): Promise<Branch[]> => {
+    try {
+      const res = await fetch(`${API_URL}/branches`, { headers: getHeaders() });
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createBranch: async (b: Omit<Branch, 'id'>): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/branches`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(b)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  updateBranch: async (b: Branch): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/branches/${b.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(b)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  deleteBranch: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/branches/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      return res.ok;
+    } catch { return false; }
   }
 };

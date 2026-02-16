@@ -367,6 +367,18 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='organization_id') THEN
                         ALTER TABLE branches ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='address') THEN
+                        ALTER TABLE branches ADD COLUMN address VARCHAR(500);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='phone') THEN
+                        ALTER TABLE branches ADD COLUMN phone VARCHAR(50);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='manager') THEN
+                        ALTER TABLE branches ADD COLUMN manager VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='status') THEN
+                        ALTER TABLE branches ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
+                    END IF;
                 END IF;
 
                 -- Users
@@ -663,6 +675,10 @@ const initDB = async () => {
             CREATE TABLE IF NOT EXISTS branches (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) NOT NULL,
+                address VARCHAR(500),
+                phone VARCHAR(50),
+                manager VARCHAR(255),
+                status VARCHAR(20) DEFAULT 'ACTIVE',
                 tenant_id UUID REFERENCES tenants(id),
                 organization_id VARCHAR(50) DEFAULT 'demo',
                 created_at TIMESTAMP DEFAULT NOW()
@@ -1015,13 +1031,49 @@ app.get('/api/integrations/aurum/status', async (req, res) => {
     });
 });
 
-app.get('/api/branches', async (req, res) => {
+app.get('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const branches = await prisma.branch.findMany({
-            where: { organizationId: req.tenantId },
+            where: { organizationId: req.organizationId || 'demo' },
             orderBy: { createdAt: 'asc' }
         });
         res.json(branches);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, address, phone, manager } = req.body;
+        const branch = await prisma.branch.create({
+            data: {
+                name,
+                address: address || '',
+                phone: phone || '',
+                manager: manager || '',
+                status: 'ACTIVE',
+                tenantId: req.tenantId,
+                organizationId: req.organizationId || 'demo'
+            }
+        });
+        res.json(branch);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, address, phone, manager, status } = req.body;
+        const branch = await prisma.branch.update({
+            where: { id: req.params.id },
+            data: { name, address, phone, manager, status }
+        });
+        res.json(branch);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        await prisma.branch.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
