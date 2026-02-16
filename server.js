@@ -548,8 +548,8 @@ const initDB = async () => {
 
                 -- Multi-Tenant Phone Fix: drop legacy global unique on phone, keep composite
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
-                    IF EXISTS (SELECT FROM pg_indexes WHERE tablename = 'users' AND indexname = 'users_phone_key') THEN
-                        DROP INDEX users_phone_key;
+                    IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'users' AND constraint_name = 'users_phone_key') THEN
+                        ALTER TABLE users DROP CONSTRAINT users_phone_key;
                     END IF;
                     -- Ensure composite unique exists
                     IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'users' AND indexname = 'users_phone_organization_id_key') THEN
