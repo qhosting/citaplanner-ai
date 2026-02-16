@@ -101,43 +101,43 @@ export const SchedulesPage: React.FC = () => {
       setSelectedDate(d);
    };
 
-   if (loading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={48} /></div>;
+   if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
 
    return (
       <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
             <div>
-               <h1 className="text-4xl font-black text-white uppercase tracking-tighter">Schedule <span className="gold-text-gradient font-light">Architecture</span></h1>
-               <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.4em] mt-2">Matriz de Operaciones y Personal</p>
+               <h1 className="text-4xl font-black text-main uppercase tracking-tighter">Schedule <span className="bugambilia-text-gradient font-light">Architecture</span></h1>
+               <p className="text-[10px] text-muted font-bold uppercase tracking-[0.4em] mt-2">Matriz de Operaciones y Personal</p>
             </div>
             <div className="flex gap-4">
-               <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-                  <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#D4AF37] text-black' : 'text-zinc-500'}`}>Matriz Hoy</button>
-                  <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#D4AF37] text-black' : 'text-zinc-500'}`}>Horarios Base</button>
+               <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
+                  <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Matriz Hoy</button>
+                  <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Horarios Base</button>
                </div>
-               <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="gold-btn text-black px-10 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black">Integrar Especialista</button>
+               <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-10 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl">Integrar Especialista</button>
             </div>
          </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-3 space-y-4">
-               <div className="glass-card rounded-[2.5rem] border-white/5 overflow-hidden">
-                  <div className="p-6 bg-white/5 border-b border-white/5">
-                     <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Nodos Profesionales</h3>
+               <div className="glass-card rounded-[2.5rem] border-theme overflow-hidden">
+                  <div className="p-6 bg-input-theme border-b border-theme">
+                     <h3 className="text-[10px] font-black text-muted uppercase tracking-widest">Nodos Profesionales</h3>
                   </div>
                   {professionals.map(pro => (
-                     <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#D4AF37]/5 border-[#D4AF37]' : 'border-transparent hover:bg-white/5'}`} onClick={() => setSelectedProId(pro.id)}>
+                     <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#CE4676]/5 border-[#CE4676]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
                         <div className="flex justify-between items-start">
                            <div>
-                              <p className={`font-black text-sm uppercase ${selectedProId === pro.id ? 'text-white' : 'text-zinc-500'}`}>{pro.name}</p>
-                              <p className="text-[9px] text-zinc-600 font-bold uppercase mt-1">{pro.role}</p>
+                              <p className={`font-black text-sm uppercase ${selectedProId === pro.id ? 'text-main' : 'text-muted'}`}>{pro.name}</p>
+                              <p className="text-[9px] text-muted font-bold uppercase mt-1">{pro.role}</p>
                            </div>
-                           <button onClick={(e) => { e.stopPropagation(); handleDeletePro(pro.id); }} className="p-2 text-zinc-800 hover:text-red-500 transition-colors">
+                           <button onClick={(e) => { e.stopPropagation(); handleDeletePro(pro.id); }} className="p-2 text-muted hover:text-red-500 transition-colors">
                               <Trash2 size={14} />
                            </button>
                         </div>
                         {selectedProId === pro.id && (
-                           <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#D4AF37] uppercase hover:underline flex items-center gap-2">
+                           <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#CE4676] uppercase hover:underline flex items-center gap-2">
                               <Settings size={12} /> Configurar Perfil
                            </button>
                         )}
@@ -148,15 +148,15 @@ export const SchedulesPage: React.FC = () => {
 
             <div className="lg:col-span-9">
                {activeTab === 'MATRIX' ? (
-                  <div className="glass-card rounded-[3.5rem] border-white/5 overflow-hidden animate-entrance">
-                     <div className="p-8 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                  <div className="glass-card rounded-[3.5rem] border-theme overflow-hidden animate-entrance">
+                     <div className="p-8 border-b border-theme bg-input-theme flex justify-between items-center">
                         <div className="flex items-center gap-6">
-                           <button onClick={() => changeDate(-1)} className="p-3 bg-black/40 rounded-xl text-zinc-500 hover:text-white border border-white/5"><ChevronLeft size={20} /></button>
+                           <button onClick={() => changeDate(-1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronLeft size={20} /></button>
                            <div className="text-center min-w-[200px]">
-                              <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
-                              <p className="text-xl font-black text-white uppercase tracking-tighter">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                              <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
+                              <p className="text-xl font-black text-main uppercase tracking-tighter">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                            </div>
-                           <button onClick={() => changeDate(1)} className="p-3 bg-black/40 rounded-xl text-zinc-500 hover:text-white border border-white/5"><ChevronRight size={20} /></button>
+                           <button onClick={() => changeDate(1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronRight size={20} /></button>
                         </div>
                         <div className="flex items-center gap-3 px-6 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                            <Activity size={14} className="text-emerald-500" />
@@ -166,12 +166,12 @@ export const SchedulesPage: React.FC = () => {
 
                      <div className="overflow-x-auto">
                         <div className="min-w-[800px]">
-                           <div className="grid grid-cols-[100px_1fr] border-b border-white/5">
-                              <div className="p-6 border-r border-white/5" />
-                              <div className="p-6 font-black text-[10px] text-zinc-600 uppercase tracking-[0.4em]">Matrix Operativa • {selectedPro?.name}</div>
+                           <div className="grid grid-cols-[100px_1fr] border-b border-theme">
+                              <div className="p-6 border-r border-theme" />
+                              <div className="p-6 font-black text-[10px] text-muted uppercase tracking-[0.4em]">Matrix Operativa • {selectedPro?.name}</div>
                            </div>
 
-                           <div className="divide-y divide-white/5">
+                           <div className="divide-y border-theme">
                               {HOURS.map(hour => {
                                  const timeStr = `${hour.toString().padStart(2, '0')}:00`;
                                  const apt = appointments.find(a =>
@@ -182,19 +182,19 @@ export const SchedulesPage: React.FC = () => {
 
                                  return (
                                     <div key={hour} className="grid grid-cols-[100px_1fr] group">
-                                       <div className="p-6 border-r border-white/5 flex items-center justify-center">
-                                          <span className="text-xs font-black text-zinc-500 group-hover:text-[#D4AF37] transition-colors">{timeStr}</span>
+                                       <div className="p-6 border-r border-theme flex items-center justify-center">
+                                          <span className="text-xs font-black text-muted group-hover:text-[#CE4676] transition-colors">{timeStr}</span>
                                        </div>
-                                       <div className="p-2 relative min-h-[80px] bg-black/20 group-hover:bg-white/[0.02] transition-all">
+                                       <div className="p-2 relative min-h-[80px] bg-input-theme group-hover:bg-[#CE4676]/5 transition-all">
                                           {apt ? (
-                                             <div className="absolute inset-2 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20">
-                                                <p className="text-[9px] font-black text-black/60 uppercase tracking-widest leading-none mb-1">Cita Confirmada</p>
-                                                <h4 className="text-sm font-black text-black uppercase truncate">{apt.title}</h4>
-                                                <p className="text-[10px] font-bold text-black/80 truncate">Cli: {apt.clientName}</p>
+                                             <div className="absolute inset-2 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20">
+                                                <p className="text-[9px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Cita Confirmada</p>
+                                                <h4 className="text-sm font-black text-white uppercase truncate">{apt.title}</h4>
+                                                <p className="text-[10px] font-bold text-white/80 truncate">Cli: {apt.clientName}</p>
                                              </div>
                                           ) : (
-                                             <div className="h-full w-full rounded-2xl border border-dashed border-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus size={20} className="text-zinc-800" />
+                                             <div className="h-full w-full rounded-2xl border border-dashed border-theme flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Plus size={20} className="text-muted" />
                                              </div>
                                           )}
                                        </div>
@@ -206,11 +206,11 @@ export const SchedulesPage: React.FC = () => {
                      </div>
                   </div>
                ) : (
-                  <div className="glass-card rounded-[3.5rem] border-white/5 p-10 animate-entrance">
+                  <div className="glass-card rounded-[3.5rem] border-theme p-10 animate-entrance">
                      <div className="flex justify-between items-center mb-10">
                         <div>
-                           <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Horarios Base</h3>
-                           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Configuración de Jornada Semanal para {selectedPro?.name}</p>
+                           <h3 className="text-2xl font-black text-main uppercase tracking-tighter">Horarios Base</h3>
+                           <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Configuración de Jornada Semanal para {selectedPro?.name}</p>
                         </div>
                         <button
                            onClick={async () => {
@@ -220,7 +220,7 @@ export const SchedulesPage: React.FC = () => {
                               setSaving(false);
                            }}
                            disabled={saving}
-                           className="gold-btn px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3"
+                           className="bugambilia-btn text-white px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl"
                         >
                            {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                            Sincronizar Cambios
@@ -232,22 +232,22 @@ export const SchedulesPage: React.FC = () => {
                            const schedule = (selectedPro?.weeklySchedule as any)?.find((s: any) => s.dayOfWeek === day.id) || { dayOfWeek: day.id, isEnabled: false, slots: [] };
 
                            return (
-                              <div key={day.id} className={`p-6 rounded-[2rem] border transition-all ${schedule.isEnabled ? 'bg-white/5 border-white/10' : 'bg-black/20 border-white/5 opacity-60'}`}>
+                              <div key={day.id} className={`p-6 rounded-[2rem] border transition-all ${schedule.isEnabled ? 'bg-input-theme border-theme shadow-sm' : 'bg-transparent border-theme/20 opacity-40'}`}>
                                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                                     <div className="flex items-center gap-6">
-                                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all ${schedule.isEnabled ? 'bg-[#D4AF37] text-black shadow-[0_0_20px_#D4AF37]/30' : 'bg-zinc-900 text-zinc-700'}`}>
+                                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all ${schedule.isEnabled ? 'bg-[#CE4676] text-white shadow-[0_0_20px_#CE4676]/30' : 'bg-card text-muted'}`}>
                                           {day.name.substring(0, 1)}
                                        </div>
                                        <div>
-                                          <p className="text-sm font-black text-white uppercase">{day.name}</p>
-                                          <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">{schedule.isEnabled ? 'Jornada Activa' : 'Día No Laboral'}</p>
+                                          <p className="text-sm font-black text-main uppercase">{day.name}</p>
+                                          <p className="text-[9px] text-muted font-bold uppercase tracking-widest mt-1">{schedule.isEnabled ? 'Jornada Activa' : 'Día No Laboral'}</p>
                                        </div>
                                     </div>
 
                                     <div className="flex items-center gap-6 w-full md:w-auto">
                                        {schedule.isEnabled && (
-                                          <div className="flex gap-4 items-center bg-black/40 p-2 rounded-2xl border border-white/5">
-                                             <Clock size={14} className="text-[#D4AF37] ml-2" />
+                                          <div className="flex gap-4 items-center bg-card p-2 rounded-2xl border border-theme">
+                                             <Clock size={14} className="text-[#CE4676] ml-2" />
                                              <input
                                                 type="time"
                                                 value={schedule.slots[0]?.start || '09:00'}

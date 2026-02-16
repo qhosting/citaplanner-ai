@@ -95,21 +95,21 @@ export const WebBuilderPage: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={48} /></div>;
+    if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
 
     return (
-        <div className="h-[calc(100vh-80px)] flex bg-black overflow-hidden font-inter">
+        <div className="h-[calc(100vh-80px)] flex bg-main overflow-hidden font-inter">
             {/* Sidebar Control Panel */}
-            <div className="w-[480px] border-r border-white/5 flex flex-col bg-zinc-950">
-                <div className="p-10 border-b border-white/5 flex justify-between items-center bg-black/40">
+            <div className="w-[480px] border-r border-theme flex flex-col bg-card-theme">
+                <div className="p-10 border-b border-theme flex justify-between items-center bg-input-theme">
                     <div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-none mb-1">Web <span className="gold-text-gradient">Architect</span></h1>
-                        <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.4em]">Aurum Builder v1.2 • Pro Edition</p>
+                        <h1 className="text-2xl font-black text-main tracking-tighter uppercase leading-none mb-1">Web <span className="bugambilia-text-gradient">Architect</span></h1>
+                        <p className="text-[9px] text-muted font-bold uppercase tracking-[0.4em]">Aurum Builder v1.2 • Pro Edition</p>
                     </div>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="gold-btn px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                        className="bugambilia-btn px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl"
                     >
                         {saving ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
                         Publicar
@@ -117,7 +117,7 @@ export const WebBuilderPage: React.FC = () => {
                 </div>
 
                 {/* Tab Selection */}
-                <div className="grid grid-cols-4 p-4 gap-2 bg-black/20">
+                <div className="grid grid-cols-4 p-4 gap-2 bg-input-theme">
                     {[
                         { id: 'CONTENT', label: 'Estructura', icon: Layers },
                         { id: 'DESIGN', label: 'Estética', icon: Palette },
@@ -127,7 +127,7 @@ export const WebBuilderPage: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActivePanel(tab.id as any)}
-                            className={`py-3 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all ${activePanel === tab.id ? 'bg-white/5 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_15px_rgba(212,175,55,0.05)]' : 'text-zinc-600 hover:text-zinc-400'}`}
+                            className={`py-3 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all ${activePanel === tab.id ? 'bg-card text-[#CE4676] border border-[#CE4676]/20 shadow-lg' : 'text-muted hover:text-main'}`}
                         >
                             <tab.icon size={14} />
                             <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
@@ -139,37 +139,37 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'CONTENT' && (
                         <div className="space-y-10 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Layout size={16} /> Identidad Hero
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-2">Título de Bienvenida</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Título de Bienvenida</label>
                                         <input
                                             type="text"
                                             value={settings.businessName}
                                             onChange={e => setSettings({ ...settings, businessName: e.target.value })}
-                                            className="w-full p-5 bg-black text-white font-black text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-2xl"
+                                            className="w-full p-5 bg-input-theme text-main font-black text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-2">Slogan Maestro</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Slogan Maestro</label>
                                         <input
                                             type="text"
                                             value={settings.slogan || ''}
                                             onChange={e => setSettings({ ...settings, slogan: e.target.value })}
-                                            className="w-full p-5 bg-black text-white font-bold text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-2xl"
+                                            className="w-full p-5 bg-input-theme text-main font-bold text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
                                         />
                                     </div>
                                 </div>
                             </section>
 
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <ImageIcon size={16} /> Imagen Editorial
                                 </h3>
                                 <div
-                                    className="group relative w-full h-48 rounded-[2.5rem] bg-black border border-dashed border-white/10 overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/40 transition-all"
+                                    className="group relative w-full h-48 rounded-[2.5rem] bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all"
                                     onClick={() => document.getElementById('hero-upload')?.click()}
                                 >
                                     {settings.heroImageUrl ? (
@@ -181,8 +181,8 @@ export const WebBuilderPage: React.FC = () => {
                                         </>
                                     ) : (
                                         <div className="text-center">
-                                            <ImageIcon className="text-zinc-800 mx-auto mb-3" size={32} />
-                                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Cargar Multimedia</p>
+                                            <ImageIcon className="text-muted mx-auto mb-3" size={32} />
+                                            <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Multimedia</p>
                                         </div>
                                     )}
                                     <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -190,14 +190,14 @@ export const WebBuilderPage: React.FC = () => {
                             </section>
 
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Type size={16} /> Narrativa 'About'
                                 </h3>
                                 <textarea
                                     rows={5}
                                     value={settings.aboutText || ''}
                                     onChange={e => setSettings({ ...settings, aboutText: e.target.value })}
-                                    className="w-full p-6 bg-black text-zinc-400 text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-[2rem] resize-none"
+                                    className="w-full p-6 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-[2rem] resize-none"
                                 />
                             </section>
                         </div>
@@ -206,33 +206,33 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'DESIGN' && (
                         <div className="space-y-12 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Branding Visual</h3>
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Branding Visual</h3>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
-                                        <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block ml-1">Color Maestro</label>
+                                        <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Maestro</label>
                                         <div className="flex gap-3">
                                             <input type="color" value={settings.primaryColor} onChange={e => setSettings({ ...settings, primaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-black rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.primaryColor}</div>
+                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-4 font-mono text-[10px] text-muted uppercase">{settings.primaryColor}</div>
                                         </div>
                                     </div>
                                     <div className="space-y-3">
-                                        <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block ml-1">Color Acento</label>
+                                        <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Acento</label>
                                         <div className="flex gap-3">
                                             <input type="color" value={settings.secondaryColor} onChange={e => setSettings({ ...settings, secondaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-black rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.secondaryColor}</div>
+                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-4 font-mono text-[10px] text-muted uppercase">{settings.secondaryColor}</div>
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Layout de Red</h3>
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Layout de Red</h3>
                                 <div className="space-y-3">
                                     {['citaplanner', 'aurum_minimal', 'luxury_white'].map(template => (
                                         <button
                                             key={template}
                                             onClick={() => setSettings({ ...settings, templateId: template as any })}
-                                            className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-xl' : 'bg-black border-white/5 text-zinc-500 hover:text-white'}`}
+                                            className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template ? 'bg-[#CE4676] border-[#CE4676] text-white shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main'}`}
                                         >
                                             <span className="text-[10px] font-black uppercase tracking-widest">{template.replace('_', ' ')}</span>
                                             {settings.templateId === template && <CheckCircle2 size={16} />}
@@ -246,51 +246,51 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'PAGES' && (
                         <div className="space-y-10 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Punto de Acceso (URL)</h3>
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Punto de Acceso (URL)</h3>
                                 <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-[2rem]">
                                     <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
                                         <Check size={12} /> Certificado SSL/TLS Operativo
                                     </p>
-                                    <p className="text-xs font-bold text-white font-mono break-all">{settings.subdomain || 'demo'}.citaplanner.com</p>
+                                    <p className="text-xs font-bold text-main font-mono break-all">{settings.subdomain || 'demo'}.citaplanner.com</p>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-white/5">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                            <section className="space-y-6 pt-10 border-t border-theme">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Phone size={16} /> Contact Hub
                                 </h3>
                                 <div className="space-y-5">
                                     <div>
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1 mb-2 block">WhatsApp Flotante</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-2 block">WhatsApp Flotante</label>
                                         <div className="relative">
-                                            <MessageSquare className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />
-                                            <input type="tel" placeholder="+52..." value={settings.whatsappPhone || ''} onChange={e => setSettings({ ...settings, whatsappPhone: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs focus:ring-1 ring-emerald-500/30" />
+                                            <MessageSquare className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                                            <input type="tel" placeholder="+52..." value={settings.whatsappPhone || ''} onChange={e => setSettings({ ...settings, whatsappPhone: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-emerald-500/30" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1 mb-2 block">Dirección Matriz</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-2 block">Dirección Matriz</label>
                                         <div className="relative">
-                                            <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />
-                                            <input type="text" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs" />
+                                            <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={16} />
+                                            <input type="text" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs" />
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-white/5">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                            <section className="space-y-6 pt-10 border-t border-theme">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Share2 size={16} /> Footer & Redes
                                 </h3>
                                 <div className="space-y-4">
-                                    <textarea placeholder="Texto legal o créditos del footer..." rows={3} value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-medium resize-none" />
+                                    <textarea placeholder="Texto legal o créditos del footer..." rows={3} value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="relative">
-                                            <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" size={14} />
-                                            <input placeholder="Instagram" type="text" value={settings.socialInstagram || ''} onChange={e => setSettings({ ...settings, socialInstagram: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-black border border-white/5 rounded-xl text-white text-[10px]" />
+                                            <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input placeholder="Instagram" type="text" value={settings.socialInstagram || ''} onChange={e => setSettings({ ...settings, socialInstagram: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
                                         </div>
                                         <div className="relative">
-                                            <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" size={14} />
-                                            <input placeholder="Facebook" type="text" value={settings.socialFacebook || ''} onChange={e => setSettings({ ...settings, socialFacebook: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-black border border-white/5 rounded-xl text-white text-[10px]" />
+                                            <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input placeholder="Facebook" type="text" value={settings.socialFacebook || ''} onChange={e => setSettings({ ...settings, socialFacebook: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
                                         </div>
                                     </div>
                                 </div>
@@ -301,40 +301,40 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'SEO' && (
                         <div className="space-y-10 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Search size={16} /> Meta-Inteligencia (SEO)
                                 </h3>
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Meta-Título (Navegador)</label>
-                                        <input type="text" placeholder="Ej: Beauty Studio • El Mejor Servicio en México" value={settings.seoTitle || ''} onChange={e => setSettings({ ...settings, seoTitle: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-black text-xs" />
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta-Título (Navegador)</label>
+                                        <input type="text" placeholder="Ej: Beauty Studio • El Mejor Servicio en México" value={settings.seoTitle || ''} onChange={e => setSettings({ ...settings, seoTitle: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main font-black text-xs" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Meta-Descripción (Google)</label>
-                                        <textarea rows={4} placeholder="Descripción que aparece en resultados de búsqueda..." value={settings.seoDescription || ''} onChange={e => setSettings({ ...settings, seoDescription: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-medium resize-none" />
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta-Descripción (Google)</label>
+                                        <textarea rows={4} placeholder="Descripción que aparece en resultados de búsqueda..." value={settings.seoDescription || ''} onChange={e => setSettings({ ...settings, seoDescription: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Keywords (SEO Keywords)</label>
-                                        <input type="text" placeholder="belleza, studio, citas, polanco, lujo..." value={settings.seoKeywords || ''} onChange={e => setSettings({ ...settings, seoKeywords: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs" />
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Keywords (SEO Keywords)</label>
+                                        <input type="text" placeholder="belleza, studio, citas, polanco, lujo..." value={settings.seoKeywords || ''} onChange={e => setSettings({ ...settings, seoKeywords: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs" />
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-white/5">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                            <section className="space-y-6 pt-10 border-t border-theme">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Compass size={16} /> Geolocalización (Mapas)
                                 </h3>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Latitud</label>
-                                        <input type="number" step="any" placeholder="19.4326" value={settings.latitude || ''} onChange={e => setSettings({ ...settings, latitude: parseFloat(e.target.value) })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-mono" />
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Latitud</label>
+                                        <input type="number" step="any" placeholder="19.4326" value={settings.latitude || ''} onChange={e => setSettings({ ...settings, latitude: parseFloat(e.target.value) })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Longitud</label>
-                                        <input type="number" step="any" placeholder="-99.1332" value={settings.longitude || ''} onChange={e => setSettings({ ...settings, longitude: parseFloat(e.target.value) })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-mono" />
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Longitud</label>
+                                        <input type="number" step="any" placeholder="-99.1332" value={settings.longitude || ''} onChange={e => setSettings({ ...settings, longitude: parseFloat(e.target.value) })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
                                     </div>
                                 </div>
-                                <p className="text-[8px] text-zinc-700 font-bold uppercase tracking-widest">Utilizado para posicionamiento en Google Maps y SEO local.</p>
+                                <p className="text-[8px] text-muted font-bold uppercase tracking-widest">Utilizado para posicionamiento en Google Maps y SEO local.</p>
                             </section>
                         </div>
                     )}
@@ -342,17 +342,17 @@ export const WebBuilderPage: React.FC = () => {
             </div>
 
             {/* Preview Area */}
-            <div className="flex-1 flex flex-col bg-zinc-900 overflow-hidden">
+            <div className="flex-1 flex flex-col bg-main overflow-hidden">
                 {/* Preview Header */}
-                <div className="h-20 bg-black border-b border-white/5 flex items-center justify-between px-10">
-                    <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-white/5">
-                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'DESKTOP' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Monitor size={16} /></button>
-                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'TABLET' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Tablet size={16} /></button>
-                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'MOBILE' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Smartphone size={16} /></button>
+                <div className="h-20 bg-card-theme border-b border-theme flex items-center justify-between px-10">
+                    <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme">
+                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'DESKTOP' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Monitor size={16} /></button>
+                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'TABLET' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Tablet size={16} /></button>
+                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'MOBILE' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Smartphone size={16} /></button>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Vista Previa Proyectada</span>
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa Proyectada</span>
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
                 </div>
@@ -360,8 +360,8 @@ export const WebBuilderPage: React.FC = () => {
                 {/* Device Frame */}
                 <div className="flex-1 overflow-hidden p-12 flex justify-center bg-[radial-gradient(circle_at_center,_#111_0%,_#000_100%)]">
                     <div className={`shadow-2xl transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full' :
-                            previewMode === 'TABLET' ? 'w-[768px] rounded-[3rem] border-[12px] border-zinc-950' :
-                                'w-[375px] rounded-[4rem] border-[16px] border-zinc-950'
+                        previewMode === 'TABLET' ? 'w-[768px] rounded-[3rem] border-[12px] border-zinc-950' :
+                            'w-[375px] rounded-[4rem] border-[16px] border-zinc-950'
                         }`}>
 
                         {/* Mock Website Content */}

@@ -21,11 +21,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('citaPlannerTheme', theme);
 
-        // Toggle class on body for tailwind or other use cases
         if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
+            document.documentElement.classList.add('dark', 'dark-theme');
+            document.documentElement.classList.remove('light-theme');
         } else {
-            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light-theme');
+            document.documentElement.classList.remove('dark', 'dark-theme');
         }
     }, [theme]);
 

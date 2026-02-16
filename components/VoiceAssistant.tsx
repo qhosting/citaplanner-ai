@@ -14,7 +14,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [status, setStatus] = useState<'IDLE' | 'LISTENING' | 'THINKING' | 'SPEAKING'>('IDLE');
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<any>(null);
@@ -72,7 +72,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
             setIsConnecting(false);
             setIsActive(true);
             setStatus('LISTENING');
-            
+
             const source = inputCtx.createMediaStreamSource(stream);
             const processor = inputCtx.createScriptProcessor(4096, 1, 1);
             processor.onaudioprocess = (e) => {
@@ -113,7 +113,7 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
                   // Simular creación o llamar a API real
                   toast.success(`Agendando: ${title} para ${clientName}`);
                   onAppointmentCreated();
-                  
+
                   sessionPromise.then(s => s.sendToolResponse({
                     functionResponses: { id: fc.id, name: fc.name, response: { result: 'ok' } }
                   }));
@@ -174,54 +174,52 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col items-center p-10 relative">
-        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600"><X size={24} /></button>
-        
-        <div className="mb-8 text-center">
-            <div className="inline-flex p-3 rounded-2xl bg-indigo-50 text-indigo-600 mb-4">
-                <Sparkles size={32} />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800">CitaPlanner Voice</h2>
-            <p className="text-slate-500 mt-2">Habla conmigo para agendar una cita rápidamente</p>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+      <div className="bg-card-theme rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col items-center p-12 relative border border-theme">
+        <button onClick={onClose} className="absolute top-8 right-8 text-muted hover:text-main transition-colors"><X size={24} /></button>
+
+        <div className="mb-10 text-center">
+          <div className="inline-flex p-4 rounded-[1.5rem] bg-[#CE4676]/10 text-[#CE4676] mb-6">
+            <Sparkles size={32} />
+          </div>
+          <h2 className="text-3xl font-black text-main uppercase tracking-tighter">CitaPlanner <span className="bugambilia-text-gradient">Voice</span></h2>
+          <p className="text-muted text-[10px] font-bold uppercase tracking-widest mt-2 px-10">Inteligencia Artificial Pro activa para tu negocio</p>
         </div>
 
-        <div className="relative flex items-center justify-center w-48 h-48 mb-10">
-            {/* Visual Waves */}
-            {isActive && status === 'LISTENING' && (
-                <div className="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20" />
-            )}
-            {isActive && status === 'SPEAKING' && (
-                <div className="absolute inset-0 bg-purple-100 rounded-full animate-pulse opacity-40" />
-            )}
+        <div className="relative flex items-center justify-center w-52 h-52 mb-12">
+          {/* Visual Waves */}
+          {isActive && status === 'LISTENING' && (
+            <div className="absolute inset-0 bg-[#CE4676]/20 rounded-full animate-ping opacity-30" />
+          )}
+          {isActive && status === 'SPEAKING' && (
+            <div className="absolute inset-0 bg-[#CE4676]/20 rounded-full animate-pulse opacity-40 shadow-[0_0_50px_#CE4676]/20" />
+          )}
 
-            <button 
-                onClick={isActive ? stopAssistant : startAssistant}
-                disabled={isConnecting}
-                className={`z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-xl active:scale-95 ${
-                    isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                }`}
-            >
-                {isConnecting ? <Loader2 size={40} className="animate-spin" /> : 
-                 isActive ? <Mic size={48} /> : <MicOff size={48} />}
-            </button>
+          <button
+            onClick={isActive ? stopAssistant : startAssistant}
+            disabled={isConnecting}
+            className={`z-10 w-36 h-36 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-95 border-4 ${isActive ? 'bg-[#CE4676] text-white border-white/20' : 'bg-input-theme text-muted hover:text-main border-theme'
+              }`}
+          >
+            {isConnecting ? <Loader2 size={40} className="animate-spin" /> :
+              isActive ? <Mic size={56} /> : <MicOff size={56} />}
+          </button>
         </div>
 
-        <div className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-center gap-3">
-             <div className={`w-3 h-3 rounded-full ${
-                 status === 'LISTENING' ? 'bg-green-500 animate-pulse' :
-                 status === 'SPEAKING' ? 'bg-purple-500' :
-                 status === 'THINKING' ? 'bg-yellow-500 animate-bounce' : 'bg-slate-300'
-             }`} />
-             <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">
-                 {status === 'IDLE' ? 'Pulsa para empezar' :
-                  status === 'LISTENING' ? 'Escuchando...' :
-                  status === 'THINKING' ? 'Procesando...' : 'Hablando...'}
-             </span>
+        <div className="w-full bg-input-theme rounded-2xl p-5 border border-theme flex items-center justify-center gap-4">
+          <div className={`w-3 h-3 rounded-full ${status === 'LISTENING' ? 'bg-[#CE4676] animate-pulse shadow-[0_0_10px_#CE4676]' :
+              status === 'SPEAKING' ? 'bg-[#CE4676]' :
+                status === 'THINKING' ? 'bg-amber-500 animate-bounce' : 'bg-muted'
+            }`} />
+          <span className="text-[10px] font-black text-main uppercase tracking-[0.3em]">
+            {status === 'IDLE' ? 'Sincronización de voz lista' :
+              status === 'LISTENING' ? 'Escuchando red' :
+                status === 'THINKING' ? 'Interpretando...' : 'Transmitiendo...'}
+          </span>
         </div>
 
-        <p className="mt-8 text-xs text-slate-400 max-w-xs text-center italic">
-            "Agenda una limpieza dental con Juan el martes a las 10 de la mañana"
+        <p className="mt-8 text-[9px] text-muted max-w-xs text-center font-bold uppercase tracking-widest leading-relaxed opacity-60 italic">
+          "Agenda una limpieza dental con Juan el martes a las 10 de la mañana"
         </p>
       </div>
     </div>

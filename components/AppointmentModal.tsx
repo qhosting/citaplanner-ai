@@ -26,16 +26,16 @@ interface AppointmentModalProps {
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose, onSave }) => {
   const { user } = useAuth();
-  const { 
-    register, 
-    handleSubmit, 
+  const {
+    register,
+    handleSubmit,
     reset,
-    formState: { errors, isSubmitting } 
+    formState: { errors, isSubmitting }
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
-        duration: 60,
-        date: new Date().toISOString().split('T')[0]
+      duration: 60,
+      date: new Date().toISOString().split('T')[0]
     }
   });
 
@@ -64,86 +64,86 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
-        <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-2">
-              <Calendar className="text-indigo-600" size={20} />
-              <h3 className="font-bold text-lg text-slate-800">Nueva Cita</h3>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-card-theme rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-in border border-theme">
+        <div className="flex justify-between items-center p-6 border-b border-theme bg-input-theme">
+          <div className="flex items-center gap-3">
+            <Calendar className="text-[#CE4676]" size={20} />
+            <h3 className="font-black text-xs uppercase tracking-[0.2em] text-main">Sincronizar nueva Cita</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition-colors">
+          <button onClick={onClose} className="text-muted hover:text-main p-2 hover:bg-card-theme rounded-xl transition-all">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-               <Info size={14} className="text-slate-400" /> Título de la Cita
+        <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+              <Info size={14} className="text-[#CE4676]" /> Título de la Cita
             </label>
             <input
               {...register('title')}
-              className={`w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${errors.title ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
+              className={`w-full p-4 bg-input-theme border rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none transition-all text-main font-bold text-xs ${errors.title ? 'border-red-500 bg-red-500/5' : 'border-theme'}`}
               placeholder="Ej: Consulta de Ortodoncia"
             />
-            {errors.title && <p className="text-[11px] text-red-500 font-medium pl-1">{errors.title.message}</p>}
+            {errors.title && <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight pl-1">{errors.title.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                   <User size={14} className="text-slate-400" /> Cliente
-                </label>
-                <input
-                  {...register('clientName')}
-                  className={`w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${errors.clientName ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
-                  placeholder="Nombre"
-                />
-                {errors.clientName && <p className="text-[11px] text-red-500 font-medium pl-1">{errors.clientName.message}</p>}
-             </div>
-             <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                   <PhoneIcon size={14} className="text-slate-400" /> Teléfono
-                </label>
-                <input
-                  {...register('clientPhone')}
-                  className={`w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${errors.clientPhone ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
-                  placeholder="+52..."
-                />
-                {errors.clientPhone && <p className="text-[11px] text-red-500 font-medium pl-1">{errors.clientPhone.message}</p>}
-             </div>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+                <User size={14} className="text-[#CE4676]" /> Cliente
+              </label>
+              <input
+                {...register('clientName')}
+                className={`w-full p-4 bg-input-theme border rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none transition-all text-main font-bold text-xs ${errors.clientName ? 'border-red-500 bg-red-500/5' : 'border-theme'}`}
+                placeholder="Nombre"
+              />
+              {errors.clientName && <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight pl-1">{errors.clientName.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+                <PhoneIcon size={14} className="text-[#CE4676]" /> Teléfono
+              </label>
+              <input
+                {...register('clientPhone')}
+                className={`w-full p-4 bg-input-theme border rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none transition-all text-main font-bold text-xs ${errors.clientPhone ? 'border-red-300 bg-red-500/5' : 'border-theme'}`}
+                placeholder="+52..."
+              />
+              {errors.clientPhone && <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight pl-1">{errors.clientPhone.message}</p>}
+            </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                 <Calendar size={14} className="text-slate-400" /> Fecha
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+                <Calendar size={14} className="text-[#CE4676]" /> Fecha
               </label>
               <input
                 type="date"
                 {...register('date')}
-                className={`w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${errors.date ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
+                className={`w-full p-4 bg-input-theme border rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none transition-all text-main font-bold text-xs ${errors.date ? 'border-red-500 bg-red-500/5' : 'border-theme'}`}
               />
-              {errors.date && <p className="text-[11px] text-red-500 font-medium pl-1">{errors.date.message}</p>}
+              {errors.date && <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight pl-1">{errors.date.message}</p>}
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                 <Clock size={14} className="text-slate-400" /> Hora
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+                <Clock size={14} className="text-[#CE4676]" /> Hora
               </label>
               <input
                 type="time"
                 {...register('time')}
-                className={`w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${errors.time ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
+                className={`w-full p-4 bg-input-theme border rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none transition-all text-main font-bold text-xs ${errors.time ? 'border-red-500 bg-red-500/5' : 'border-theme'}`}
               />
-              {errors.time && <p className="text-[11px] text-red-500 font-medium pl-1">{errors.time.message}</p>}
+              {errors.time && <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight pl-1">{errors.time.message}</p>}
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Duración Estándar</label>
-             <select
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-muted uppercase tracking-[0.2em] ml-1">Duración Estándar</label>
+            <select
               {...register('duration')}
-              className="w-full p-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+              className="w-full p-4 bg-input-theme border border-theme rounded-2xl focus:ring-1 focus:ring-[#CE4676]/30 focus:outline-none text-main font-bold text-xs"
             >
               <option value={15}>15 minutos</option>
               <option value={30}>30 minutos</option>
@@ -153,13 +153,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
             </select>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-6">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="bugambilia-btn w-full text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-[0.98]"
             >
-              Agendar Cita
+              Sincronizar Cita
             </button>
           </div>
         </form>

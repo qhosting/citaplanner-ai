@@ -72,9 +72,9 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
         <div>
           <div className="flex items-center gap-4 mb-3">
-            <div className="w-1 h-10 bg-gradient-to-b from-[#D4AF37] to-transparent rounded-full shadow-[0_0_20px_#D4AF37]"></div>
+            <div className="w-1 h-10 bg-gradient-to-b from-[#CE4676] to-transparent rounded-full shadow-[0_0_20px_#CE4676]"></div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-none text-main">
-              Console <span className="gold-text-gradient font-light italic">Master</span>
+              Console <span className="bugambilia-text-gradient font-light italic">Master</span>
             </h1>
           </div>
           <p className="text-muted font-bold uppercase tracking-[0.5em] text-[10px] ml-5">Network Operation Center • Aurum Infrastructure</p>
@@ -82,13 +82,13 @@ export const Dashboard: React.FC = () => {
         <div className="flex gap-4">
           <button
             onClick={() => setIsVoiceOpen(true)}
-            className="glass-card text-white px-8 py-5 rounded-2xl hover:bg-white/10 transition-all flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 shadow-2xl"
+            className="glass-card text-main px-8 py-5 rounded-2xl bg-card-theme hover:bg-input-theme transition-all flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-theme shadow-lg"
           >
-            <Mic size={18} className="text-[#D4AF37]" /> AI Concierge
+            <Mic size={18} className="text-[#CE4676]" /> AI Concierge
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="gold-btn text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest"
+            className="bugambilia-btn text-white px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl"
           >
             <Plus size={18} /> Nueva Cita Elite
           </button>
@@ -105,7 +105,7 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
         <div className="lg:col-span-2 space-y-16">
-          <div className="glass-card p-1.5 rounded-[3.5rem] border-[#D4AF37]/5">
+          <div className="glass-card p-1.5 rounded-[3.5rem] border-[#CE4676]/5">
             <SmartScheduler onAddAppointment={(apt) => createMutation.mutate(apt)} />
           </div>
 
