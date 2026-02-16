@@ -2460,9 +2460,104 @@ app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req,
 
         // Invalidate Cache
         if (redisClient && redisClient.isOpen) {
-            await redisClient.del(`services:${req.tenantId} `);
+            await redisClient.del(`services:${req.tenantId}`);
         }
 
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- CLIENTS ENDPOINTS ---
+
+app.get('/api/clients', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const clients = await prisma.user.findMany({
+            where: {
+                organizationId: req.tenantId,
+                role: 'CLIENT'
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // Map User to Client interface
+        const mappedClients = clients.map(u => ({
+            id: u.id,
+            name: u.name,
+            phone: u.phone,
+            email: u.email,
+            skinType: u.skinType,
+            allergies: u.allergies,
+            medicalConditions: u.medicalConditions,
+            notes: u.preferences?.notes || '',
+            birthDate: u.preferences?.birthDate || null,
+            consentAccepted: u.preferences?.consentAccepted || false,
+            treatmentHistory: [] // TODO: Fetch from appointments
+        }));
+
+        res.json(mappedClients);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/clients', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate } = req.body;
+
+        const newClient = await prisma.user.create({
+            data: {
+                name,
+                phone,
+                email,
+                role: 'CLIENT',
+                organizationId: req.tenantId,
+                skinType,
+                allergies,
+                medicalConditions,
+                preferences: {
+                    notes,
+                    birthDate,
+                    consentAccepted: false // Default
+                }
+            }
+        });
+
+        res.json({ success: true, client: newClient });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted } = req.body;
+
+        // Fetch existing to merge preferences
+        const existing = await prisma.user.findUnique({ where: { id } });
+
+        const updatedClient = await prisma.user.update({
+            where: { id },
+            data: {
+                name,
+                phone,
+                email,
+                skinType,
+                allergies,
+                medicalConditions,
+                preferences: {
+                    ...(existing?.preferences || {}),
+                    notes,
+                    birthDate,
+                    consentAccepted
+                }
+            }
+        });
+
+        res.json({ success: true, client: updatedClient });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.user.delete({ where: { id } });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

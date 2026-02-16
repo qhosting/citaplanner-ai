@@ -58,5 +58,15 @@
   - **Impacto**: UX deficiente
   - **Estimación**: 4 horas
 
-**Última actualización**: 2026-02-16 (v5.3 Web Builder Evolution)  
-**Estado**: 🚀 Sistema robusto y funcional. Web Builder Personalizado con Portafolio y Servicios.
+- [ ] **Web Builder: Carga de Datos Default (Shula Studio)**
+  - **Motivo**: Plantilla vacía al iniciar
+  - **Impacto**: UX mejorada para nuevos tenants con template pre-llenado
+  - **Estimación**: 2 horas
+
+- [ ] **Fix: Módulo Configuración**
+  - **Motivo**: Reporte de fallo en carga
+  - **Impacto**: Bloqueante para ajustes generales
+  - **Estimación**: 1 hora
+
+**Última actualización**: 2026-02-16 (v5.4 Roadmap Update)  
+**Estado**: 🚀 Sistema robusto. Enfocados en Polish Visual y Estabilidad de Módulos.
