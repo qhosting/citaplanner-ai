@@ -533,14 +533,14 @@ export const api = {
   // Settings & Landing
   getLandingSettings: async (): Promise<LandingSettings> => {
     try {
-      const res = await fetch(`${API_URL}/landing/settings`, { headers: getHeaders() });
+      const res = await fetchWithAuth(`${API_URL}/settings/landing`);
       return res.ok ? await res.json() : {} as LandingSettings;
     } catch { return {} as LandingSettings; }
   },
 
   updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
     try {
-      const res = await fetchWithAuth(`${API_URL}/landing/settings`, {
+      const res = await fetchWithAuth(`${API_URL}/settings/landing`, {
         method: 'PUT',
         body: JSON.stringify(s)
       });
