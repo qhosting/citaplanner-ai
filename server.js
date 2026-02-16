@@ -832,8 +832,8 @@ const initDB = async () => {
 
 
 
-        // 7. Shula Studio High-Authority Seeding
         try {
+            console.log("🚀 [INFRA] Starting Global Infrastructure Sync v5.3...");
             const shulaExists = await client.query("SELECT id FROM tenants WHERE subdomain = 'shula'");
             if (shulaExists.rows.length === 0) {
                 console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
@@ -858,12 +858,13 @@ const initDB = async () => {
                     INSERT INTO branches(name, organization_id, tenant_id)
                     VALUES('Shula Studio Matriz', 'shula', $1)
                 `, [shulaId]);
+                console.log("✅ Shula Studio Node Provisioned.");
             }
         } catch (shulaErr) {
             console.error("❌ Shula Seeding Failed:", shulaErr.message);
         }
 
-        console.log("✅ Infraestructura Aurum Nexus v5.2 Operativa.");
+        console.log("✅ Infraestructura Aurum Nexus v5.3 Operativa.");
     } catch (e) {
         console.error("❌ Error en initDB:", e.message);
     } finally {
