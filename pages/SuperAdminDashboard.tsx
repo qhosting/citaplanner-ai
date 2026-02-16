@@ -19,15 +19,21 @@ export const SuperAdminDashboard: React.FC = () => {
   const { user: godUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [view, setView] = useState<'NODES' | 'BILLING' | 'LOGS'>('NODES');
-
+  const [view, setView] = useState<'NODES' | 'BILLING' | 'LOGS' | 'DIAGS' | 'PLANS'>('NODES');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', customDomain: '', planType: 'ELITE' });
   const [managingAdminsTenantId, setManagingAdminsTenantId] = useState<string | null>(null);
+  const [manageSubsTenantId, setManageSubsTenantId] = useState<string | null>(null);
+  const [subForm, setSubForm] = useState({ planId: '', status: '', trialDays: '' });
+
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', role: '', password: '' });
   const [newAdmin, setNewAdmin] = useState({ name: '', phone: '', email: '', password: '', role: 'STUDIO_OWNER' });
   const [showNewAdminForm, setShowNewAdminForm] = useState(false);
+
+  // New Plan State
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [planForm, setPlanForm] = useState({ id: '', title: '', price: 0, description: '', currency: 'MXN' });
 
   // 1. Fetch Global Stats
   const { data: stats } = useQuery({
@@ -49,6 +55,17 @@ export const SuperAdminDashboard: React.FC = () => {
       });
       const data = await res.json();
       return Array.isArray(data) ? data : [];
+    }
+  });
+
+  // Fetch Plans
+  const { data: plans = [], refetch: refetchPlans } = useQuery({
+    queryKey: ['saas-plans'],
+    queryFn: async () => {
+      const res = await fetch('/api/saas/plans', {
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      return res.json();
     }
   });
 
@@ -156,6 +173,47 @@ export const SuperAdminDashboard: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['saas-tenants'] });
       toast.success("Estado de nodo actualizado.");
     }
+  });
+
+  const updateSubMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/saas/tenants/${manageSubsTenantId}/subscription`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}`
+        },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saas-tenants'] });
+      setManageSubsTenantId(null);
+      toast.success("Suscripción actualizada.");
+    }
+  });
+
+  const createPlanMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/saas/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    onSuccess: () => { refetchPlans(); setIsPlanModalOpen(false); toast.success("Plan creado."); }
+  });
+
+  const deletePlanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await fetch(`/api/saas/plans/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+    },
+    onSuccess: () => { refetchPlans(); toast.success("Plan eliminado."); }
   });
 
   const impersonateMutation = useMutation({
@@ -286,6 +344,7 @@ export const SuperAdminDashboard: React.FC = () => {
         <nav className="flex bg-white/5 p-2 rounded-2xl border border-white/5">
           {[
             { id: 'NODES', label: 'Nodes', icon: Server },
+            { id: 'PLANS', label: 'Plan Manager', icon: ShoppingBag },
             { id: 'BILLING', label: 'Master Billing', icon: CreditCard },
             { id: 'LOGS', label: 'Cluster Logs', icon: Terminal },
             { id: 'DIAGS', label: 'Diagnostics', icon: Zap }
@@ -588,15 +647,26 @@ export const SuperAdminDashboard: React.FC = () => {
                         <p className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">{t.planType} TIER</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedTenantId(t.id);
-                        setView('BILLING');
-                      }}
-                      className="flex items-center gap-3 bg-white/5 hover:bg-[#D4AF37] px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-black transition-all border border-white/5"
-                    >
-                      <History size={14} /> Facturación & Pagos
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setSubForm({ planId: t.planType, status: t.status, trialDays: '' });
+                          setManageSubsTenantId(t.id);
+                        }}
+                        className="flex items-center gap-3 bg-white/5 hover:bg-emerald-500 px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-all border border-white/5"
+                      >
+                        <Zap size={14} /> Plan & Status
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedTenantId(t.id);
+                          setView('BILLING');
+                        }}
+                        className="flex items-center gap-3 bg-white/5 hover:bg-[#D4AF37] px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-black transition-all border border-white/5"
+                      >
+                        <History size={14} /> Facturación & Pagos
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -688,6 +758,46 @@ export const SuperAdminDashboard: React.FC = () => {
               )) : (
                 <p className="text-slate-700 uppercase font-black text-[10px] text-center py-20">No system events recorded in current cluster.</p>
               )}
+            </div>
+          </div>
+        )}
+        {view === 'PLANS' && (
+          <div className="space-y-10">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Gestión de Planes SaaS</h2>
+              <button
+                onClick={() => { setPlanForm({ id: '', title: '', price: 0, description: '', currency: 'MXN' }); setIsPlanModalOpen(true); }}
+                className="gold-btn px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-black flex items-center gap-3"
+              >
+                <Plus size={16} /> Crear Nuevo Plan
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {plans.map((p: any) => (
+                <div key={p.id} className="glass-card p-8 rounded-[3rem] border-white/5 relative group hover:border-[#D4AF37]/30 transition-all">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="p-4 bg-[#D4AF37]/10 text-[#D4AF37] rounded-2xl">
+                      <ShoppingBag size={24} />
+                    </div>
+                    <button onClick={() => { if (window.confirm('¿Eliminar plan?')) deletePlanMutation.mutate(p.id); }} className="text-red-500 hover:text-white"><X size={20} /></button>
+                  </div>
+                  <h3 className="text-2xl font-black text-white uppercase mb-2">{p.title}</h3>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-6">{p.description}</p>
+                  <div className="flex items-end gap-2 mb-6">
+                    <span className="text-4xl font-black text-[#D4AF37]">${p.price}</span>
+                    <span className="text-[10px] font-bold text-slate-600 mb-2 uppercase">{p.currency} / MES</span>
+                  </div>
+                  <div className="pt-6 border-t border-white/5">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Features Key</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(p.features || {}).map(([k, v]) => v && (
+                        <span key={k} className="px-3 py-1 bg-white/5 rounded-lg text-[8px] font-bold text-slate-400 uppercase">{k.replace('_', ' ')}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -785,6 +895,168 @@ export const SuperAdminDashboard: React.FC = () => {
                   {createTenantMutation.isPending ? <Loader2 className="animate-spin" size={24} /> : <Zap size={24} />} Autorizar Despliegue
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 CREATE PLAN MODAL */}
+      {isPlanModalOpen && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-6">
+          <div className="w-full max-w-xl bg-[#080808] rounded-[4rem] border border-[#D4AF37]/20 shadow-[0_0_80px_rgba(212,175,55,0.1)] overflow-hidden animate-scale-in">
+            <div className="p-10 border-b border-white/5 flex justify-between items-center">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-[#D4AF37]/10 rounded-2xl text-[#D4AF37]"><ShoppingBag size={28} /></div>
+                <div>
+                  <h3 className="font-black text-2xl text-white uppercase tracking-tighter">Nuevo Plan SaaS</h3>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Definir estructura de precios</p>
+                </div>
+              </div>
+              <button onClick={() => setIsPlanModalOpen(false)} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all"><X size={24} /></button>
+            </div>
+
+            <div className="p-10 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Plan ID (Único)</p>
+                  <input className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-white font-mono font-bold text-sm outline-none focus:border-[#D4AF37]/40 transition-all placeholder:text-slate-800 uppercase" placeholder="STARTER" value={planForm.id} onChange={e => setPlanForm({ ...planForm, id: e.target.value.toUpperCase().replace(/\s/g, '_') })} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Precio (MXN/mes)</p>
+                  <input type="number" className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-[#D4AF37] font-black text-sm outline-none focus:border-[#D4AF37]/40 transition-all placeholder:text-slate-800" placeholder="299" value={planForm.price || ''} onChange={e => setPlanForm({ ...planForm, price: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Título Comercial</p>
+                <input className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#D4AF37]/40 transition-all placeholder:text-slate-800" placeholder="Ej: Starter (Freelance)" value={planForm.title} onChange={e => setPlanForm({ ...planForm, title: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Descripción</p>
+                <input className="w-full p-4 bg-white/5 border border-white/5 rounded-2xl text-white text-sm outline-none focus:border-[#D4AF37]/40 transition-all placeholder:text-slate-800" placeholder="Ideal para independientes" value={planForm.description} onChange={e => setPlanForm({ ...planForm, description: e.target.value })} />
+              </div>
+
+              <button
+                onClick={() => createPlanMutation.mutate({ ...planForm, features: { ai_scheduler: true, marketing_pro: false, inventory_advanced: false, analytics_nexus: false } })}
+                disabled={!planForm.id || !planForm.title || !planForm.price || createPlanMutation.isPending}
+                className="w-full gold-btn py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(212,175,55,0.2)] disabled:opacity-20 transition-all"
+              >
+                {createPlanMutation.isPending ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />} Crear Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ SUBSCRIPTION MANAGEMENT MODAL */}
+      {manageSubsTenantId && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[1000] flex items-center justify-center p-6">
+          <div className="w-full max-w-xl bg-[#080808] rounded-[4rem] border border-emerald-500/20 shadow-[0_0_80px_rgba(16,185,129,0.1)] overflow-hidden animate-scale-in">
+            <div className="p-10 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-emerald-600/5 to-transparent">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500"><Zap size={28} /></div>
+                <div>
+                  <h3 className="font-black text-2xl text-white uppercase tracking-tighter">
+                    Gestionar Suscripción
+                  </h3>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">
+                    {tenants.find((t: any) => t.id === manageSubsTenantId)?.name || 'Nodo'}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setManageSubsTenantId(null)} className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all"><X size={24} /></button>
+            </div>
+
+            <div className="p-10 space-y-8">
+              {/* Plan Assignment */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Asignar Plan</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {plans.map((p: any) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSubForm({ ...subForm, planId: p.id })}
+                      className={`p-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${subForm.planId === p.id ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-lg' : 'bg-white/5 border-white/5 text-slate-500 hover:border-white/10'}`}
+                    >
+                      <span className="block">{p.title}</span>
+                      <span className="block mt-1 text-[9px] opacity-70">${p.price}/mes</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Override */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Override de Estado</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {['ACTIVE', 'TRIAL', 'SUSPENDED'].map(st => (
+                    <button
+                      key={st}
+                      onClick={() => setSubForm({ ...subForm, status: st })}
+                      className={`p-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${subForm.status === st
+                        ? st === 'ACTIVE' ? 'bg-emerald-500 text-white border-emerald-500'
+                          : st === 'TRIAL' ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-red-500 text-white border-red-500'
+                        : 'bg-white/5 border-white/5 text-slate-500 hover:border-white/10'}`}
+                    >
+                      {st === 'ACTIVE' && <Unlock size={14} className="inline mr-2" />}
+                      {st === 'TRIAL' && <Activity size={14} className="inline mr-2" />}
+                      {st === 'SUSPENDED' && <Lock size={14} className="inline mr-2" />}
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trial Days */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Días de Prueba (Trial)</p>
+                <div className="flex gap-3">
+                  {[7, 14, 30, 60, 90].map(d => (
+                    <button
+                      key={d}
+                      onClick={() => setSubForm({ ...subForm, trialDays: String(d), status: 'TRIAL' })}
+                      className={`px-5 py-3 rounded-xl border text-[10px] font-black transition-all ${subForm.trialDays === String(d) ? 'bg-blue-500 text-white border-blue-500' : 'bg-white/5 border-white/5 text-slate-500 hover:border-white/10'}`}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    placeholder="Custom"
+                    className="w-24 px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-white text-xs font-bold outline-none focus:border-blue-500/40 placeholder:text-slate-700"
+                    value={subForm.trialDays}
+                    onChange={e => setSubForm({ ...subForm, trialDays: e.target.value, status: 'TRIAL' })}
+                  />
+                </div>
+                <p className="text-[9px] text-slate-600 font-bold">
+                  Asignar días de prueba activa el estado TRIAL automáticamente y permite acceso completo sin pago.
+                </p>
+              </div>
+
+              {/* Summary */}
+              <div className="p-6 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Resumen de Cambios</p>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {subForm.planId && <span className="text-[10px] font-bold text-[#D4AF37]">📦 Plan: {subForm.planId}</span>}
+                  {subForm.status && <span className="text-[10px] font-bold text-emerald-500">⚡ Status: {subForm.status}</span>}
+                  {subForm.trialDays && <span className="text-[10px] font-bold text-blue-400">📅 Trial: {subForm.trialDays} días</span>}
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  const payload: any = {};
+                  if (subForm.planId) payload.planId = subForm.planId;
+                  if (subForm.status) payload.status = subForm.status;
+                  if (subForm.trialDays) payload.trialDays = parseInt(subForm.trialDays);
+                  updateSubMutation.mutate(payload);
+                }}
+                disabled={updateSubMutation.isPending || (!subForm.planId && !subForm.status && !subForm.trialDays)}
+                className="w-full py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-20 flex items-center justify-center gap-3"
+              >
+                {updateSubMutation.isPending ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                Aplicar Cambios
+              </button>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 
 import express from 'express';
+import fs from 'fs';
 import crypto from 'crypto';
 import pg from 'pg';
 import cors from 'cors';
@@ -77,7 +78,10 @@ const REDIS_URL = process.env.REDIS_URL;
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'aum-core-secure-2026-fix';
 const WAHA_URL = process.env.WAHA_URL || 'http://localhost:3000';
 
-const SAAS_PLANS = [
+// --- SAAS PLANS (DYNAMIC) ---
+const PLANS_FILE = path.join(__dirname, 'saas_plans.json');
+
+let SAAS_PLANS = [
     {
         id: 'BASIC',
         title: 'Básico (Starter)',
@@ -103,6 +107,25 @@ const SAAS_PLANS = [
         features: { ai_scheduler: true, marketing_pro: true, inventory_advanced: true, analytics_nexus: true }
     }
 ];
+
+// Load plans from disk if exists
+try {
+    if (fs.existsSync(PLANS_FILE)) {
+        const raw = fs.readFileSync(PLANS_FILE, 'utf-8');
+        SAAS_PLANS = JSON.parse(raw);
+        console.log(`✅ ${SAAS_PLANS.length} Planes cargados desde disco.`);
+    }
+} catch (e) {
+    console.warn("⚠️ Error cargando planes, usando defaults:", e.message);
+}
+
+const savePlans = () => {
+    try {
+        fs.writeFileSync(PLANS_FILE, JSON.stringify(SAAS_PLANS, null, 2));
+    } catch (e) {
+        console.error("❌ Error guardando planes:", e.message);
+    }
+};
 
 
 // --- OPTIMIZACIÓN: CACHÉ DE TENANTS ---
@@ -1461,7 +1484,100 @@ app.delete('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMo
 });
 
 
-// --- PUBLIC SAAS REGISTRATION ---
+// --- SAAS PLANS MANAGEMENT (DYNAMIC) ---
+
+app.get('/api/saas/plans', authenticateToken, async (req, res) => {
+    res.json(SAAS_PLANS);
+});
+
+app.post('/api/saas/plans', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id, title, price, currency, description, features } = req.body;
+        if (!id || !title || !price) return res.status(400).json({ error: "Datos incompletos" });
+
+        const exists = SAAS_PLANS.find(p => p.id === id);
+        if (exists) return res.status(400).json({ error: "ID de plan ya existe" });
+
+        const newPlan = { id, title, price, currency: currency || 'MXN', description, features: features || {} };
+        SAAS_PLANS.push(newPlan);
+        savePlans();
+
+        res.json({ success: true, plan: newPlan });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/saas/plans/:id', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+        const index = SAAS_PLANS.findIndex(p => p.id === id);
+
+        if (index === -1) return res.status(404).json({ error: "Plan no encontrado" });
+
+        SAAS_PLANS[index] = { ...SAAS_PLANS[index], ...updates, id }; // Keep ID or allow rename if handled carefully
+        savePlans();
+
+        res.json({ success: true, plan: SAAS_PLANS[index] });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/saas/plans/:id', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const initialLength = SAAS_PLANS.length;
+        SAAS_PLANS = SAAS_PLANS.filter(p => p.id !== id);
+
+        if (SAAS_PLANS.length === initialLength) return res.status(404).json({ error: "Plan no encontrado" });
+
+        savePlans();
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- TENANT SUBSCRIPTION MANAGEMENT (MANUAL OVERRIDE) ---
+app.put('/api/saas/tenants/:id/subscription', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { planId, status, trialDays } = req.body;
+
+        const updateData = {};
+        const plan = SAAS_PLANS.find(p => p.id === planId);
+
+        if (planId) {
+            if (!plan) return res.status(400).json({ error: "Plan inválido" });
+            updateData.planType = planId;
+            updateData.features = plan.features;
+        }
+
+        if (status) updateData.status = status;
+
+        if (trialDays !== undefined) {
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + parseInt(trialDays));
+            updateData.trialEndsAt = endDate;
+            updateData.status = 'TRIAL'; // Force status to TRIAL if adding days
+        }
+
+        const tenant = await prisma.tenant.update({
+            where: { id },
+            data: updateData
+        });
+
+        // Log manual intervention
+        await prisma.billingLog.create({
+            data: {
+                tenantId: id,
+                amount: 0,
+                status: 'SUCCESS',
+                provider: 'MANUAL_ADMIN',
+                description: `Ajuste manual: Plan ${planId || '-'} | Status ${status || '-'} | Trial ${trialDays || 0}d`
+            }
+        });
+
+        res.json({ success: true, tenant });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 
 app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, res) => {
     try {
