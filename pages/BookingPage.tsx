@@ -119,12 +119,17 @@ export const BookingPage: React.FC = () => {
           api.getLandingSettings(),
           api.getServices(),
           api.getProfessionals(),
-          api.getAppointments() // Load all for availability check (optimization: fetch by pro/date)
+          api.getAppointments()
         ]);
         setSettings(set);
         setServices(s);
         setProfessionals(p);
         setAppointments(a);
+
+        // Update document title
+        if (set.businessName) {
+          document.title = `Reserva tu Cita | ${set.businessName}`;
+        }
       } catch (error) {
         console.error("Error loading booking data", error);
       } finally {
@@ -312,8 +317,8 @@ export const BookingPage: React.FC = () => {
                 key={time}
                 onClick={() => setSelectedTime(time)}
                 className={`py-5 rounded-3xl font-black text-sm transition-all border-2 ${selectedTime === time
-                    ? 'border-[#D4AF37] bg-[#D4AF37] text-white shadow-2xl shadow-[#D4AF37]/20 scale-105'
-                    : 'border-slate-50 bg-white text-slate-400 hover:border-[#D4AF37]/20'
+                  ? 'border-[#D4AF37] bg-[#D4AF37] text-white shadow-2xl shadow-[#D4AF37]/20 scale-105'
+                  : 'border-slate-50 bg-white text-slate-400 hover:border-[#D4AF37]/20'
                   }`}
               >
                 {time}
@@ -505,10 +510,16 @@ export const BookingPage: React.FC = () => {
               </button>
             )}
             <Link to="/" className="flex items-center gap-3">
-              <div style={{ backgroundColor: primaryColor }} className="p-2 rounded-xl text-white shadow-lg">
-                <Sparkles size={24} />
-              </div>
-              <span className="font-black text-2xl tracking-tighter text-slate-900 uppercase">Cita<span style={{ color: primaryColor }}>Planner</span></span>
+              {settings?.logoUrl ? (
+                <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto rounded-lg shadow-sm" />
+              ) : (
+                <div style={{ backgroundColor: primaryColor }} className="p-2 rounded-xl text-white shadow-lg">
+                  <Sparkles size={24} />
+                </div>
+              )}
+              <span className="font-black text-2xl tracking-tighter text-slate-900 uppercase">
+                {settings?.businessName || (<>Cita<span style={{ color: primaryColor }}>Planner</span></>)}
+              </span>
             </Link>
           </div>
 
@@ -531,7 +542,7 @@ export const BookingPage: React.FC = () => {
 
           <div className="text-[10px] font-black text-slate-400 flex items-center gap-3 uppercase tracking-widest">
             <MapPin size={18} style={{ color: primaryColor }} />
-            <span className="hidden sm:inline">Node CDMX Polanco</span>
+            <span className="hidden sm:inline">{settings?.address || 'Node CDMX Polanco'}</span>
           </div>
         </div>
       </nav>
