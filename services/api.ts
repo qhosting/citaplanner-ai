@@ -491,5 +491,77 @@ export const api = {
       });
       return res.ok;
     } catch { return false; }
+  },
+
+  // Professionals CRUD
+  getProfessionals: async (): Promise<Professional[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createProfessional: async (p: Omit<Professional, 'id'>): Promise<{ success: boolean, id?: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals`, {
+        method: 'POST',
+        body: JSON.stringify(p)
+      });
+      return await res.json();
+    } catch { return { success: false }; }
+  },
+
+  updateProfessional: async (p: Professional): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals/${p.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(p)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  deleteProfessional: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals/${id}`, {
+        method: 'DELETE'
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  // Settings & Landing
+  getLandingSettings: async (): Promise<LandingSettings> => {
+    try {
+      const res = await fetch(`${API_URL}/landing/settings`, { headers: getHeaders() });
+      return res.ok ? await res.json() : {} as LandingSettings;
+    } catch { return {} as LandingSettings; }
+  },
+
+  updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/landing/settings`, {
+        method: 'PUT',
+        body: JSON.stringify(s)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  // Media
+  uploadImage: async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetchWithAuth(`${API_URL}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+      return null;
+    } catch { return null; }
   }
 };

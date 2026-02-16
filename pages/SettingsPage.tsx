@@ -253,24 +253,104 @@ export const SettingsPage: React.FC = () => {
                {activeTab === 'GENERAL' && landingSettings && (
                   <div className="space-y-12 animate-entrance">
                      <section>
-                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-8">Información del Nodo</h3>
+                        <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-8">Identidad del Nodo</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Nombre del Negocio</label>
-                              <input type="text" value={landingSettings.businessName} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl text-white font-bold" disabled />
+                           <div className="space-y-3">
+                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Nombre Comercial</label>
+                              <input
+                                 type="text"
+                                 value={landingSettings.businessName}
+                                 onChange={(e) => setLandingSettings({ ...landingSettings, businessName: e.target.value })}
+                                 onBlur={() => api.updateLandingSettings(landingSettings)}
+                                 className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-black text-xs outline-none focus:border-[#D4AF37]"
+                              />
                            </div>
-                           <div className="space-y-2">
-                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Subdominio de Red</label>
-                              <input type="text" value={landingSettings.subdomain} className="w-full p-5 bg-white/5 border border-white/5 rounded-2xl text-[#D4AF37] font-mono font-bold" disabled />
+                           <div className="space-y-3">
+                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Subdominio Operativo</label>
+                              <div className="relative">
+                                 <Globe className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700" size={18} />
+                                 <input type="text" value={landingSettings.subdomain} className="w-full pl-14 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-[#D4AF37] font-mono font-bold text-xs" disabled />
+                              </div>
                            </div>
                         </div>
                      </section>
 
-                     <section className="bg-[#D4AF37]/5 border border-[#D4AF37]/10 p-8 rounded-[3rem] flex items-center gap-6">
-                        <div className="p-4 bg-[#D4AF37] text-black rounded-2xl shadow-2xl"><Globe size={24} /></div>
+                     <section className="bg-white/5 p-10 rounded-[3rem] border border-white/5">
+                        <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-8 flex items-center gap-3"><MapPin size={16} /> Contact Hub</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                           <div className="space-y-3">
+                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">WhatsApp de Enlace</label>
+                              <input
+                                 type="text"
+                                 value={landingSettings.contactPhone || ''}
+                                 onChange={(e) => setLandingSettings({ ...landingSettings, contactPhone: e.target.value })}
+                                 onBlur={() => api.updateLandingSettings(landingSettings)}
+                                 className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs"
+                              />
+                           </div>
+                           <div className="space-y-3">
+                              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Dirección de Matriz</label>
+                              <input
+                                 type="text"
+                                 value={landingSettings.address || ''}
+                                 onChange={(e) => setLandingSettings({ ...landingSettings, address: e.target.value })}
+                                 onBlur={() => api.updateLandingSettings(landingSettings)}
+                                 className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs"
+                              />
+                           </div>
+                        </div>
+                     </section>
+
+                     <section className="bg-[#D4AF37]/5 border border-[#D4AF37]/10 p-8 rounded-[3.5rem] flex items-center gap-6">
+                        <div className="p-4 bg-[#D4AF37] text-black rounded-2xl shadow-2xl"><ShieldCheck size={24} /></div>
                         <div>
                            <h4 className="text-white font-black uppercase text-sm mb-1">Sincronización Hub Maestro</h4>
                            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Su identidad de negocio está vinculada al Ecosistema Global de Aurum Capital.</p>
+                        </div>
+                     </section>
+                  </div>
+               )}
+
+               {activeTab === 'SECURITY' && (
+                  <div className="space-y-12 animate-entrance">
+                     <div className="flex justify-between items-center bg-white/5 p-8 rounded-[3rem] border border-white/5 mb-10">
+                        <div className="flex items-center gap-6">
+                           <div className="p-4 bg-zinc-900 rounded-2xl text-[#D4AF37]"><ShieldAlert size={24} /></div>
+                           <div>
+                              <h4 className="text-white font-black uppercase text-lg tracking-tight">Protocolos de Seguridad</h4>
+                              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Gestión de Credenciales e Integridad de Sesión</p>
+                           </div>
+                        </div>
+                        <button className="gold-btn px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest">Auditar Accesos</button>
+                     </div>
+
+                     <section className="space-y-10">
+                        <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40">
+                           <h5 className="text-[10px] font-black text-white uppercase tracking-widest mb-8">Actualizar Credenciales Maestras</h5>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                              <div className="space-y-3">
+                                 <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Nueva Contraseña</label>
+                                 <input type="password" placeholder="••••••••" className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white outline-none focus:border-[#D4AF37]" />
+                              </div>
+                              <div className="space-y-3">
+                                 <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Confirmar Nueva Contraseña</label>
+                                 <input type="password" placeholder="••••••••" className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white outline-none focus:border-[#D4AF37]" />
+                              </div>
+                           </div>
+                           <div className="mt-10 flex justify-end">
+                              <button className="bg-white/5 hover:bg-white/10 text-white px-10 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Sincronizar Password</button>
+                           </div>
+                        </div>
+
+                        <div className="bg-rose-500/5 border border-rose-500/10 p-10 rounded-[3rem]">
+                           <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-6">Zona de Riesgo</h5>
+                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                              <div>
+                                 <h6 className="text-white font-black uppercase text-sm mb-1">Cerrar Sesión en Todos los Dispositivos</h6>
+                                 <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest max-w-md">Invalidará todos los tokens de acceso activos en cualquier nodo cliente vinculado a este perfil.</p>
+                              </div>
+                              <button className="px-8 py-4 bg-rose-500/10 text-rose-500 rounded-xl text-[9px] font-black uppercase tracking-widest border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">Invalidar Sesiones</button>
+                           </div>
                         </div>
                      </section>
                   </div>

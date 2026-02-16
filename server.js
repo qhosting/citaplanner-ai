@@ -2366,7 +2366,7 @@ app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req,
 app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const professionals = await prisma.professional.findMany({
-            where: { organizationId: req.tenantId },
+            where: { organizationId: req.tenantId || 'demo' },
             select: {
                 id: true,
                 name: true,
@@ -2374,10 +2374,57 @@ app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, r
                 email: true,
                 aurumEmployeeId: true,
                 weeklySchedule: true,
-                exceptions: true
+                exceptions: true,
+                tenantId: true,
+                branchId: true
             }
         });
         res.json(professionals);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, role, email, aurum_employee_id, weeklySchedule, exceptions } = req.body;
+        const pro = await prisma.professional.create({
+            data: {
+                name,
+                role,
+                email,
+                aurumEmployeeId: aurum_employee_id,
+                weeklySchedule: weeklySchedule || [],
+                exceptions: exceptions || [],
+                organizationId: req.tenantId || 'demo',
+                tenantId: req.tenantId,
+                serviceIds: ''
+            }
+        });
+        res.json({ success: true, id: pro.id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/professionals/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, role, email, aurumEmployeeId, weeklySchedule, exceptions } = req.body;
+        await prisma.professional.update({
+            where: { id: req.params.id },
+            data: {
+                name,
+                role,
+                email,
+                aurumEmployeeId,
+                weeklySchedule,
+                exceptions
+            }
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/professionals/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        await prisma.professional.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

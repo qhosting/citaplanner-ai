@@ -13,11 +13,11 @@ interface ServiceModalProps {
   initialData?: Service;
 }
 
-export const ServiceModal: React.FC<ServiceModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  initialData 
+export const ServiceModal: React.FC<ServiceModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -67,7 +67,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Fixed: Included tenantId in serviceToSave
     const serviceToSave: Service = {
       id: initialData?.id || (Date.now().toString(36) + Math.random().toString(36).substring(2)),
@@ -100,17 +100,26 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               <h3 className="font-black text-2xl text-white tracking-tighter uppercase">
                 {initialData ? 'Configurar Nodo Maestro' : 'Integrar Nuevo Servicio'}
               </h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-1">Ecosistema Aurum • Service Intelligence</p>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-1">Ecosistema Aurum • Service Intelligence</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all rounded-2xl border border-white/5">
+
+          <div className="hidden lg:flex items-center gap-4 px-6 py-2 bg-[#D4AF37]/10 rounded-2xl border border-[#D4AF37]/20">
+            <div className="text-right">
+              <p className="text-[8px] font-black text-[#D4AF37] uppercase tracking-widest leading-none">Vista Previa</p>
+              <p className="text-[10px] font-bold text-white uppercase truncate max-w-[100px]">{formData.name || 'Sin nombre'}</p>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center font-black text-[10px] text-[#D4AF37]">${formData.price}</div>
+          </div>
+
+          <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all rounded-2xl border border-white/5 ml-4">
             <X size={24} />
           </button>
         </div>
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-10 overflow-y-auto space-y-8 custom-scrollbar">
-          
+
           <div className="space-y-6">
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Identidad del Servicio</label>
@@ -119,7 +128,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 type="text"
                 className="w-full bg-black/40 border border-white/10 rounded-2xl p-5 text-white outline-none focus:border-[#D4AF37] transition-all font-bold"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ej: Técnica Clásica Natural"
               />
             </div>
@@ -134,7 +143,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     type="text"
                     className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
                     value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     placeholder="Eje: PESTAÑAS"
                   />
                   <datalist id="categories">
@@ -151,7 +160,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 <select
                   className="w-full p-5 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold appearance-none cursor-pointer"
                   value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE'})}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}
                 >
                   <option value="ACTIVE">OPERATIVO (Visible)</option>
                   <option value="INACTIVE">MANTENIMIENTO (Oculto)</option>
@@ -182,11 +191,11 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     </div>
                   )}
                 </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="input-file-hidden" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="input-file-hidden"
+                  accept="image/*"
                   onChange={handleFileUpload}
                 />
               </div>
@@ -202,7 +211,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                       step="5"
                       className="w-full pl-14 pr-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
                       value={formData.duration}
-                      onChange={(e) => setFormData({...formData, duration: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -217,7 +226,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                       step="1"
                       className="w-full pl-14 pr-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-[#D4AF37] font-bold"
                       value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -227,14 +236,14 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Narrativa del Servicio</label>
               <div className="relative">
-                  <FileText size={16} className="absolute left-5 top-6 text-[#D4AF37]/50" />
-                  <textarea
-                    rows={4}
-                    className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-3xl text-white outline-none focus:border-[#D4AF37] resize-none font-medium text-sm leading-relaxed"
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Detalles sobre los beneficios y la técnica..."
-                  />
+                <FileText size={16} className="absolute left-5 top-6 text-[#D4AF37]/50" />
+                <textarea
+                  rows={4}
+                  className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-3xl text-white outline-none focus:border-[#D4AF37] resize-none font-medium text-sm leading-relaxed"
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detalles sobre los beneficios y la técnica..."
+                />
               </div>
             </div>
           </div>
