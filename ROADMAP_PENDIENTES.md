@@ -78,5 +78,10 @@
   - **Impacto**: Completado (CSV Import/Export)
   - **Estimación**: Completado
 
-**Última actualización**: 2026-02-16 (v5.6 Tenant Booking Update)
+- [x] **Nexus: Plan Manager & Subscription Override**
+  - **Motivo**: Nexus no tenía UI para crear planes ni gestionar suscripciones manualmente
+  - **Impacto**: Completado (CRUD Plans, Trial Days, Status Override, Billing Log)
+  - **Estimación**: Completado
+
+**Última actualización**: 2026-02-16 (v5.7 Nexus Plan Manager)
 **Estado**: 🚀 Sistema robusto. Enfocados en Polish Visual y Estabilidad de Módulos.
