@@ -83,5 +83,10 @@
   - **Impacto**: Completado (CRUD Plans, Trial Days, Status Override, Billing Log)
   - **Estimación**: Completado
 
-**Última actualización**: 2026-02-16 (v5.7 Nexus Plan Manager)
+- [x] **Landing Page: Multi-Tenant Dinámico por Web Builder**
+  - **Motivo**: Todos los tenants mostraban el mismo landing con colores y textos hardcodeados
+  - **Impacto**: Completado (Colores, branding, servicios, galería y contacto dinámicos por tenant)
+  - **Estimación**: Completado
+
+**Última actualización**: 2026-02-16 (v5.8 Dynamic Tenant Landing)
 **Estado**: 🚀 Sistema robusto. Enfocados en Polish Visual y Estabilidad de Módulos.
