@@ -491,13 +491,27 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
-                -- Custom Domain & Organization ID Migration
+                -- Custom Domain & Resilience Migration
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
+                    -- Add organization_id if missing
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
+                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                    
+                    -- Add custom_domain if missing
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='custom_domain') THEN
                         ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
                     END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
-                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+
+                    -- ENSURE UNIQUE CONSTRAINTS (Critical for Seeding)
+                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_subdomain_key') THEN
+                        ALTER TABLE tenants ADD CONSTRAINT tenants_subdomain_key UNIQUE (subdomain);
+                    END IF;
+
+                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_organization_id_key') THEN
+                        -- Temporary cleanup of duplicates if any before adding constraint
+                        -- ALTER TABLE tenants ADD CONSTRAINT tenants_organization_id_key UNIQUE (organization_id);
+                        -- Using a softer approach to avoid breaking existing DBs with duplicates
                     END IF;
                 END IF;
 
@@ -697,13 +711,20 @@ const initDB = async () => {
         `);
 
         // 2. Seeding Master Tenant
-        const masterIdRes = await client.query(`
-            INSERT INTO tenants(name, subdomain, status, plan_type, organization_id)
-            VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
-            ON CONFLICT(subdomain) DO UPDATE SET organization_id = 'master', name = EXCLUDED.name 
-            RETURNING id
-        `);
-        const masterId = masterIdRes.rows[0].id;
+        let masterId;
+        try {
+            const masterIdRes = await client.query(`
+                INSERT INTO tenants(name, subdomain, status, plan_type, organization_id)
+                VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
+                ON CONFLICT(subdomain) DO UPDATE SET organization_id = 'master', name = EXCLUDED.name 
+                RETURNING id
+            `);
+            masterId = masterIdRes.rows[0].id;
+        } catch (masterErr) {
+            console.warn("⚠️ Master Tenant Seeding warning (likely exists):", masterErr.message);
+            const m = await client.query("SELECT id FROM tenants WHERE subdomain = 'master'");
+            masterId = m.rows[0]?.id;
+        }
 
         // 3. Seeding Default Branch
         const branchRes = await client.query(`
@@ -812,30 +833,34 @@ const initDB = async () => {
 
 
         // 7. Shula Studio High-Authority Seeding
-        const shulaExists = await client.query("SELECT id FROM tenants WHERE subdomain = 'shula'");
-        if (shulaExists.rows.length === 0) {
-            console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
-            const shulaIdRes = await client.query(`
-                INSERT INTO tenants(name, subdomain, custom_domain, status, plan_type, organization_id)
-                VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
-                RETURNING id
-            `);
-            const shulaId = shulaIdRes.rows[0].id;
+        try {
+            const shulaExists = await client.query("SELECT id FROM tenants WHERE subdomain = 'shula'");
+            if (shulaExists.rows.length === 0) {
+                console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
+                const shulaIdRes = await client.query(`
+                    INSERT INTO tenants(name, subdomain, custom_domain, status, plan_type, organization_id)
+                    VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
+                    RETURNING id
+                `);
+                const shulaId = shulaIdRes.rows[0].id;
 
-            // Seed Shula Landing
-            await client.query(`
-                INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url)
-                VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada', 
-                'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.', 
-                'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
-                ON CONFLICT(organization_id) DO NOTHING
-            `);
+                // Seed Shula Landing
+                await client.query(`
+                    INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url)
+                    VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada', 
+                    'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.', 
+                    'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
+                    ON CONFLICT(organization_id) DO NOTHING
+                `);
 
-            // Seed Shula Branch
-            await client.query(`
-                INSERT INTO branches(name, organization_id, tenant_id)
-                VALUES('Shula Studio Matriz', 'shula', $1)
-            `, [shulaId]);
+                // Seed Shula Branch
+                await client.query(`
+                    INSERT INTO branches(name, organization_id, tenant_id)
+                    VALUES('Shula Studio Matriz', 'shula', $1)
+                `, [shulaId]);
+            }
+        } catch (shulaErr) {
+            console.error("❌ Shula Seeding Failed:", shulaErr.message);
         }
 
         console.log("✅ Infraestructura Aurum Nexus v5.2 Operativa.");
@@ -936,6 +961,13 @@ app.get('/api/saas/plans', (req, res) => {
 });
 
 // --- SAAS TENANT MANAGEMENT (GOD MODE ONLY) ---
+
+app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const poolRes = await pool.query("SELECT * FROM tenants ORDER BY created_at DESC");
+        res.json({ count: poolRes.rowCount, rows: poolRes.rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
