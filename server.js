@@ -695,9 +695,9 @@ const initDB = async () => {
 
         // 2. Seeding Master Tenant
         const masterIdRes = await client.query(`
-            INSERT INTO tenants(name, subdomain, status, plan_type)
-            VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY') 
-            ON CONFLICT(subdomain) DO UPDATE SET name = EXCLUDED.name 
+            INSERT INTO tenants(name, subdomain, status, plan_type, organization_id)
+            VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
+            ON CONFLICT(subdomain) DO UPDATE SET organization_id = 'master', name = EXCLUDED.name 
             RETURNING id
         `);
         const masterId = masterIdRes.rows[0].id;
@@ -937,15 +937,25 @@ app.get('/api/saas/plans', (req, res) => {
 app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
         console.log(`[MASTER] Global Tenant List requested by: ${req.user.phone} (${req.user.id})`);
+        // We include subscriptions but use a try-catch for safety during migrations
         const tenants = await prisma.tenant.findMany({
-            include: { subscriptions: true },
+            include: {
+                subscriptions: true
+            },
             orderBy: { createdAt: 'desc' }
         });
+
         console.log(`[MASTER] Found ${tenants.length} tenants in database.`);
         res.json(tenants);
     } catch (e) {
         console.error(`[MASTER ERROR] Failed to fetch tenants:`, e);
-        res.status(500).json({ error: e.message });
+        // Fallback: try without relations if schema is in flux
+        try {
+            const basicTenants = await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
+            return res.json(basicTenants);
+        } catch (e2) {
+            res.status(500).json({ error: e.message });
+        }
     }
 });
 
