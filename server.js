@@ -491,6 +491,26 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
+                -- Products
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'products') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='organization_id') THEN
+                        ALTER TABLE products ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='branch_id') THEN
+                        ALTER TABLE products ADD COLUMN branch_id UUID;
+                    END IF;
+                END IF;
+
+                -- Transactions
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transactions') THEN
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='organization_id') THEN
+                        ALTER TABLE transactions ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='branch_id') THEN
+                        ALTER TABLE transactions ADD COLUMN branch_id UUID;
+                    END IF;
+                END IF;
+
                 -- Full SaaS Infrastructure Migration (Hardened)
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
                     -- Identity & Routing
