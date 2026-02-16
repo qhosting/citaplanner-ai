@@ -58,15 +58,15 @@
   - **Impacto**: UX deficiente
   - **Estimación**: 4 horas
 
-- [ ] **Web Builder: Carga de Datos Default (Shula Studio)**
+- [x] **Web Builder: Carga de Datos Default (Shula Studio)**
   - **Motivo**: Plantilla vacía al iniciar
-  - **Impacto**: UX mejorada para nuevos tenants con template pre-llenado
-  - **Estimación**: 2 horas
+  - **Impacto**: Completado (Pre-filled Shula Template)
+  - **Estimación**: Completado
 
-- [ ] **Fix: Módulo Configuración**
+- [x] **Fix: Módulo Configuración**
   - **Motivo**: Reporte de fallo en carga
-  - **Impacto**: Bloqueante para ajustes generales
-  - **Estimación**: 1 hora
+  - **Impacto**: Completado (Resolved Auth & Defaults)
+  - **Estimación**: Completado
 
-**Última actualización**: 2026-02-16 (v5.4 Roadmap Update)  
+**Última actualización**: 2026-02-16 (v5.5 Stability Release)
 **Estado**: 🚀 Sistema robusto. Enfocados en Polish Visual y Estabilidad de Módulos.

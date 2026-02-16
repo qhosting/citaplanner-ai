@@ -140,6 +140,7 @@ export const api = {
     } catch { return {} as LandingSettings; }
   },
 
+
   updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/settings/landing`, {
@@ -158,6 +159,13 @@ export const api = {
 
       return res.ok;
     } catch { return false; }
+  },
+
+  getIntegrationLogs: async (): Promise<any[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/integrations/status`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
   },
 
   updateSubdomain: async (subdomain: string) => {
