@@ -54,6 +54,23 @@ export interface LandingSettings {
   gallery?: string[];
   showWhatsappButton?: boolean;
   googleMapsUrl?: string;
+
+  // SEO & Meta
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
+
+  // Geo
+  latitude?: number;
+  longitude?: number;
+
+  // Advanced Contact & Footer
+  whatsappPhone?: string;
+  footerText?: string;
+  socialInstagram?: string;
+  socialFacebook?: string;
+  socialTwitter?: string;
+  heroImageUrl?: string; // Sincronizado con Prisma
 }
 
 export interface Professional {

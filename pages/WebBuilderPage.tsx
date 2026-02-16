@@ -4,7 +4,7 @@ import {
     Globe, Layout, Sparkles, Save, Image as ImageIcon,
     Type, Palette, MousePointer2, Loader2, Check,
     Eye, Monitor, Smartphone, Tablet, RefreshCw,
-    MessageSquare, Phone, MapPin, Share2, Layers
+    MessageSquare, Phone, MapPin, Share2, Layers, Search, Compass, Cloud, Instagram, Facebook, Twitter, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -14,19 +14,29 @@ export const WebBuilderPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [previewMode, setPreviewMode] = useState<'DESKTOP' | 'TABLET' | 'MOBILE'>('DESKTOP');
-    const [activePanel, setActivePanel] = useState<'CONTENT' | 'DESIGN' | 'PAGES'>('CONTENT');
+    const [activePanel, setActivePanel] = useState<'CONTENT' | 'DESIGN' | 'PAGES' | 'SEO'>('CONTENT');
 
     const [settings, setSettings] = useState<LandingSettings>({
         businessName: '',
         primaryColor: '#630E14',
         secondaryColor: '#C5A028',
-        templateId: 'citaplanner',
+        templateId: 'citaplanner' as any,
         slogan: '',
         aboutText: '',
         address: '',
         contactPhone: '',
         heroImageUrl: '',
-        organizationId: ''
+        organizationId: '',
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: '',
+        whatsappPhone: '',
+        footerText: '',
+        latitude: undefined,
+        longitude: undefined,
+        socialInstagram: '',
+        socialFacebook: '',
+        socialTwitter: ''
     });
 
     useEffect(() => {
@@ -37,7 +47,17 @@ export const WebBuilderPage: React.FC = () => {
         setLoading(true);
         try {
             const data = await api.getLandingSettings();
-            setSettings(data);
+            setSettings({
+                ...data,
+                seoTitle: data.seoTitle || '',
+                seoDescription: data.seoDescription || '',
+                seoKeywords: data.seoKeywords || '',
+                whatsappPhone: data.whatsappPhone || data.contactPhone || '',
+                footerText: data.footerText || '',
+                socialInstagram: data.socialInstagram || '',
+                socialFacebook: data.socialFacebook || '',
+                socialTwitter: data.socialTwitter || ''
+            });
         } catch (e) {
             toast.error("Error al cargar configuración web.");
         } finally {
@@ -50,9 +70,9 @@ export const WebBuilderPage: React.FC = () => {
         try {
             const success = await api.updateLandingSettings(settings);
             if (success) {
-                toast.success("Ecosistema web sincronizado.");
+                toast.success("Ecosistema web sincronizado y publicado.");
             } else {
-                toast.error("Falla en el despliegue.");
+                toast.error("Falla en el despliegue del nodo web.");
             }
         } catch (e) {
             toast.error("Error de conexión con el nodo servidor.");
@@ -65,7 +85,7 @@ export const WebBuilderPage: React.FC = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        toast.info("Subiendo imagen editorial...");
+        toast.info("Transfiriendo imagen editorial...");
         const url = await api.uploadImage(file);
         if (url) {
             setSettings({ ...settings, heroImageUrl: url });
@@ -80,11 +100,11 @@ export const WebBuilderPage: React.FC = () => {
     return (
         <div className="h-[calc(100vh-80px)] flex bg-black overflow-hidden font-inter">
             {/* Sidebar Control Panel */}
-            <div className="w-[450px] border-r border-white/5 flex flex-col bg-zinc-950">
+            <div className="w-[480px] border-r border-white/5 flex flex-col bg-zinc-950">
                 <div className="p-10 border-b border-white/5 flex justify-between items-center bg-black/40">
                     <div>
                         <h1 className="text-2xl font-black text-white tracking-tighter uppercase leading-none mb-1">Web <span className="gold-text-gradient">Architect</span></h1>
-                        <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.4em]">Aurum Builder v1.0</p>
+                        <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.4em]">Aurum Builder v1.2 • Pro Edition</p>
                     </div>
                     <button
                         onClick={handleSave}
@@ -97,18 +117,20 @@ export const WebBuilderPage: React.FC = () => {
                 </div>
 
                 {/* Tab Selection */}
-                <div className="flex p-4 gap-2 bg-black/20">
+                <div className="grid grid-cols-4 p-4 gap-2 bg-black/20">
                     {[
                         { id: 'CONTENT', label: 'Estructura', icon: Layers },
                         { id: 'DESIGN', label: 'Estética', icon: Palette },
-                        { id: 'PAGES', label: 'Dominios', icon: Globe },
+                        { id: 'PAGES', label: 'Global', icon: Globe },
+                        { id: 'SEO', label: 'SEO', icon: Search },
                     ].map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActivePanel(tab.id as any)}
-                            className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${activePanel === tab.id ? 'bg-white/5 text-[#D4AF37] border border-[#D4AF37]/20' : 'text-zinc-600 hover:text-white'}`}
+                            className={`py-3 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all ${activePanel === tab.id ? 'bg-white/5 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_15px_rgba(212,175,55,0.05)]' : 'text-zinc-600 hover:text-zinc-400'}`}
                         >
-                            <tab.icon size={14} /> {tab.label}
+                            <tab.icon size={14} />
+                            <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
                         </button>
                     ))}
                 </div>
@@ -127,7 +149,7 @@ export const WebBuilderPage: React.FC = () => {
                                             type="text"
                                             value={settings.businessName}
                                             onChange={e => setSettings({ ...settings, businessName: e.target.value })}
-                                            className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-black text-xs outline-none focus:border-[#D4AF37]"
+                                            className="w-full p-5 bg-black text-white font-black text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-2xl"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -136,7 +158,7 @@ export const WebBuilderPage: React.FC = () => {
                                             type="text"
                                             value={settings.slogan || ''}
                                             onChange={e => setSettings({ ...settings, slogan: e.target.value })}
-                                            className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37]"
+                                            className="w-full p-5 bg-black text-white font-bold text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-2xl"
                                         />
                                     </div>
                                 </div>
@@ -144,7 +166,7 @@ export const WebBuilderPage: React.FC = () => {
 
                             <section className="space-y-6">
                                 <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
-                                    <ImageIcon size={16} /> Imagen Editorial Hero
+                                    <ImageIcon size={16} /> Imagen Editorial
                                 </h3>
                                 <div
                                     className="group relative w-full h-48 rounded-[2.5rem] bg-black border border-dashed border-white/10 overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/40 transition-all"
@@ -154,13 +176,13 @@ export const WebBuilderPage: React.FC = () => {
                                         <>
                                             <img src={settings.heroImageUrl} className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-all duration-1000" />
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-6 py-2 rounded-full border border-white/20">Cambiar Imagen</span>
+                                                <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-6 py-2 rounded-full border border-white/20">Sustituir Activo</span>
                                             </div>
                                         </>
                                     ) : (
                                         <div className="text-center">
                                             <ImageIcon className="text-zinc-800 mx-auto mb-3" size={32} />
-                                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Sincronizar Background</p>
+                                            <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Cargar Multimedia</p>
                                         </div>
                                     )}
                                     <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -169,14 +191,13 @@ export const WebBuilderPage: React.FC = () => {
 
                             <section className="space-y-6">
                                 <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
-                                    <Type size={16} /> Narrativa About
+                                    <Type size={16} /> Narrativa 'About'
                                 </h3>
                                 <textarea
                                     rows={5}
                                     value={settings.aboutText || ''}
                                     onChange={e => setSettings({ ...settings, aboutText: e.target.value })}
-                                    className="w-full p-6 bg-black/40 border border-white/5 rounded-[2rem] text-zinc-400 text-xs font-medium leading-relaxed outline-none focus:border-[#D4AF37] resize-none"
-                                    placeholder="Cuéntanos la historia de tu negocio..."
+                                    className="w-full p-6 bg-black text-zinc-400 text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-[2rem] resize-none"
                                 />
                             </section>
                         </div>
@@ -185,33 +206,33 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'DESIGN' && (
                         <div className="space-y-12 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Paleta de Identidad</h3>
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Branding Visual</h3>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
                                         <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block ml-1">Color Maestro</label>
                                         <div className="flex gap-3">
                                             <input type="color" value={settings.primaryColor} onChange={e => setSettings({ ...settings, primaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-black/40 rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.primaryColor}</div>
+                                            <div className="flex-1 bg-black rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.primaryColor}</div>
                                         </div>
                                     </div>
                                     <div className="space-y-3">
-                                        <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block ml-1">Acento Gold</label>
+                                        <label className="text-[8px] font-black text-zinc-600 uppercase tracking-widest block ml-1">Color Acento</label>
                                         <div className="flex gap-3">
                                             <input type="color" value={settings.secondaryColor} onChange={e => setSettings({ ...settings, secondaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-black/40 rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.secondaryColor}</div>
+                                            <div className="flex-1 bg-black rounded-xl border border-white/5 flex items-center px-4 font-mono text-[10px] text-zinc-400 uppercase">{settings.secondaryColor}</div>
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Layout & Estructura</h3>
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Layout de Red</h3>
                                 <div className="space-y-3">
                                     {['citaplanner', 'aurum_minimal', 'luxury_white'].map(template => (
                                         <button
                                             key={template}
-                                            onClick={() => setSettings({ ...settings, templateId: template })}
-                                            className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-xl shadow-[#D4AF37]/10' : 'bg-black/40 border-white/5 text-zinc-500 hover:text-white'}`}
+                                            onClick={() => setSettings({ ...settings, templateId: template as any })}
+                                            className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-xl' : 'bg-black border-white/5 text-zinc-500 hover:text-white'}`}
                                         >
                                             <span className="text-[10px] font-black uppercase tracking-widest">{template.replace('_', ' ')}</span>
                                             {settings.templateId === template && <CheckCircle2 size={16} />}
@@ -225,30 +246,95 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'PAGES' && (
                         <div className="space-y-10 animate-entrance">
                             <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Configuración de Dominio</h3>
-                                <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-3xl">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Punto de Acceso (URL)</h3>
+                                <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-[2rem]">
                                     <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                        <Check size={12} /> SSL Activo
+                                        <Check size={12} /> Certificado SSL/TLS Operativo
                                     </p>
-                                    <p className="text-xs font-bold text-white font-mono">{settings.subdomain}.citaplanner.com</p>
+                                    <p className="text-xs font-bold text-white font-mono break-all">{settings.subdomain || 'demo'}.citaplanner.com</p>
                                 </div>
-                                <button className="w-full py-4 rounded-xl bg-white/5 text-[9px] font-black uppercase text-zinc-400 border border-dashed border-white/10 hover:border-[#D4AF37]/40 hover:text-white transition-all">
-                                    Vincular Dominio Propio (Pro)
-                                </button>
                             </section>
 
                             <section className="space-y-6 pt-10 border-t border-white/5">
-                                <h3 className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Información de Contacto</h3>
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-2">WhatsApp / Teléfono</label>
-                                        <input type="text" value={settings.contactPhone || ''} onChange={e => setSettings({ ...settings, contactPhone: e.target.value })} className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs" />
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                    <Phone size={16} /> Contact Hub
+                                </h3>
+                                <div className="space-y-5">
+                                    <div>
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1 mb-2 block">WhatsApp Flotante</label>
+                                        <div className="relative">
+                                            <MessageSquare className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />
+                                            <input type="tel" placeholder="+52..." value={settings.whatsappPhone || ''} onChange={e => setSettings({ ...settings, whatsappPhone: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs focus:ring-1 ring-emerald-500/30" />
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-2">Dirección Física</label>
-                                        <input type="text" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs" />
+                                    <div>
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1 mb-2 block">Dirección Matriz</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />
+                                            <input type="text" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs" />
+                                        </div>
                                     </div>
                                 </div>
+                            </section>
+
+                            <section className="space-y-6 pt-10 border-t border-white/5">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                    <Share2 size={16} /> Footer & Redes
+                                </h3>
+                                <div className="space-y-4">
+                                    <textarea placeholder="Texto legal o créditos del footer..." rows={3} value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-medium resize-none" />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="relative">
+                                            <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" size={14} />
+                                            <input placeholder="Instagram" type="text" value={settings.socialInstagram || ''} onChange={e => setSettings({ ...settings, socialInstagram: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-black border border-white/5 rounded-xl text-white text-[10px]" />
+                                        </div>
+                                        <div className="relative">
+                                            <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700" size={14} />
+                                            <input placeholder="Facebook" type="text" value={settings.socialFacebook || ''} onChange={e => setSettings({ ...settings, socialFacebook: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-black border border-white/5 rounded-xl text-white text-[10px]" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+
+                    {activePanel === 'SEO' && (
+                        <div className="space-y-10 animate-entrance">
+                            <section className="space-y-6">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                    <Search size={16} /> Meta-Inteligencia (SEO)
+                                </h3>
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Meta-Título (Navegador)</label>
+                                        <input type="text" placeholder="Ej: Beauty Studio • El Mejor Servicio en México" value={settings.seoTitle || ''} onChange={e => setSettings({ ...settings, seoTitle: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-black text-xs" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Meta-Descripción (Google)</label>
+                                        <textarea rows={4} placeholder="Descripción que aparece en resultados de búsqueda..." value={settings.seoDescription || ''} onChange={e => setSettings({ ...settings, seoDescription: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-medium resize-none" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Keywords (SEO Keywords)</label>
+                                        <input type="text" placeholder="belleza, studio, citas, polanco, lujo..." value={settings.seoKeywords || ''} onChange={e => setSettings({ ...settings, seoKeywords: e.target.value })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs" />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section className="space-y-6 pt-10 border-t border-white/5">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                    <Compass size={16} /> Geolocalización (Mapas)
+                                </h3>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Latitud</label>
+                                        <input type="number" step="any" placeholder="19.4326" value={settings.latitude || ''} onChange={e => setSettings({ ...settings, latitude: parseFloat(e.target.value) })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-mono" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-1">Longitud</label>
+                                        <input type="number" step="any" placeholder="-99.1332" value={settings.longitude || ''} onChange={e => setSettings({ ...settings, longitude: parseFloat(e.target.value) })} className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white text-xs font-mono" />
+                                    </div>
+                                </div>
+                                <p className="text-[8px] text-zinc-700 font-bold uppercase tracking-widest">Utilizado para posicionamiento en Google Maps y SEO local.</p>
                             </section>
                         </div>
                     )}
@@ -260,84 +346,90 @@ export const WebBuilderPage: React.FC = () => {
                 {/* Preview Header */}
                 <div className="h-20 bg-black border-b border-white/5 flex items-center justify-between px-10">
                     <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-white/5">
-                        <button
-                            onClick={() => setPreviewMode('DESKTOP')}
-                            className={`p-2.5 rounded-xl transition-all ${previewMode === 'DESKTOP' ? 'bg-white/10 text-white shadow-inner' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                            <Monitor size={16} />
-                        </button>
-                        <button
-                            onClick={() => setPreviewMode('TABLET')}
-                            className={`p-2.5 rounded-xl transition-all ${previewMode === 'TABLET' ? 'bg-white/10 text-white shadow-inner' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                            <Tablet size={16} />
-                        </button>
-                        <button
-                            onClick={() => setPreviewMode('MOBILE')}
-                            className={`p-2.5 rounded-xl transition-all ${previewMode === 'MOBILE' ? 'bg-white/10 text-white shadow-inner' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                            <Smartphone size={16} />
-                        </button>
+                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'DESKTOP' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Monitor size={16} /></button>
+                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'TABLET' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Tablet size={16} /></button>
+                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'MOBILE' ? 'bg-white/10 text-white' : 'text-zinc-600 hover:text-zinc-400'}`}><Smartphone size={16} /></button>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Simulación Real-Time</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                        <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Vista Previa Proyectada</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
                 </div>
 
                 {/* Device Frame */}
                 <div className="flex-1 overflow-hidden p-12 flex justify-center bg-[radial-gradient(circle_at_center,_#111_0%,_#000_100%)]">
-                    <div className={`shadow-[0_0_100px_rgba(0,0,0,0.8)] transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full' :
+                    <div className={`shadow-2xl transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full' :
                             previewMode === 'TABLET' ? 'w-[768px] rounded-[3rem] border-[12px] border-zinc-950' :
                                 'w-[375px] rounded-[4rem] border-[16px] border-zinc-950'
                         }`}>
-                        {/* Actual Preview Content */}
-                        <div className="flex flex-col min-h-full font-inter bg-white text-black">
-                            {/* Preview Nav */}
-                            <nav className="p-10 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-zinc-100">
-                                <span className="font-black text-2xl tracking-tighter uppercase" style={{ color: settings.primaryColor }}>{settings.businessName || 'MY BRAND'}</span>
-                                <button className="px-10 py-4 font-black text-[10px] uppercase tracking-widest text-white rounded-full shadow-2xl transition-all" style={{ backgroundColor: settings.primaryColor }}>Reservar</button>
+
+                        {/* Mock Website Content */}
+                        <div className="flex flex-col min-h-full bg-white">
+                            <nav className="p-8 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-zinc-100">
+                                <span className="font-black text-2xl tracking-tighter uppercase" style={{ color: settings.primaryColor }}>{settings.businessName || 'BRAND'}</span>
+                                <div className="hidden md:flex gap-8 text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                                    <span>Home</span>
+                                    <span>Servicios</span>
+                                    <span>Nosotros</span>
+                                </div>
+                                <button className="px-8 py-3 font-black text-[9px] uppercase tracking-widest text-white rounded-full shadow-lg" style={{ backgroundColor: settings.primaryColor }}>Reservar</button>
                             </nav>
 
-                            {/* Preview Hero */}
-                            <section className="h-[600px] relative flex items-center justify-center text-center px-10 overflow-hidden bg-black">
-                                {settings.heroImageUrl && (
-                                    <img src={settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-80" />
-                                <div className="relative z-10 space-y-8 animate-entrance">
+                            <section className="h-[550px] relative flex items-center justify-center text-center px-10 overflow-hidden bg-black">
+                                {settings.heroImageUrl && <img src={settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                                <div className="relative z-10 space-y-6 max-w-3xl">
                                     <p className="text-[#D4AF37] font-black text-[10px] uppercase tracking-[0.5em]">{settings.slogan || 'TU EXPERIENCIA DE LUJO'}</p>
-                                    <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter uppercase leading-[0.9] max-w-4xl">{settings.businessName || 'Elite Beauty'}</h2>
-                                    <div className="pt-10 flex gap-6 justify-center">
-                                        <button className="px-12 py-5 bg-[#D4AF37] text-black font-black text-xs uppercase tracking-widest rounded-full shadow-2xl hover:scale-105 transition-all">Ver Servicios</button>
-                                        <button className="px-12 py-5 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black text-xs uppercase tracking-widest rounded-full hover:bg-white/20 transition-all">Contactar</button>
+                                    <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-[0.9]">{settings.businessName || 'Elite Beauty'}</h2>
+                                    <div className="pt-8 flex gap-5 justify-center">
+                                        <button className="px-10 py-4 bg-[#D4AF37] text-black font-black text-[10px] uppercase tracking-widest rounded-full shadow-xl">Agendar Cita</button>
+                                        <button className="px-10 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black text-[10px] uppercase tracking-widest rounded-full">Contactar</button>
                                     </div>
                                 </div>
                             </section>
 
-                            {/* Preview Footer */}
-                            <div className="mt-auto p-20 bg-zinc-50 border-t border-zinc-200">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+                            <section className="p-20 space-y-12">
+                                <div className="flex flex-col items-center text-center space-y-6">
+                                    <div className="w-12 h-1 bg-[#D4AF37]" />
+                                    <h3 className="text-3xl font-black uppercase tracking-tighter">Nuestra Esencia</h3>
+                                    <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl">{settings.aboutText || 'Expertos en realzar tu belleza natural con técnicas de vanguardia y atención personalizada.'}</p>
+                                </div>
+                            </section>
+
+                            <footer className="mt-auto p-16 bg-zinc-950 text-white">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-b border-white/5 pb-16">
                                     <div className="space-y-6">
-                                        <h4 className="font-black text-sm uppercase tracking-tighter">About Us</h4>
-                                        <p className="text-zinc-500 text-sm leading-relaxed">{settings.aboutText || 'Nuestra esencia define la calidad...'}</p>
+                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">{settings.businessName}</h4>
+                                        <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || 'Experimenta el estándar de oro en gestión de servicios y belleza.'}</p>
                                     </div>
                                     <div className="space-y-6">
-                                        <h4 className="font-black text-sm uppercase tracking-tighter">Contact</h4>
-                                        <div className="space-y-4">
-                                            <p className="flex items-center gap-4 text-zinc-500 text-sm"><Phone size={14} /> {settings.contactPhone || '+52 55...'}</p>
-                                            <p className="flex items-center gap-4 text-zinc-500 text-sm"><MapPin size={14} /> {settings.address || 'Ubicación Premium'}</p>
-                                        </div>
+                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">Ubicación</h4>
+                                        <p className="text-zinc-400 text-xs flex gap-3 items-start"><MapPin size={14} className="mt-1" /> {settings.address || 'Ubicación Central'}</p>
+                                        <p className="text-zinc-400 text-xs flex gap-3 items-center"><Phone size={14} /> {settings.contactPhone || '+52...'}</p>
                                     </div>
                                     <div className="space-y-6">
-                                        <h4 className="font-black text-sm uppercase tracking-tighter">Social</h4>
-                                        <div className="flex gap-6">
-                                            <span className="p-3 bg-white rounded-2xl shadow-lg border border-zinc-100 text-zinc-400 hover:text-black cursor-pointer"><Share2 size={20} /></span>
-                                            <span className="p-3 bg-white rounded-2xl shadow-lg border border-zinc-100 text-zinc-400 hover:text-black cursor-pointer"><MessageSquare size={20} /></span>
+                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">Redes</h4>
+                                        <div className="flex gap-4">
+                                            {settings.socialInstagram && <Instagram size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
+                                            {settings.socialFacebook && <Facebook size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
+                                            {settings.socialTwitter && <Twitter size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
                                         </div>
                                     </div>
                                 </div>
+                                <div className="pt-8 flex justify-between items-center">
+                                    <p className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">© 2026 {settings.businessName} • Powered by Aurum</p>
+                                    <div className="flex gap-4 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                                        <span>Privacidad</span>
+                                        <span>Términos</span>
+                                    </div>
+                                </div>
+                            </footer>
+
+                            {/* Floating WhatsApp Button Mockup */}
+                            <div className="fixed bottom-10 right-10 w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20 cursor-pointer hover:scale-110 transition-all z-50">
+                                <MessageSquare size={24} />
+                                <div className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
                             </div>
                         </div>
                     </div>

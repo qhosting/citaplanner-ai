@@ -230,6 +230,23 @@ model LandingSetting {
   contactPhone   String?   @map("contact_phone") @db.VarChar(20)
   heroImageUrl   String?   @map("hero_image_url")
   organizationId String?   @unique @default("demo") @map("organization_id") @db.VarChar(50)
+  
+  // SEO & Meta
+  seoTitle       String?   @map("seo_title") @db.VarChar(100)
+  seoDescription String?   @map("seo_description")
+  seoKeywords    String?   @map("seo_keywords")
+  
+  // Geo & Location
+  latitude       Float?
+  longitude      Float?
+  
+  // Advanced Contact & Footer
+  whatsappPhone  String?   @map("whatsapp_phone") @db.VarChar(20)
+  footerText     String?   @map("footer_text")
+  socialInstagram String?  @map("social_instagram")
+  socialFacebook  String?  @map("social_facebook")
+  socialTwitter   String?  @map("social_twitter")
+
   features       Json?     @default("{\"ai\": true, \"inventory\": true, \"marketing\": true}")
 
   @@map("landing_settings")

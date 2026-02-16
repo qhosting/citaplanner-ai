@@ -617,6 +617,38 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'landing_settings' AND indexname = 'idx_landing_org_unique') THEN
                         CREATE UNIQUE INDEX idx_landing_org_unique ON landing_settings(organization_id);
                     END IF;
+                    
+                    -- New columns for Web Builder Pro
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_title') THEN
+                        ALTER TABLE landing_settings ADD COLUMN seo_title VARCHAR(100);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_description') THEN
+                        ALTER TABLE landing_settings ADD COLUMN seo_description TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_keywords') THEN
+                        ALTER TABLE landing_settings ADD COLUMN seo_keywords TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='latitude') THEN
+                        ALTER TABLE landing_settings ADD COLUMN latitude DOUBLE PRECISION;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='longitude') THEN
+                        ALTER TABLE landing_settings ADD COLUMN longitude DOUBLE PRECISION;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='whatsapp_phone') THEN
+                        ALTER TABLE landing_settings ADD COLUMN whatsapp_phone VARCHAR(20);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='footer_text') THEN
+                        ALTER TABLE landing_settings ADD COLUMN footer_text TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_instagram') THEN
+                        ALTER TABLE landing_settings ADD COLUMN social_instagram VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_facebook') THEN
+                        ALTER TABLE landing_settings ADD COLUMN social_facebook VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_twitter') THEN
+                        ALTER TABLE landing_settings ADD COLUMN social_twitter VARCHAR(255);
+                    END IF;
                 END IF;
 
             END $$;
@@ -636,6 +668,16 @@ const initDB = async () => {
                 contact_phone VARCHAR(20),
                 hero_image_url TEXT,
                 organization_id VARCHAR(50) UNIQUE DEFAULT 'demo',
+                seo_title VARCHAR(100),
+                seo_description TEXT,
+                seo_keywords TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                whatsapp_phone VARCHAR(20),
+                footer_text TEXT,
+                social_instagram VARCHAR(255),
+                social_facebook VARCHAR(255),
+                social_twitter VARCHAR(255),
                 features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
             );
         `);
@@ -2567,7 +2609,17 @@ app.get('/api/settings/landing', async (req, res) => {
             aboutText: data.aboutText || 'Plataforma líder.',
             address: data.address || 'Ubicación Central',
             contactPhone: data.contactPhone || '+52 55 0000 0000',
-            heroImageUrl: data.heroImageUrl || ''
+            heroImageUrl: data.heroImageUrl || '',
+            seoTitle: data.seoTitle || '',
+            seoDescription: data.seoDescription || '',
+            seoKeywords: data.seoKeywords || '',
+            latitude: data.latitude || null,
+            longitude: data.longitude || null,
+            whatsappPhone: data.whatsappPhone || '',
+            footerText: data.footerText || '',
+            socialInstagram: data.socialInstagram || '',
+            socialFacebook: data.socialFacebook || '',
+            socialTwitter: data.socialTwitter || ''
         };
         res.json(normalized);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2589,7 +2641,17 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 aboutText: settings.aboutText,
                 address: settings.address,
                 contactPhone: settings.contactPhone,
-                heroImageUrl: settings.heroImageUrl
+                heroImageUrl: settings.heroImageUrl,
+                seoTitle: settings.seoTitle,
+                seoDescription: settings.seoDescription,
+                seoKeywords: settings.seoKeywords,
+                latitude: settings.latitude ? parseFloat(settings.latitude) : null,
+                longitude: settings.longitude ? parseFloat(settings.longitude) : null,
+                whatsappPhone: settings.whatsappPhone,
+                footerText: settings.footerText,
+                socialInstagram: settings.socialInstagram,
+                socialFacebook: settings.socialFacebook,
+                socialTwitter: settings.socialTwitter
             },
             create: {
                 organizationId,
@@ -2601,7 +2663,17 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 aboutText: settings.aboutText,
                 address: settings.address,
                 contactPhone: settings.contactPhone,
-                heroImageUrl: settings.heroImageUrl
+                heroImageUrl: settings.heroImageUrl,
+                seoTitle: settings.seoTitle,
+                seoDescription: settings.seoDescription,
+                seoKeywords: settings.seoKeywords,
+                latitude: settings.latitude ? parseFloat(settings.latitude) : null,
+                longitude: settings.longitude ? parseFloat(settings.longitude) : null,
+                whatsappPhone: settings.whatsappPhone,
+                footerText: settings.footerText,
+                socialInstagram: settings.socialInstagram,
+                socialFacebook: settings.socialFacebook,
+                socialTwitter: settings.socialTwitter
             }
         });
 
