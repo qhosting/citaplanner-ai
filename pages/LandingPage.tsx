@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, Sparkles, Loader2, Clock, MapPin, Instagram, Facebook,
@@ -11,23 +11,23 @@ import { api } from '../services/api';
 import { LandingSettings, Service } from '../types';
 
 const DEFAULT_SETTINGS: LandingSettings = {
-  businessName: 'Aurum Beauty Studio',
+  businessName: 'CitaPlanner',
   primaryColor: '#C5A028',
   secondaryColor: '#1A1A1A',
   templateId: 'beauty',
   slogan: 'Redefiniendo la Estética de Ultra-Lujo',
   aboutText: 'Santuario de belleza líder en alta tecnología. Fusionamos arte y ciencia para crear resultados naturales y sofisticados.',
-  address: 'Presidente Masaryk 450, Polanco, CDMX',
-  contactPhone: '+52 55 7142 7321',
+  address: 'Ubicación Central',
+  contactPhone: '+52 55 0000 0000',
   heroSlides: [],
   stats: [],
   socialLinks: {},
   testimonials: [],
-  gallery: [],
+  images: [],
   showWhatsappButton: true
 };
 
-export const LogoCitaplanner = ({ size = 20, color = "#C5A028", customUrl }: { size?: number, color?: string, customUrl?: string }) => (
+export const LogoCitaplanner = ({ size = 20, color = "#C5A028", customUrl, businessName }: { size?: number, color?: string, customUrl?: string, businessName?: string }) => (
   <div className="flex items-center gap-3 group cursor-default">
     {customUrl ? (
       <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
@@ -36,17 +36,21 @@ export const LogoCitaplanner = ({ size = 20, color = "#C5A028", customUrl }: { s
     ) : (
       <div className="p-2.5 rounded-xl text-white group-hover:scale-105 transition-transform duration-500 relative shadow-lg" style={{ background: `linear-gradient(135deg, ${color} 0%, #000 100%)` }}>
         <CalendarDays size={size} />
-        <div className="absolute -top-1 -right-1 text-[#C5A028] animate-pulse">
+        <div className="absolute -top-1 -right-1 animate-pulse" style={{ color }}>
           <Sparkles size={size * 0.6} fill="currentColor" />
         </div>
       </div>
     )}
     <div className="flex flex-col">
-      <div className="flex items-center">
-        <span className="font-black text-2xl tracking-tighter leading-none text-white">Cita</span>
-        <span className="font-black text-2xl tracking-tighter leading-none" style={{ color: color }}>Planner</span>
-      </div>
-      <span className="text-[7px] font-bold text-zinc-400 uppercase tracking-[0.4em]">Aurum Ecosystem</span>
+      {businessName ? (
+        <span className="font-black text-2xl tracking-tighter leading-none text-white">{businessName}</span>
+      ) : (
+        <div className="flex items-center">
+          <span className="font-black text-2xl tracking-tighter leading-none text-white">Cita</span>
+          <span className="font-black text-2xl tracking-tighter leading-none" style={{ color }}>Planner</span>
+        </div>
+      )}
+      <span className="text-[7px] font-bold text-zinc-400 uppercase tracking-[0.4em]">Powered by CitaPlanner</span>
     </div>
   </div>
 );
@@ -58,6 +62,9 @@ export const LandingPage: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Dynamic accent color from tenant settings
+  const accent = settings.primaryColor || '#C5A028';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -87,8 +94,8 @@ export const LandingPage: React.FC = () => {
         }
 
         if (sv.status === 'fulfilled' && sv.value) {
-          const activeServices = sv.value.filter(svItem => svItem.status === 'ACTIVE').slice(0, 3);
-          setServices(activeServices.length > 0 ? activeServices : sv.value.slice(0, 3));
+          const activeServices = sv.value.filter(svItem => svItem.status === 'ACTIVE').slice(0, 6);
+          setServices(activeServices.length > 0 ? activeServices : sv.value.slice(0, 6));
         }
       } catch (error) {
         console.error("Error loading landing:", error);
@@ -100,7 +107,9 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (settings.seoTitle) document.title = settings.seoTitle;
+    if (settings.seoTitle || settings.businessName) {
+      document.title = settings.seoTitle || `${settings.businessName} — Reservas en Línea`;
+    }
 
     const updateMeta = (name: string, content: string) => {
       let meta = document.querySelector(`meta[name="${name}"]`);
@@ -114,26 +123,60 @@ export const LandingPage: React.FC = () => {
 
     if (settings.seoDescription) updateMeta('description', settings.seoDescription);
     if (settings.seoKeywords) updateMeta('keywords', settings.seoKeywords);
-  }, [settings.seoTitle, settings.seoDescription, settings.seoKeywords]);
 
-  const slides = settings.heroSlides && settings.heroSlides.length > 0
-    ? settings.heroSlides
-    : [{ image: "https://images.unsplash.com/photo-1560066984-138dadb4c035", title: settings.businessName || "Citaplanner", subtitle: "ELITE", text: settings.slogan || "Gestiona tu negocio con inteligencia." }];
+    // Inject dynamic accent color as CSS variable
+    document.documentElement.style.setProperty('--accent', accent);
+  }, [settings.seoTitle, settings.seoDescription, settings.seoKeywords, accent, settings.businessName]);
+
+  const slides = useMemo(() => {
+    if (settings.heroSlides && settings.heroSlides.length > 0) return settings.heroSlides;
+    return [{
+      image: settings.heroImageUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035",
+      title: settings.businessName || "CitaPlanner",
+      subtitle: "",
+      text: settings.slogan || "Gestiona tu negocio con inteligencia."
+    }];
+  }, [settings]);
 
   const waTarget = settings.whatsappPhone || settings.contactPhone;
   const whatsappLink = waTarget ? `https://wa.me/${waTarget.replace(/\D/g, '')}` : '#';
 
+  // Landing services from web-builder or from database
+  const landingServices = useMemo(() => {
+    if (services.length > 0) return services;
+    // Fallback to web-builder configured services
+    if (settings.services && Array.isArray(settings.services) && settings.services.length > 0) {
+      return settings.services.map((s: any, i: number) => ({
+        id: `landing-${i}`,
+        name: s.title || s.name || 'Servicio',
+        description: s.description || '',
+        price: s.price || '0',
+        duration: 60,
+        category: s.category || '',
+        imageUrl: s.imageUrl || '',
+        status: 'ACTIVE'
+      }));
+    }
+    return [];
+  }, [services, settings.services]);
+
+  // Gallery from web-builder
+  const gallery = useMemo(() => {
+    if (settings.images && Array.isArray(settings.images) && settings.images.length > 0) return settings.images;
+    return [];
+  }, [settings.images]);
+
   if (loading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-black">
-        <Loader2 className="animate-spin text-[#D4AF37] mb-6" size={40} />
-        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">Iniciando Protocolo Aurum...</p>
+        <Loader2 className="animate-spin mb-6" style={{ color: accent }} size={40} />
+        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">Cargando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] font-inter selection:bg-[#C5A028] selection:text-white overflow-x-hidden scroll-smooth">
+    <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth" style={{ '--accent': accent } as React.CSSProperties}>
 
       {/* Floating WhatsApp Concierge */}
       {(settings.showWhatsappButton ?? true) && waTarget && (
@@ -144,8 +187,8 @@ export const LandingPage: React.FC = () => {
           className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group"
         >
           <div className="relative">
-            <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-ping opacity-25 scale-125" />
-            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 transition-all duration-500">
+            <div className="absolute inset-0 rounded-full animate-ping opacity-25 scale-125" style={{ backgroundColor: accent }} />
+            <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-all duration-500" style={{ background: `linear-gradient(135deg, ${accent}, #000)` }}>
               <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
             </div>
           </div>
@@ -153,16 +196,17 @@ export const LandingPage: React.FC = () => {
       )}
 
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#C5A028]/20 shadow-2xl' : 'bg-transparent py-8'}`}>
+      <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 shadow-2xl' : 'bg-transparent py-8'}`} style={scrolled ? { borderBottom: `1px solid ${accent}20` } : {}}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
-          <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
+          <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.logoUrl ? undefined : settings.businessName} />
 
           <div className="hidden lg:flex items-center gap-10">
-            <a href="#services" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Servicios</a>
-            <a href="#about" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Santuario</a>
+            <a href="#services" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80" style={{ ['--hover-color' as any]: accent }}>Servicios</a>
+            <a href="#about" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Nosotros</a>
+            {gallery.length > 0 && <a href="#gallery" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Galería</a>}
             <div className="w-px h-4 bg-white/10 mx-2" />
-            <Link to="/login" className="font-black text-[10px] uppercase tracking-[0.3em] transition-all text-white/60 hover:text-[#C5A028] px-4 py-2 rounded-xl hover:bg-white/5">Staff</Link>
-            <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 bg-white text-black">
+            <Link to="/login" className="font-black text-[10px] uppercase tracking-[0.3em] transition-all text-white/60 hover:opacity-80 px-4 py-2 rounded-xl hover:bg-white/5">Staff</Link>
+            <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 text-white" style={{ backgroundColor: accent }}>
               Mi Cita <ArrowRight size={14} />
             </Link>
           </div>
@@ -177,17 +221,17 @@ export const LandingPage: React.FC = () => {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-2xl animate-entrance p-8 flex flex-col">
           <div className="flex justify-between items-center mb-20">
-            <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
-            <button onClick={() => setMobileMenuOpen(false)} className="p-4 bg-white/5 rounded-2xl text-[#C5A028] border border-[#C5A028]/20">
+            <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.logoUrl ? undefined : settings.businessName} />
+            <button onClick={() => setMobileMenuOpen(false)} className="p-4 bg-white/5 rounded-2xl border" style={{ color: accent, borderColor: `${accent}33` }}>
               <X size={32} />
             </button>
           </div>
           <div className="flex flex-col gap-10 text-center">
             <a href="#services" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Servicios</a>
-            <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Santuario</a>
+            <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Nosotros</a>
             <div className="h-px bg-white/10 w-24 mx-auto my-4" />
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-black text-[#C5A028] uppercase tracking-[0.2em]">Acceso Staff</Link>
-            <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="gold-btn py-6 rounded-[2rem] text-sm uppercase tracking-[0.4em] font-black mx-auto w-full max-w-xs">Reservar Ahora</Link>
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-black uppercase tracking-[0.2em]" style={{ color: accent }}>Acceso Staff</Link>
+            <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="py-6 rounded-[2rem] text-sm uppercase tracking-[0.4em] font-black mx-auto w-full max-w-xs text-black" style={{ backgroundColor: accent }}>Reservar Ahora</Link>
           </div>
           <div className="mt-auto text-center border-t border-white/5 pt-10">
             <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{settings.businessName}</p>
@@ -203,106 +247,139 @@ export const LandingPage: React.FC = () => {
             <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
             <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
               <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-                <span className="text-[11px] font-black uppercase tracking-[1em] text-[#C5A028] mb-8 block">Exclusividad • Arte • Precisión</span>
-                <h1 className="text-6xl md:text-[140px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
-                  {slide.title} <span className="italic font-light text-[#C5A028]">{slide.subtitle}</span>
+                <span className="text-[11px] font-black uppercase tracking-[1em] mb-8 block" style={{ color: accent }}>{settings.seoKeywords?.split(',')[0] || settings.businessName}</span>
+                <h1 className="text-6xl md:text-[120px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
+                  {slide.title} {slide.subtitle && <span className="italic font-light" style={{ color: accent }}>{slide.subtitle}</span>}
                 </h1>
                 <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed mb-14">{slide.text}</p>
-                <Link to="/book" className="gold-btn px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block">Reservar Experiencia</Link>
+                <Link to="/book" className="px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block text-black" style={{ backgroundColor: accent }}>Reservar Experiencia</Link>
               </div>
             </div>
           </div>
         ))}
       </section>
 
-      {/* Services Section */}
-      <section id="services" className="py-48 bg-[#050505] relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="mb-32">
-            <span className="text-[11px] font-black uppercase tracking-[0.6em] text-[#C5A028] mb-8 block">Le Menu d'Excellence</span>
-            <h2 className="text-6xl md:text-[100px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
-              Invierte en tu <br /> <span className="italic font-light text-[#C5A028]">Propia Mirada.</span>
+      {/* About Section */}
+      {settings.aboutText && (
+        <section id="about" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden">
+          <div className="max-w-5xl mx-auto px-8 text-center">
+            <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Sobre Nosotros</span>
+            <h2 className="text-4xl md:text-6xl font-playfair font-black text-white leading-tight tracking-tighter mb-12">
+              {settings.businessName}
             </h2>
+            <p className="text-lg md:text-xl text-zinc-400 font-light leading-relaxed max-w-3xl mx-auto">{settings.aboutText}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
-            {services.map((s, i) => (
-              <div key={i} className="group bg-[#0a0a0a] rounded-[4.5rem] border border-white/5 hover:border-[#C5A028]/40 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl">
-                <div className="h-[300px] overflow-hidden relative">
-                  <img src={s.imageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9'} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
-                </div>
-                <div className="p-12">
-                  <span className="text-[9px] font-black text-[#C5A028] uppercase tracking-[0.4em] mb-6 block">{s.category}</span>
-                  <h3 className="text-2xl font-playfair font-bold text-white mb-6 group-hover:text-[#C5A028] transition-colors">{s.name}</h3>
-                  <p className="text-zinc-500 font-medium leading-relaxed mb-10 min-h-[80px]">{s.description || 'Protocolo exclusivo diseñado para armonizar tus rasgos.'}</p>
-                  <div className="pt-8 border-t border-white/5">
-                    <Link to="/book" className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-white group-hover:text-[#C5A028] transition-all">RESERVAR EXPERIENCIA <ArrowRight size={18} className="text-[#C5A028]" /></Link>
+        </section>
+      )}
+
+      {/* Services Section */}
+      {landingServices.length > 0 && (
+        <section id="services" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="mb-20 md:mb-32">
+              <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Nuestros Servicios</span>
+              <h2 className="text-5xl md:text-[80px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
+                Descubre lo que <br /> <span className="italic font-light" style={{ color: accent }}>ofrecemos.</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-16">
+              {landingServices.map((s: any, i: number) => (
+                <div key={s.id || i} className="group bg-[#0a0a0a] rounded-[3rem] md:rounded-[4.5rem] border border-white/5 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl" style={{ ['--card-hover-border' as any]: `${accent}66` }}>
+                  {s.imageUrl && (
+                    <div className="h-[250px] md:h-[300px] overflow-hidden relative">
+                      <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
+                    </div>
+                  )}
+                  <div className="p-8 md:p-12">
+                    {s.category && <span className="text-[9px] font-black uppercase tracking-[0.4em] mb-6 block" style={{ color: accent }}>{s.category}</span>}
+                    <h3 className="text-xl md:text-2xl font-playfair font-bold text-white mb-4 md:mb-6 group-hover:transition-colors" style={{ ['--hover' as any]: accent }}>{s.name}</h3>
+                    <p className="text-zinc-500 font-medium leading-relaxed mb-8 md:mb-10 min-h-[60px]">{s.description || ''}</p>
+                    {s.price && (
+                      <div className="flex items-center justify-between pt-6 md:pt-8 border-t border-white/5">
+                        <span className="text-2xl font-black" style={{ color: accent }}>${typeof s.price === 'number' ? s.price.toLocaleString() : s.price}</span>
+                        <Link to="/book" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-white hover:opacity-80 transition-all">
+                          RESERVAR <ArrowRight size={16} style={{ color: accent }} />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* --- ELITE UPGRADED FOOTER --- */}
+      {/* Gallery Section */}
+      {gallery.length > 0 && (
+        <section id="gallery" className="py-32 md:py-48 bg-[#050505]">
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="mb-20">
+              <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Galería</span>
+              <h2 className="text-5xl md:text-[80px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
+                Nuestro <span className="italic font-light" style={{ color: accent }}>trabajo.</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {gallery.map((img: any, i: number) => (
+                <div key={i} className="group relative rounded-3xl overflow-hidden aspect-[4/3]">
+                  <img src={img.url || img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={img.caption || `Imagen ${i + 1}`} />
+                  {img.caption && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      <p className="text-white text-sm font-bold">{img.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* --- FOOTER --- */}
       <footer className="bg-[#050505] pt-32 pb-12 border-t border-white/5 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-[#C5A028]/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] blur-[120px] rounded-full pointer-events-none" style={{ backgroundColor: `${accent}0D` }} />
 
         <div className="max-w-7xl mx-auto px-8 relative z-10">
-          {/* Top Footer: Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 mb-24">
             {/* Column 1: Brand */}
             <div className="lg:col-span-4 space-y-10">
-              <LogoCitaplanner size={32} color={settings.primaryColor} customUrl={settings.logoUrl} />
+              <LogoCitaplanner size={32} color={accent} customUrl={settings.logoUrl} businessName={settings.logoUrl ? undefined : settings.businessName} />
               <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-                {settings.footerText || `${settings.businessName} opera bajo los estándares del ecosistema de capital Aurum. Fusionamos alta tecnología con protocolos de estética de nivel máster para resultados sin precedentes.`}
+                {settings.footerText || `${settings.businessName} — Sistema de reservas y gestión profesional.`}
               </p>
               <div className="flex items-center gap-4">
                 {(settings.socialInstagram) && (
-                  <a href={settings.socialInstagram} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                  <a href={settings.socialInstagram} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:border-opacity-40 transition-all" style={{ ['--hover-color' as any]: accent }}>
                     <Instagram size={20} />
                   </a>
                 )}
                 {(settings.socialFacebook) && (
-                  <a href={settings.socialFacebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                  <a href={settings.socialFacebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 transition-all">
                     <Facebook size={20} />
                   </a>
                 )}
                 {(settings.socialTwitter) && (
-                  <a href={settings.socialTwitter} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                  <a href={settings.socialTwitter} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 transition-all">
                     <Twitter size={20} />
                   </a>
-                )}
-                {!settings.socialInstagram && !settings.socialFacebook && !settings.socialTwitter && (
-                  <>
-                    <a href={settings.socialLinks?.instagram || '#'} className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
-                      <Instagram size={20} />
-                    </a>
-                    <a href={settings.socialLinks?.facebook || '#'} className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
-                      <Facebook size={20} />
-                    </a>
-                    <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
-                      <Linkedin size={20} />
-                    </a>
-                  </>
                 )}
               </div>
             </div>
 
             {/* Column 2: Navigation */}
             <div className="lg:col-span-2 space-y-10">
-              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Navegación</h4>
+              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] pl-4" style={{ borderLeft: `2px solid ${accent}` }}>Navegación</h4>
               <ul className="space-y-4">
-                {['Inicio', 'Servicios', 'Santuario', 'Agendar'].map((item) => (
+                {['Inicio', 'Servicios', 'Nosotros'].map((item) => (
                   <li key={item}>
                     <a href={`#${item.toLowerCase()}`} className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
-                      <div className="w-1 h-1 rounded-full bg-[#C5A028] scale-0 group-hover:scale-100 transition-transform" /> {item}
+                      <div className="w-1 h-1 rounded-full scale-0 group-hover:scale-100 transition-transform" style={{ backgroundColor: accent }} /> {item}
                     </a>
                   </li>
                 ))}
                 <li>
-                  <Link to="/login" className="text-[11px] font-black text-[#C5A028] uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
+                  <Link to="/login" className="text-[11px] font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group" style={{ color: accent }}>
                     <ShieldCheck size={14} /> Acceso Staff
                   </Link>
                 </li>
@@ -311,24 +388,24 @@ export const LandingPage: React.FC = () => {
 
             {/* Column 3: Contact */}
             <div className="lg:col-span-3 space-y-10">
-              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Contacto Elite</h4>
+              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] pl-4" style={{ borderLeft: `2px solid ${accent}` }}>Contacto</h4>
               <div className="space-y-6">
-                <div className="flex gap-4">
-                  <MapPin size={18} className="text-[#C5A028] shrink-0" />
-                  {settings.googleMapsUrl ? (
-                    <a href={settings.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed hover:text-[#C5A028] transition-colors">{settings.address}</a>
-                  ) : (
-                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
-                  )}
-                </div>
-                <div className="flex gap-4">
-                  <Phone size={18} className="text-[#C5A028] shrink-0" />
-                  <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest">{settings.contactPhone}</p>
-                </div>
-                <div className="flex gap-4">
-                  <Mail size={18} className="text-[#C5A028] shrink-0" />
-                  <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest">concierge@{settings.businessName.toLowerCase().replace(/\s/g, '')}.mx</p>
-                </div>
+                {settings.address && (
+                  <div className="flex gap-4">
+                    <MapPin size={18} className="shrink-0" style={{ color: accent }} />
+                    {settings.googleMapsUrl ? (
+                      <a href={settings.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed hover:text-white transition-colors">{settings.address}</a>
+                    ) : (
+                      <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
+                    )}
+                  </div>
+                )}
+                {settings.contactPhone && (
+                  <div className="flex gap-4">
+                    <Phone size={18} className="shrink-0" style={{ color: accent }} />
+                    <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest">{settings.contactPhone}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -336,25 +413,21 @@ export const LandingPage: React.FC = () => {
             <div className="lg:col-span-3">
               <div className="glass-card p-8 rounded-[2.5rem] border-white/5 bg-gradient-to-tr from-white/[0.02] to-transparent">
                 <div className="flex items-center justify-between mb-8">
-                  <h4 className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Network Status</h4>
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-[0.3em]">System Status</h4>
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                    <span className="text-[8px] font-black text-emerald-500 uppercase">Live</span>
+                    <span className="text-[8px] font-black text-emerald-500 uppercase">Online</span>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Node ID</span>
-                    <span className="text-[9px] text-zinc-400 font-mono">AUM-NODE-MX-01</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Latency</span>
-                    <span className="text-[9px] text-zinc-400 font-mono">14ms</span>
+                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Platform</span>
+                    <span className="text-[9px] text-zinc-400 font-mono">CitaPlanner</span>
                   </div>
                   <div className="pt-4 border-t border-white/5">
-                    <div className="flex items-center gap-2 text-[#C5A028]">
+                    <div className="flex items-center gap-2" style={{ color: accent }}>
                       <ShieldCheck size={12} />
-                      <span className="text-[8px] font-black uppercase tracking-widest">Aurum Shield Active</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest">Reservas Activas</span>
                     </div>
                   </div>
                 </div>
@@ -367,25 +440,22 @@ export const LandingPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <Shield size={16} className="text-zinc-700" />
               <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em]">
-                Aurum Capital Technology • 8888
+                {settings.businessName} • {new Date().getFullYear()}
               </p>
             </div>
 
             <div className="flex items-center gap-10">
-              <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Privacidad</a>
-              <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Protocolos Legales</a>
-              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="p-3 bg-white/5 rounded-xl text-zinc-500 hover:text-[#C5A028] transition-all border border-white/5">
+              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="p-3 bg-white/5 rounded-xl text-zinc-500 hover:opacity-80 transition-all border border-white/5">
                 <ChevronUp size={16} />
               </button>
             </div>
           </div>
 
           <div className="mt-12 text-center">
-            <p className="text-[8px] font-bold text-zinc-800 uppercase tracking-[1em] mb-4">In Precision We Trust</p>
             <div className="flex justify-center gap-4 text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em]">
-              <span>© 2026 {settings.businessName}</span>
+              <span>© {new Date().getFullYear()} {settings.businessName}</span>
               <span className="text-zinc-900">|</span>
-              <span>Infrastructure by QHosting</span>
+              <span>Powered by CitaPlanner</span>
             </div>
           </div>
         </div>
