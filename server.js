@@ -799,15 +799,28 @@ const initDB = async () => {
     }
 };
 
-const tenantMiddleware = (req, res, next) => {
+const tenantMiddleware = async (req, res, next) => {
     try {
-        // 1. Detect Tenant from Subdomain
-        const host = req.headers.host || '';
-        const parts = host.split('.');
+        const host = (req.headers.host || '').toLowerCase();
         let tenantId = 'demo';
 
-        if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'citaplanner') {
-            tenantId = parts[0];
+        // 1. Hybrid Detection: Subdomains
+        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
+            const subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
+            if (subdomain) tenantId = subdomain;
+        }
+        // 2. High Authority Detection: Custom Domains (e.g. shulastudio.com)
+        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
+            const tenant = await prisma.tenant.findUnique({
+                where: { customDomain: host },
+                select: { subdomain: true }
+            });
+
+            if (tenant) {
+                tenantId = tenant.subdomain;
+            } else {
+                tenantId = req.headers['x-tenant-id'] || 'demo';
+            }
         } else {
             tenantId = req.headers['x-tenant-id'] || 'demo';
         }
@@ -815,12 +828,13 @@ const tenantMiddleware = (req, res, next) => {
         req.tenantId = tenantId;
         req.branchId = req.headers['x-branch-id'];
 
-        console.log(`[CTX] Tenant: ${tenantId} | Branch: ${req.branchId || 'ALL'} `);
         next();
     } catch (e) {
-        res.status(500).json({ error: "Falla de red" });
+        console.error("Middleware Error:", e);
+        next();
     }
 };
+
 
 app.use(tenantMiddleware);
 
@@ -955,7 +969,7 @@ app.post('/api/saas/tenants/:id/status', authenticateToken, checkGodMode, async 
 
 app.post('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
-        const { name, subdomain, planType } = req.body;
+        const { name, subdomain, planType, customDomain } = req.body;
 
         const existing = await prisma.tenant.findUnique({ where: { subdomain } });
         if (existing) return res.status(400).json({ error: "Subdominio ya en uso" });
@@ -969,9 +983,11 @@ app.post('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) 
                 planType,
                 features: planRef.features,
                 status: 'ACTIVE',
-                organizationId: subdomain // Using subdomain as organizationId for now
+                organizationId: subdomain,
+                customDomain: customDomain || null
             }
         });
+
 
         res.json(newTenant);
     } catch (e) { res.status(500).json({ error: e.message }); }

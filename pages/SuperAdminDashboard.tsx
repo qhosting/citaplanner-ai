@@ -20,7 +20,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [view, setView] = useState<'NODES' | 'BILLING' | 'LOGS'>('NODES');
 
-  const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', planType: 'ELITE' });
+  const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', customDomain: '', planType: 'ELITE' });
 
   // 1. Fetch Global Stats
   const { data: stats } = useQuery({
@@ -459,6 +459,14 @@ export const SuperAdminDashboard: React.FC = () => {
                     />
                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-700 font-mono font-black">.{ROOT_DOMAIN}</span>
                   </div>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Propriedad de Marca / Custom Domain (Opcional)</p>
+                  <input
+                    type="text" placeholder="Ej: shulastudio.com"
+                    className="w-full p-6 bg-white/5 border border-white/5 rounded-3xl text-white font-mono font-bold text-xl outline-none focus:border-[#D4AF37]/40 transition-all placeholder:text-slate-800"
+                    value={newTenant.customDomain} onChange={e => setNewTenant({ ...newTenant, customDomain: e.target.value.toLowerCase() })}
+                  />
                 </div>
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Tier de Infraestructura</p>
