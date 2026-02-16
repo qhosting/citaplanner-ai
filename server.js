@@ -491,47 +491,58 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
-                -- Custom Domain & Resilience Migration
+                -- Full SaaS Infrastructure Migration (Hardened)
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
-                    -- Add organization_id if missing
+                    -- Identity & Routing
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
                         ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
-                    
-                    -- Add custom_domain if missing
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='custom_domain') THEN
                         ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
                     END IF;
 
-                    -- Add plan_type if missing (CRITICAL)
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='plan_type') THEN
-                        ALTER TABLE tenants ADD COLUMN plan_type VARCHAR(20) DEFAULT 'ELITE';
-                    END IF;
-
-                    -- Add features if missing (CRITICAL - Fixed P2022)
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='features') THEN
-                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}';
-                    END IF;
-
-                    -- Add status if missing
+                    -- Subscription & Billing
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='status') THEN
                         ALTER TABLE tenants ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
                     END IF;
-
-                    -- Add openpay_id if missing
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='plan_type') THEN
+                        ALTER TABLE tenants ADD COLUMN plan_type VARCHAR(20) DEFAULT 'ELITE';
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='features') THEN
+                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}';
+                    END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='openpay_id') THEN
                         ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
                     END IF;
 
-                    -- ENSURE UNIQUE CONSTRAINTS (Critical for Seeding)
-                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_subdomain_key') THEN
-                        ALTER TABLE tenants ADD CONSTRAINT tenants_subdomain_key UNIQUE (subdomain);
+                    -- Lifecycle & Dates (Fixed P2022: suspended_at)
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='suspended_at') THEN
+                        ALTER TABLE tenants ADD COLUMN suspended_at TIMESTAMP;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='trial_ends_at') THEN
+                        ALTER TABLE tenants ADD COLUMN trial_ends_at TIMESTAMP;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='last_login_at') THEN
+                        ALTER TABLE tenants ADD COLUMN last_login_at TIMESTAMP;
                     END IF;
 
-                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_organization_id_key') THEN
-                        -- Temporary cleanup of duplicates if any before adding constraint
-                        -- ALTER TABLE tenants ADD CONSTRAINT tenants_organization_id_key UNIQUE (organization_id);
-                        -- Using a softer approach to avoid breaking existing DBs with duplicates
+                    -- Bridge Integration Ecosystem
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_enabled') THEN
+                        ALTER TABLE tenants ADD COLUMN bridge_enabled BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_webhook_url') THEN
+                        ALTER TABLE tenants ADD COLUMN bridge_webhook_url TEXT;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_api_key') THEN
+                        ALTER TABLE tenants ADD COLUMN bridge_api_key UUID DEFAULT gen_random_uuid();
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_satellite_id') THEN
+                        ALTER TABLE tenants ADD COLUMN bridge_satellite_id INTEGER DEFAULT 3;
+                    END IF;
+
+                    -- ENSURE UNIQUE CONSTRAINTS
+                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_subdomain_key') THEN
+                        ALTER TABLE tenants ADD CONSTRAINT tenants_subdomain_key UNIQUE (subdomain);
                     END IF;
                 END IF;
 
