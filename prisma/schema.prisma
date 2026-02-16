@@ -88,7 +88,7 @@ model Branch {
 model User {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String?  @db.VarChar(100)
-  phone            String?  @unique @db.VarChar(20)
+  phone            String?  @db.VarChar(20)
   email            String?  @db.VarChar(100)
   password         String?  @db.VarChar(100)
   role             String?  @db.VarChar(20)
