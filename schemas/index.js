@@ -28,5 +28,7 @@ export const saasRegisterSchema = z.object({
     name: z.string().min(3, "Business name is too short"),
     subdomain: z.string().min(3, "Subdomain is too short").regex(/^[a-z0-9-]+$/, "Subdomain must be alphanumeric"),
     adminPhone: z.string().min(5, "Phone is too short"),
+    adminEmail: z.string().email("Email is required for billing"),
     adminPassword: z.string().min(6, "Password must be at least 6 characters")
 });
+

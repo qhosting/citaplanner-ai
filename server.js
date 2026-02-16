@@ -991,27 +991,86 @@ app.put('/api/saas/tenants/:id/features', authenticateToken, checkGodMode, async
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- OPENPAY INFRASTRUCTURE MONITOR ---
+app.get('/api/saas/openpay/plans', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        openpay.plans.list({}, (error, list) => {
+            if (error) return res.status(500).json({ error: error.description });
+            res.json(list);
+        });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// --- NEXUS IMPERSONATION (SUPPORT BYPASS) ---
+app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tenant = await prisma.tenant.findUnique({ where: { id } });
+        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
+
+        // Find the owner or a primary admin of this tenant
+        const owner = await prisma.user.findFirst({
+            where: { organizationId: tenant.subdomain, role: 'STUDIO_OWNER' }
+        });
+
+        if (!owner) return res.status(404).json({ error: "No se encontró un administrador para este nodo" });
+
+        console.log(`[MASTER] Impersonating ${owner.phone} for tenant ${tenant.subdomain}`);
+
+        const token = jwt.sign({
+            id: owner.id,
+            role: owner.role,
+            tenantId: tenant.subdomain,
+            branchId: owner.branchId,
+            isImpersonated: true,
+            masterAdminId: req.user.id
+        }, JWT_SECRET, { expiresIn: '2h' });
+
+        res.json({ success: true, token, user: owner });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
 // --- PUBLIC SAAS REGISTRATION ---
 
 app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, res) => {
     try {
-        const { name, subdomain, adminPhone, adminPassword } = req.body;
+        const { name, subdomain, adminPhone, adminEmail, adminPassword } = req.body;
 
         const existing = await prisma.tenant.findUnique({ where: { subdomain } });
         if (existing) return res.status(400).json({ error: "Este subdominio ya está reservado" });
 
-        // ACID Transaction: Create Tenant + Default Branch + Admin User
+        // 1. Create Openpay Customer
+        let openpayId = null;
+        try {
+            const customer = await new Promise((resolve, reject) => {
+                openpay.customers.create({
+                    name: name,
+                    email: adminEmail,
+                    phone_number: adminPhone,
+                    requires_account: false
+                }, (error, body) => error ? reject(error) : resolve(body));
+            });
+            openpayId = customer.id;
+        } catch (opErr) {
+            console.warn("⚠️ Openpay Customer creation failed, continuing without it:", opErr.description);
+        }
+
+        // 2. ACID Transaction: Create Tenant + Default Branch + Admin User
         const result = await prisma.$transaction(async (tx) => {
             const tenant = await tx.tenant.create({
                 data: {
                     name,
                     subdomain,
-                    planType: 'BASIC', // Start with basic
+                    planType: 'BASIC',
                     features: SAAS_PLANS[0].features,
                     status: 'PENDINGPAYMENT',
-                    organizationId: subdomain
+                    organizationId: subdomain,
+                    openpayId
                 }
             });
+
 
             const branch = await tx.branch.create({
                 data: {
@@ -1026,6 +1085,7 @@ app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, 
                 data: {
                     name: "Administrador de " + name,
                     phone: adminPhone,
+                    email: adminEmail,
                     password: hashedPassword,
                     role: 'STUDIO_OWNER',
                     branchId: branch.id,
@@ -1047,26 +1107,57 @@ app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, 
 
 app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
     try {
-        const { planId } = req.body;
+        const { planId, provider = 'MERCADOPAGO' } = req.body;
         const plan = SAAS_PLANS.find(p => p.id === planId);
 
         if (!plan) return res.status(400).json({ error: "Plan inválido" });
 
         const user = await prisma.user.findFirst({ where: { id: req.user.id } });
-        // Use user email or generic default if local development
         const payerEmail = user?.email || "test_user@test.com";
 
-        // Verify if MP is configured
-        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
-            console.warn("⚠️ MP_ACCESS_TOKEN not set or is test. Returning mock subscription.");
-            return res.json({
-                id: "mock_preapproval_id",
-                init_point: "#/mock-checkout?plan=" + planId
+        if (provider === 'OPENPAY') {
+            // Openpay Checkout logic
+            const chargeRequest = {
+                method: 'card',
+                amount: plan.price,
+                description: `Suscripción CitaPlanner - ${plan.title}`,
+                order_id: `CP-${Date.now()}`,
+                customer: {
+                    name: user?.name || 'Cliente SaaS',
+                    email: payerEmail,
+                    phone_number: user?.phone || '0000000000'
+                },
+                send_email: true,
+                confirm: false,
+                redirect_url: `${process.env.ROOT_DOMAIN}/settings?status=success`
+            };
+
+            return openpay.charges.create(chargeRequest, async (error, charge) => {
+                if (error) return res.status(500).json({ error: error.description });
+
+                // Save PENDING Subscription
+                await prisma.subscription.create({
+                    data: {
+                        tenantId: req.user.tenantId,
+                        planId: plan.id,
+                        status: 'PENDING',
+                        provider: 'OPENPAY',
+                        externalId: charge.id,
+                        currentPeriodStart: new Date(),
+                        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    }
+                });
+
+                res.json({ id: charge.id, init_point: charge.payment_method.url });
             });
         }
 
-        const preapproval = new PreApproval(mpClient);
+        // Mercado Pago Logic (Refactored for externalId)
+        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
+            return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
+        }
 
+        const preapproval = new PreApproval(mpClient);
         const result = await preapproval.create({
             body: {
                 reason: `Suscripción CitaPlanner - ${plan.title}`,
@@ -1083,28 +1174,26 @@ app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
             }
         });
 
-        // Save PENDING Subscription
         await prisma.subscription.create({
             data: {
-                tenantId: req.user.tenantId || 'demo', // Fallback for safety
+                tenantId: req.user.tenantId,
                 planId: plan.id,
                 status: 'PENDING',
-                mercadopagoId: result.id,
+                provider: 'MERCADOPAGO',
+                externalId: result.id,
                 currentPeriodStart: new Date(),
                 currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             }
         });
 
-        res.json({
-            id: result.id,
-            init_point: result.init_point
-        });
+        res.json({ id: result.id, init_point: result.init_point });
 
     } catch (e) {
-        console.error("❌ Mercado Pago Sub Error:", e);
-        res.status(500).json({ error: "Error al crear suscripción" });
+        console.error("❌ SaaS Sub Error:", e);
+        res.status(500).json({ error: "Error al iniciar suscripción" });
     }
 });
+
 
 
 
@@ -1133,7 +1222,7 @@ app.post('/api/saas/webhook', async (req, res) => {
             if (status === 'authorized') {
                 await prisma.$transaction(async (tx) => {
                     const pendingSub = await tx.subscription.findUnique({
-                        where: { mercadopagoId: preapprovalId }
+                        where: { externalId: preapprovalId }
                     });
 
                     if (pendingSub) {
@@ -1141,6 +1230,17 @@ app.post('/api/saas/webhook', async (req, res) => {
                         await tx.subscription.update({
                             where: { id: pendingSub.id },
                             data: { status: 'ACTIVE' }
+                        });
+
+                        // Create Billing Log
+                        await tx.billingLog.create({
+                            data: {
+                                tenantId: pendingSub.tenantId,
+                                amount: SAAS_PLANS.find(p => p.id === pendingSub.planId)?.price || 0,
+                                status: 'SUCCESS',
+                                provider: 'MERCADOPAGO',
+                                description: `Pago Suscripción ${pendingSub.planId}`
+                            }
                         });
 
                         // Upgrade Tenant
@@ -1244,6 +1344,60 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
     } catch (e) {
         console.error("Webhook Error:", e);
         res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/saas/openpay/webhook', async (req, res) => {
+    try {
+        const { type, transaction } = req.body;
+        console.log(`[OPENPAY WEBHOOK] Event: ${type} | Trans: ${transaction?.id}`);
+
+        if (type === 'verification') return res.status(200).send();
+        if (!transaction) return res.status(200).send();
+
+        if (type === 'charge.succeeded') {
+            await prisma.$transaction(async (tx) => {
+                const pendingSub = await tx.subscription.findUnique({
+                    where: { externalId: transaction.id }
+                });
+
+                if (pendingSub) {
+                    // Activate Subscription
+                    await tx.subscription.update({
+                        where: { id: pendingSub.id },
+                        data: { status: 'ACTIVE' }
+                    });
+
+                    // Create Billing Log
+                    await tx.billingLog.create({
+                        data: {
+                            tenantId: pendingSub.tenantId,
+                            amount: transaction.amount,
+                            status: 'SUCCESS',
+                            provider: 'OPENPAY',
+                            description: `Pago Openpay - ${transaction.description}`
+                        }
+                    });
+
+                    // Upgrade Tenant
+                    const planRef = SAAS_PLANS.find(p => p.id === pendingSub.planId) || SAAS_PLANS[0];
+                    await tx.tenant.update({
+                        where: { id: pendingSub.tenantId },
+                        data: {
+                            planType: pendingSub.planId,
+                            features: planRef.features,
+                            status: 'ACTIVE'
+                        }
+                    });
+                    console.log(`✅ Openpay Sub Activated for Tenant: ${pendingSub.tenantId}`);
+                }
+            });
+        }
+
+        res.status(200).send();
+    } catch (e) {
+        console.error("❌ Openpay Webhook Error:", e);
+        res.status(500).send();
     }
 });
 

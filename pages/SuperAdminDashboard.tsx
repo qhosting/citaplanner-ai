@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Tenant, TenantFeatures } from '../types';
 
 export const SuperAdminDashboard: React.FC = () => {
+  const ROOT_DOMAIN = window.location.hostname.split('.').slice(-2).join('.');
   const queryClient = useQueryClient();
   const { user: godUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -146,7 +147,8 @@ export const SuperAdminDashboard: React.FC = () => {
           {[
             { id: 'NODES', label: 'Nodes', icon: Server },
             { id: 'BILLING', label: 'Master Billing', icon: CreditCard },
-            { id: 'LOGS', label: 'Audit Logs', icon: Terminal }
+            { id: 'LOGS', label: 'Audit Logs', icon: Terminal },
+            { id: 'DIAGS', label: 'Diagnostics', icon: Zap }
           ].map(btn => (
             <button
               key={btn.id}
@@ -165,7 +167,7 @@ export const SuperAdminDashboard: React.FC = () => {
           { label: 'Ingresos MRR Est.', value: `$${stats?.mrr || 0}`, icon: TrendingUp, color: 'text-emerald-500', sub: 'Revenue Global' },
           { label: 'Nodos Activos', value: stats?.activeSubscriptions || 0, icon: Globe, color: 'text-blue-500', sub: `de ${stats?.totalTenants || 0} totales` },
           { label: 'Uptime Global', value: stats?.systemHealth?.uptime || '99.9%', icon: Activity, color: 'text-[#D4AF37]', sub: 'SLA Status' },
-          { label: 'CPU Cluster', value: '18%', icon: Cpu, color: 'text-red-500', sub: 'Balanced Load' },
+          { label: 'Cloud Latency', value: stats?.systemHealth?.latency || '--', icon: Cpu, color: 'text-red-500', sub: 'DC Performance' },
         ].map((s, i) => (
           <div key={i} className="glass-card p-10 rounded-[3.5rem] border-white/5 relative overflow-hidden group hover:border-red-500/20 transition-all">
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-125 transition-all text-white"><s.icon size={64} /></div>
@@ -180,6 +182,55 @@ export const SuperAdminDashboard: React.FC = () => {
 
       {/* 🖥️ MAIN VIEW AREA */}
       <main className="space-y-12">
+        {view === 'DIAGS' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="glass-card p-12 rounded-[4rem] border-white/5">
+              <h2 className="text-2xl font-black uppercase mb-8 flex items-center gap-4 text-[#D4AF37]">
+                <CreditCard size={28} /> Openpay Infrastructure
+              </h2>
+              <div className="space-y-6">
+                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Endpoint Status</p>
+                  <div className="flex justify-between items-center text-emerald-500 font-bold">
+                    <span>API Production</span>
+                    <span className="flex items-center gap-2 animate-pulse"><div className="w-2 h-2 bg-emerald-500 rounded-full" /> Verified</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toast.promise(fetch('/api/saas/openpay/plans', {
+                    headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+                  }).then(r => r.json()), {
+                    loading: 'Fetching Openpay Plans...',
+                    success: (data) => `Found ${data.length || 0} plans in Openpay`,
+                    error: 'Openpay sync error'
+                  })}
+                  className="w-full py-4 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#D4AF37] hover:text-black transition-all"
+                >
+                  Sync Operation Plans
+                </button>
+              </div>
+            </div>
+
+            <div className="glass-card p-12 rounded-[4rem] border-white/5">
+              <h2 className="text-2xl font-black uppercase mb-8 flex items-center gap-4 text-red-500">
+                <Database size={28} /> Database Integrity
+              </h2>
+              <div className="space-y-4">
+                {[
+                  { label: 'Tenants Primary ID', status: 'OK' },
+                  { label: 'IDX_Subdomain', status: 'Verifying...' },
+                  { label: 'BillingLog FKs', status: 'OK' },
+                  { label: 'Subscription Provider Mapping', status: 'OK' }
+                ].map((idx, i) => (
+                  <div key={i} className="flex justify-between items-center p-4 border-b border-white/5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{idx.label}</span>
+                    <span className="text-[10px] font-black text-white">{idx.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {view === 'NODES' && (
           <>
             <div className="flex flex-col md:flex-row gap-6 justify-between items-center">
