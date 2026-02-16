@@ -51,7 +51,8 @@ export interface LandingSettings {
   stats?: Array<{ label: string; value: string; }>;
   socialLinks?: { instagram?: string; facebook?: string; twitter?: string; linkedin?: string; };
   testimonials?: Array<{ name: string; text: string; rating: number; }>;
-  gallery?: string[];
+  images?: Array<{ url: string; caption?: string; }>;
+  services?: Array<{ title: string; description?: string; price?: string; }>;
   showWhatsappButton?: boolean;
   googleMapsUrl?: string;
 

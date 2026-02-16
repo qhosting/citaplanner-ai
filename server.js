@@ -2629,6 +2629,8 @@ app.get('/api/settings/landing', async (req, res) => {
             socialInstagram: data.socialInstagram || '',
             socialFacebook: data.socialFacebook || '',
             socialTwitter: data.socialTwitter || '',
+            images: data.images || [],
+            services: data.services || [],
             subdomain: organizationId,
             bridge: tenant ? {
                 enabled: tenant.bridgeEnabled || false,
@@ -2673,7 +2675,9 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 footerText: settings.footerText,
                 socialInstagram: settings.socialInstagram,
                 socialFacebook: settings.socialFacebook,
-                socialTwitter: settings.socialTwitter
+                socialTwitter: settings.socialTwitter,
+                images: settings.images,
+                services: settings.services
             },
             create: {
                 organizationId,
@@ -2696,7 +2700,9 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 footerText: settings.footerText,
                 socialInstagram: settings.socialInstagram,
                 socialFacebook: settings.socialFacebook,
-                socialTwitter: settings.socialTwitter
+                socialTwitter: settings.socialTwitter,
+                images: settings.images,
+                services: settings.services
             }
         });
 

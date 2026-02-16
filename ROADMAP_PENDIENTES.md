@@ -45,7 +45,12 @@
 ### **📱 Features de Producción Faltantes**
 - [x] **Preparar DB para SaaS Multi-tenant (Custom Domains)**
   - **Motivo**: Requerimiento clave del modelo de negocio (CEO -> Negocios)
-  - **Impacto**: Completado (Schema actualizado + Logo Upload + Shula Dark Template)
+  - **Impacto**: Completado (Web Builder v2: Galería + Servicios dinámicos + Shula Dark Theme)
+  - **Estimación**: Completado
+
+- [x] **Mejoras UX / UI**
+  - **Motivo**: Refinamiento de la experiencia de usuario
+  - **Impacto**: Fix Modal Clientes (Z-Index), Web Builder Preview Real-time
   - **Estimación**: Completado
 
 - [ ] **Recuperación de contraseña vía email**
@@ -53,5 +58,5 @@
   - **Impacto**: UX deficiente
   - **Estimación**: 4 horas
 
-**Última actualización**: 2026-02-15 (v5.2 Shula Studio Edition)  
-**Estado**: 🚀 Sistema robusto y funcional. Web Builder Personalizado.
+**Última actualización**: 2026-02-16 (v5.3 Web Builder Evolution)  
+**Estado**: 🚀 Sistema robusto y funcional. Web Builder Personalizado con Portafolio y Servicios.

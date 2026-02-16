@@ -224,6 +224,123 @@ export const WebBuilderPage: React.FC = () => {
                                     className="w-full p-6 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-[2rem] resize-none"
                                 />
                             </section>
+
+                            <section className="space-y-6">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                    <Sparkles size={16} /> Servicios Destacados
+                                </h3>
+                                <div className="space-y-4">
+                                    {(settings.services || []).map((service, index) => (
+                                        <div key={index} className="p-4 bg-input-theme border border-theme rounded-2xl relative group">
+                                            <button
+                                                onClick={() => {
+                                                    const newServices = [...(settings.services || [])];
+                                                    newServices.splice(index, 1);
+                                                    setSettings({ ...settings, services: newServices });
+                                                }}
+                                                className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                ✕
+                                            </button>
+                                            <div className="space-y-3">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Nombre del Servicio"
+                                                    value={service.title}
+                                                    onChange={e => {
+                                                        const newServices = [...(settings.services || [])];
+                                                        newServices[index].title = e.target.value;
+                                                        setSettings({ ...settings, services: newServices });
+                                                    }}
+                                                    className="w-full bg-transparent border-b border-theme pb-2 text-xs font-bold text-main outline-none"
+                                                />
+                                                <div className="flex gap-4">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Precio"
+                                                        value={service.price}
+                                                        onChange={e => {
+                                                            const newServices = [...(settings.services || [])];
+                                                            newServices[index].price = e.target.value;
+                                                            setSettings({ ...settings, services: newServices });
+                                                        }}
+                                                        className="w-1/3 bg-transparent border-b border-theme pb-2 text-[10px] text-muted outline-none"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Descripción Corta"
+                                                        value={service.description}
+                                                        onChange={e => {
+                                                            const newServices = [...(settings.services || [])];
+                                                            newServices[index].description = e.target.value;
+                                                            setSettings({ ...settings, services: newServices });
+                                                        }}
+                                                        className="flex-1 bg-transparent border-b border-theme pb-2 text-[10px] text-muted outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={() => setSettings({ ...settings, services: [...(settings.services || []), { title: '', price: '', description: '' }] })}
+                                        className="w-full py-3 border border-dashed border-theme rounded-2xl text-[10px] font-black text-muted uppercase tracking-widest hover:border-[#CE4676] hover:text-[#CE4676] transition-all"
+                                    >
+                                        + Agregar Servicio
+                                    </button>
+                                </div>
+                            </section>
+
+                            <section className="space-y-6">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                    <ImageIcon size={16} /> Galería Visual
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {(settings.images || []).map((img, index) => (
+                                        <div key={index} className="aspect-square bg-input-theme border border-theme rounded-xl overflow-hidden relative group">
+                                            <img src={img.url} className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => {
+                                                    const newImages = [...(settings.images || [])];
+                                                    newImages.splice(index, 1);
+                                                    setSettings({ ...settings, images: newImages });
+                                                }}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <div
+                                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                                        className="aspect-square bg-input-theme border border-dashed border-theme rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#CE4676] hover:text-[#CE4676] transition-all"
+                                    >
+                                        <Cloud size={20} className="mb-2 text-muted" />
+                                        <span className="text-[8px] font-black text-muted uppercase tracking-widest">Subir</span>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        id="gallery-upload"
+                                        className="hidden"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={async (e) => {
+                                            const files = e.target.files;
+                                            if (!files) return;
+                                            toast.info(`Subiendo ${files.length} imágenes...`);
+
+                                            // Process uploads sequentially to avoid flooding
+                                            const newImages = [...(settings.images || [])];
+                                            for (let i = 0; i < files.length; i++) {
+                                                const url = await api.uploadImage(files[i]);
+                                                if (url) newImages.push({ url });
+                                            }
+
+                                            setSettings({ ...settings, images: newImages });
+                                            toast.success("Galería actualizada.");
+                                        }}
+                                    />
+                                </div>
+                            </section>
                         </div>
                     )}
 
@@ -417,11 +534,51 @@ export const WebBuilderPage: React.FC = () => {
                                 </div>
                             </section>
 
-                            <section className="p-20 space-y-12">
+                            <section className="p-20 space-y-20">
                                 <div className="flex flex-col items-center text-center space-y-6">
-                                    <div className="w-12 h-1 bg-[#D4AF37]" />
+                                    <div className="w-12 h-1" style={{ backgroundColor: settings.secondaryColor || '#D4AF37' }} />
                                     <h3 className="text-3xl font-black uppercase tracking-tighter">Nuestra Esencia</h3>
                                     <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl">{settings.aboutText || 'Expertos en realzar tu belleza natural con técnicas de vanguardia y atención personalizada.'}</p>
+                                </div>
+
+                                {/* Dynamic Services Preview */}
+                                <div className="space-y-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-px flex-1 bg-zinc-200" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Servicios Destacados</span>
+                                        <div className="h-px flex-1 bg-zinc-200" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {(settings.services?.length ? settings.services : [
+                                            { title: 'Microblading 3D', price: '$3,500', description: 'Técnica pelo a pelo' },
+                                            { title: 'Lip Blush', price: '$2,800', description: 'Coloración natural de labios' },
+                                            { title: 'Lamination', price: '$900', description: 'Brows perfectas' }
+                                        ]).map((s, i) => (
+                                            <div key={i} className={`p-8 rounded-2xl border ${settings.templateId === 'shula_dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-100'}`}>
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <h4 className="font-bold text-sm">{s.title}</h4>
+                                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-200 text-zinc-800">{s.price}</span>
+                                                </div>
+                                                <p className="text-xs text-zinc-500">{s.description}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Gallery Preview */}
+                                <div className="space-y-10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-px flex-1 bg-zinc-200" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Nuestro Trabajo</span>
+                                        <div className="h-px flex-1 bg-zinc-200" />
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        {(settings.images?.length ? settings.images : Array(4).fill({ url: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&q=80' })).map((img, i) => (
+                                            <div key={i} className="aspect-square bg-zinc-100 overflow-hidden relative group">
+                                                <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </section>
 
