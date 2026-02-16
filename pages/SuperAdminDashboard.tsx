@@ -6,7 +6,8 @@ import {
   Search, Power, Database, Cpu, Server, ExternalLink,
   Loader2, TrendingUp, BarChart3, Lock, Unlock, AlertTriangle, Plus,
   ShieldCheck, Wand2, ShoppingBag, Megaphone, Eye, ChevronRight, X,
-  CreditCard, History, Terminal, HardDrive, RefreshCw
+  CreditCard, History, Terminal, HardDrive, RefreshCw,
+  Trash2, Edit3, UserPlus, Save, Phone, Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -22,6 +23,11 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', customDomain: '', planType: 'ELITE' });
+  const [managingAdminsTenantId, setManagingAdminsTenantId] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', role: '', password: '' });
+  const [newAdmin, setNewAdmin] = useState({ name: '', phone: '', email: '', password: '', role: 'STUDIO_OWNER' });
+  const [showNewAdminForm, setShowNewAdminForm] = useState(false);
 
   // 1. Fetch Global Stats
   const { data: stats } = useQuery({
@@ -158,7 +164,9 @@ export const SuperAdminDashboard: React.FC = () => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error de impersonación');
+      return data;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -168,6 +176,74 @@ export const SuperAdminDashboard: React.FC = () => {
       } else {
         toast.error("Falla en el bypass de identidad.");
       }
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
+  // ADMIN MANAGEMENT
+  const { data: tenantAdmins = [], refetch: refetchAdmins } = useQuery({
+    queryKey: ['tenant-admins', managingAdminsTenantId],
+    queryFn: async () => {
+      const res = await fetch(`/api/saas/tenants/${managingAdminsTenantId}/admins`, {
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      return res.json();
+    },
+    enabled: !!managingAdminsTenantId
+  });
+
+  const createAdminMutation = useMutation({
+    mutationFn: async ({ tenantId, data }: { tenantId: string, data: any }) => {
+      const res = await fetch(`/api/saas/tenants/${tenantId}/admins`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAdmins();
+      setShowNewAdminForm(false);
+      setNewAdmin({ name: '', phone: '', email: '', password: '', role: 'STUDIO_OWNER' });
+      toast.success('Administrador creado con éxito.');
+    },
+    onError: (e) => toast.error(e.message)
+  });
+
+  const updateAdminMutation = useMutation({
+    mutationFn: async ({ tenantId, userId, data }: { tenantId: string, userId: string, data: any }) => {
+      const res = await fetch(`/api/saas/tenants/${tenantId}/admins/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}`
+        },
+        body: JSON.stringify(data)
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAdmins();
+      setEditingUserId(null);
+      toast.success('Administrador actualizado.');
+    }
+  });
+
+  const deleteAdminMutation = useMutation({
+    mutationFn: async ({ tenantId, userId }: { tenantId: string, userId: string }) => {
+      const res = await fetch(`/api/saas/tenants/${tenantId}/admins/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAdmins();
+      toast.success('Administrador eliminado.');
     }
   });
 
@@ -347,6 +423,17 @@ export const SuperAdminDashboard: React.FC = () => {
                     </div>
                     <div className="flex gap-3">
                       <button
+                        onClick={() => {
+                          setManagingAdminsTenantId(managingAdminsTenantId === t.id ? null : t.id);
+                          setShowNewAdminForm(false);
+                          setEditingUserId(null);
+                        }}
+                        className={`w-14 h-14 rounded-2xl transition-all border flex items-center justify-center shadow-xl ${managingAdminsTenantId === t.id ? 'bg-blue-500 text-white border-blue-500/30' : 'bg-white/5 text-blue-400 border-white/5 hover:bg-blue-500/20'}`}
+                        title="Administrar Usuarios"
+                      >
+                        <Users size={24} />
+                      </button>
+                      <button
                         onClick={() => impersonateMutation.mutate(t.id)}
                         className="w-14 h-14 bg-white/5 text-[#D4AF37] rounded-2xl hover:bg-[#D4AF37] hover:text-black transition-all border border-white/5 flex items-center justify-center shadow-xl"
                         title="Master Impersonation (Soporte)"
@@ -396,6 +483,96 @@ export const SuperAdminDashboard: React.FC = () => {
                       </button>
                     ))}
                   </div>
+
+                  {/* 👥 ADMIN MANAGEMENT PANEL */}
+                  {managingAdminsTenantId === t.id && (
+                    <div className="mb-8 p-8 bg-black/40 rounded-3xl border border-blue-500/20">
+                      <div className="flex justify-between items-center mb-6">
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                          <Users size={16} /> Administradores del Nodo
+                        </h4>
+                        <button
+                          onClick={() => { setShowNewAdminForm(!showNewAdminForm); setEditingUserId(null); }}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-xl text-[9px] font-black uppercase hover:bg-blue-500 hover:text-white transition-all"
+                        >
+                          <UserPlus size={14} /> Nuevo Admin
+                        </button>
+                      </div>
+
+                      {/* Existing Users */}
+                      <div className="space-y-3 mb-6">
+                        {tenantAdmins.length === 0 && (
+                          <p className="text-slate-600 text-[10px] font-bold uppercase text-center py-6">Sin usuarios en este nodo.</p>
+                        )}
+                        {tenantAdmins.map((u: any) => (
+                          <div key={u.id} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5 group hover:border-white/10 transition-all">
+                            {editingUserId === u.id ? (
+                              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Nombre" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                                <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Teléfono" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
+                                <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                                <select className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
+                                  <option value="STUDIO_OWNER">STUDIO_OWNER</option>
+                                  <option value="ADMIN">ADMIN</option>
+                                  <option value="GOD_MODE">GOD_MODE</option>
+                                </select>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400"><Users size={16} /></div>
+                                <div>
+                                  <p className="text-white text-xs font-bold">{u.name}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="text-slate-500 text-[9px] flex items-center gap-1"><Phone size={10} /> {u.phone}</span>
+                                    {u.email && <span className="text-slate-500 text-[9px] flex items-center gap-1"><Mail size={10} /> {u.email}</span>}
+                                  </div>
+                                </div>
+                                <span className="ml-auto mr-4 px-3 py-1 bg-white/5 rounded-lg text-[8px] font-black uppercase text-slate-400 border border-white/10">{u.role}</span>
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              {editingUserId === u.id ? (
+                                <button onClick={() => updateAdminMutation.mutate({ tenantId: t.id, userId: u.id, data: editForm })} className="p-2 bg-emerald-500/20 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-all" title="Guardar">
+                                  <Save size={14} />
+                                </button>
+                              ) : (
+                                <button onClick={() => { setEditingUserId(u.id); setEditForm({ name: u.name || '', phone: u.phone || '', email: u.email || '', role: u.role || '', password: '' }); }} className="p-2 bg-white/5 text-slate-400 rounded-lg hover:bg-white/10 transition-all" title="Editar">
+                                  <Edit3 size={14} />
+                                </button>
+                              )}
+                              <button onClick={() => { if (window.confirm(`¿Eliminar a ${u.name}?`)) deleteAdminMutation.mutate({ tenantId: t.id, userId: u.id }); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all" title="Eliminar">
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* New Admin Form */}
+                      {showNewAdminForm && (
+                        <div className="p-6 bg-blue-500/5 rounded-2xl border border-blue-500/20">
+                          <h5 className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-4">Crear Nuevo Administrador</h5>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                            <input className="p-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-700" placeholder="Nombre completo" value={newAdmin.name} onChange={e => setNewAdmin({ ...newAdmin, name: e.target.value })} />
+                            <input className="p-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-700" placeholder="Teléfono" value={newAdmin.phone} onChange={e => setNewAdmin({ ...newAdmin, phone: e.target.value })} />
+                            <input className="p-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-700" placeholder="Email (opcional)" value={newAdmin.email} onChange={e => setNewAdmin({ ...newAdmin, email: e.target.value })} />
+                            <input type="password" className="p-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-700" placeholder="Contraseña" value={newAdmin.password} onChange={e => setNewAdmin({ ...newAdmin, password: e.target.value })} />
+                            <select className="p-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs" value={newAdmin.role} onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value })}>
+                              <option value="STUDIO_OWNER">STUDIO_OWNER</option>
+                              <option value="ADMIN">ADMIN</option>
+                            </select>
+                          </div>
+                          <button
+                            onClick={() => createAdminMutation.mutate({ tenantId: t.id, data: newAdmin })}
+                            disabled={!newAdmin.name || !newAdmin.phone || !newAdmin.password}
+                            className="w-full py-3 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all disabled:opacity-30"
+                          >
+                            {createAdminMutation.isPending ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Crear Administrador'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-8">

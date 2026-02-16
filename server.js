@@ -1194,14 +1194,30 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
         const tenant = await prisma.tenant.findUnique({ where: { id } });
         if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
 
-        // Find the owner or a primary admin of this tenant
-        const owner = await prisma.user.findFirst({
+        // Cascade: find the best available user for this tenant
+        let owner = await prisma.user.findFirst({
             where: { organizationId: tenant.subdomain, role: 'STUDIO_OWNER' }
         });
+        if (!owner) {
+            owner = await prisma.user.findFirst({
+                where: { organizationId: tenant.subdomain, role: 'GOD_MODE' }
+            });
+        }
+        if (!owner) {
+            owner = await prisma.user.findFirst({
+                where: { organizationId: tenant.subdomain, role: 'ADMIN' }
+            });
+        }
+        if (!owner) {
+            // Last resort: grab any user in this tenant
+            owner = await prisma.user.findFirst({
+                where: { organizationId: tenant.subdomain }
+            });
+        }
 
-        if (!owner) return res.status(404).json({ error: "No se encontró un administrador para este nodo" });
+        if (!owner) return res.status(404).json({ error: `No se encontraron usuarios registrados en el nodo '${tenant.subdomain}'. Crea un administrador primero.` });
 
-        console.log(`[MASTER] Impersonating ${owner.phone} for tenant ${tenant.subdomain}`);
+        console.log(`[MASTER] Impersonating ${owner.phone} (role: ${owner.role}) for tenant ${tenant.subdomain}`);
 
         const token = jwt.sign({
             id: owner.id,
@@ -1213,6 +1229,86 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
         }, JWT_SECRET, { expiresIn: '2h' });
 
         res.json({ success: true, token, user: owner });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- TENANT ADMIN MANAGEMENT (GOD MODE) ---
+app.get('/api/saas/tenants/:id/admins', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tenant = await prisma.tenant.findUnique({ where: { id } });
+        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
+
+        const users = await prisma.user.findMany({
+            where: { organizationId: tenant.subdomain },
+            select: { id: true, name: true, phone: true, email: true, role: true, branchId: true },
+            orderBy: { role: 'asc' }
+        });
+        res.json(users);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/saas/tenants/:id/admins', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tenant = await prisma.tenant.findUnique({ where: { id } });
+        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
+
+        const { name, phone, email, password, role } = req.body;
+        if (!name || !phone || !password) return res.status(400).json({ error: "Nombre, teléfono y contraseña son requeridos" });
+
+        // Find or create default branch for this tenant
+        let branch = await prisma.branch.findFirst({ where: { organizationId: tenant.subdomain } });
+        if (!branch) {
+            branch = await prisma.branch.create({
+                data: { name: "Sucursal Principal", tenantId: tenant.id, organizationId: tenant.subdomain }
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await prisma.user.create({
+            data: {
+                name,
+                phone,
+                email: email || null,
+                password: hashedPassword,
+                role: role || 'STUDIO_OWNER',
+                branchId: branch.id,
+                organizationId: tenant.subdomain
+            }
+        });
+
+        res.json({ success: true, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role } });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { name, phone, email, role, password } = req.body;
+
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (phone) updateData.phone = phone;
+        if (email) updateData.email = email;
+        if (role) updateData.role = role;
+        if (password) updateData.password = await bcrypt.hash(password, 10);
+
+        const updated = await prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            select: { id: true, name: true, phone: true, email: true, role: true }
+        });
+
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMode, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        await prisma.user.delete({ where: { id: userId } });
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
