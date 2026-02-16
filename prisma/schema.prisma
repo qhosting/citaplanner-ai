@@ -16,9 +16,16 @@ model Tenant {
   name              String         @db.VarChar(100)
   subdomain         String         @unique @db.VarChar(50)
   customDomain      String?        @unique @map("custom_domain") @db.VarChar(100)
-  status            String?        @default("ACTIVE") @db.VarChar(20)
+  status            String?        @default("ACTIVE") @db.VarChar(20) // ACTIVE, SUSPENDED, TRIAL
   planType          String?        @default("ELITE") @map("plan_type") @db.VarChar(20)
   features          Json?          @default("{\"ai_scheduler\": true, \"marketing_pro\": true, \"inventory_advanced\": true, \"analytics_nexus\": true}")
+  
+  // Infrastructure & SaaS Fields
+  openpayId         String?        @unique @map("openpay_id")
+  suspendedAt       DateTime?      @map("suspended_at")
+  trialEndsAt       DateTime?      @map("trial_ends_at")
+  lastLoginAt       DateTime?      @map("last_login_at")
+  
   bridgeEnabled     Boolean?       @default(false) @map("bridge_enabled")
   bridgeWebhookUrl  String?        @map("bridge_webhook_url")
   bridgeApiKey      String?        @default(dbgenerated("gen_random_uuid()")) @map("bridge_api_key") @db.Uuid
@@ -30,6 +37,7 @@ model Tenant {
   appointments      Appointment[]
   settings          Setting[]
   subscriptions     Subscription[]
+  billingLogs       BillingLog[]
 
   @@map("tenants")
 }
@@ -39,7 +47,8 @@ model Subscription {
   tenantId          String   @map("tenant_id") @db.Uuid
   planId            String   @map("plan_id") // BASIC, PRO, ELITE
   status            String   @default("INACTIVE") // ACTIVE, CANCELLED, PAST_DUE
-  mercadopagoId     String?  @unique @map("mercadopago_id") 
+  provider          String   @default("MERCADOPAGO") // MERCADOPAGO, OPENPAY
+  externalId        String?  @unique @map("external_id") // mp_id or openpay_id
   currentPeriodStart DateTime? @map("current_period_start")
   currentPeriodEnd   DateTime? @map("current_period_end")
   createdAt         DateTime @default(now()) @map("created_at")
@@ -48,6 +57,22 @@ model Subscription {
   tenant            Tenant   @relation(fields: [tenantId], references: [id])
   
   @@map("subscriptions")
+}
+
+model BillingLog {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  amount         Decimal   @db.Decimal(12, 2)
+  currency       String    @default("MXN")
+  status         String    // SUCCESS, FAILED
+  provider       String    // OPENPAY, MERCADOPAGO
+  description    String?
+  invoiceUrl     String?   @map("invoice_url")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@map("billing_logs")
 }
 
 model Branch {

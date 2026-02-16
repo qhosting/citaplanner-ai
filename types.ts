@@ -18,9 +18,12 @@ export interface Tenant {
   id: string;
   name: string;
   subdomain: string;
-  status: 'ACTIVE' | 'SUSPENDED' | 'MAINTENANCE';
-  planType: 'TRIAL' | 'ELITE' | 'LEGACY';
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  planType: 'BASIC' | 'PRO' | 'ELITE' | 'LEGACY';
   features: TenantFeatures;
+  openpayId?: string;
+  suspendedAt?: string;
+  trialEndsAt?: string;
   createdAt: string;
 }
 
