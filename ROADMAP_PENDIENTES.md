@@ -90,10 +90,10 @@
   - **Estimación**: 12 horas (Playwright/Cypress)
 
 ### **🎨 UX/UI**
-- [ ] **Modo oscuro/claro persistente**
-  - **Motivo**: Mejora accesibilidad
-  - **Impacto**: Bajo
-  - **Estimación**: 4 horas
+- [x] **Modo oscuro/claro persistente y rediseño visual Bugambilia**
+  - **Motivo**: Mejora accesibilidad y estética institucional (Aurum Pro)
+  - **Impacto**: Completado (CSS variables + Bugambilia integration)
+  - **Estimación**: Completado
 
 - [ ] **Diseño responsive completo**
   - **Motivo**: Verificar que todas las páginas funcionen en móvil
