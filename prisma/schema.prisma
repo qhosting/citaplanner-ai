@@ -87,6 +87,8 @@ model Branch {
   organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+
   @@map("branches")
 }
 
@@ -111,20 +113,7 @@ model User {
   resetToken       String?  @map("reset_token")
   resetTokenExpiry DateTime? @map("reset_token_expiry")
 
-  @@unique([phone, organizationId]) // Approximated from index idx_users_phone_tenant on phone, tenant_id (using organizationId as proxy if tenant logic shifts, typically it's tenant_id but code used organization_id/tenant replacement. Sticking to code structure.)
-  // Note: The original index was on (phone, tenant_id). But the CREATE TABLE for users DOES NOT have tenant_id column in the first CREATE statement (line 225).
-  // Wait, line 319 adds organization_id. Line 328 adds branch_id. Line 296 creates index on users(phone, tenant_id).
-  // ERROR IN ORIGINAL SQL: users table does NOT have tenant_id column defined in CREATE or ALTER! It has 'branch_id'.
-  // server.js Line 296: CREATE UNIQUE INDEX ... ON users (phone, tenant_id). This would FAIL if tenant_id doesn't exist.
-  // Checking server.js again...
-  // Line 225: CREATE TABLE users ... no tenant_id.
-  // Maybe it was added silently? Or the code assumes it exists? 
-  // Line 669: SELECT * FROM users WHERE ... AND organization_id = $3. 
-  // It seems organization_id IS the tenant discriminator now.
-  // The index creation on line 296 might be legacy or broken code in server.js. 
-  // I will map it to organizationId for safety in Prisma, or verify if I should add tenantId.
-  // Given 'organization_id' is added in line 319, I will use that.
-
+  @@unique([phone, organizationId])
   @@map("users")
 }
 
@@ -252,7 +241,6 @@ model LandingSetting {
   @@map("landing_settings")
 }
 
-
 model IntegrationLog {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Inferred ID
   platform       String?
@@ -278,20 +266,4 @@ model Transaction {
   createdAt      DateTime? @default(now()) @map("created_at")
 
   @@map("transactions")
-}
-
-model Branch {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String    @db.VarChar(255)
-  address        String?
-  phone          String?   @db.VarChar(50)
-  manager        String?   @db.VarChar(255)
-  status         String?   @default("ACTIVE") @db.VarChar(20)
-  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
-  tenantId       String?   @map("tenant_id") @db.Uuid
-  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-
-  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
-
-  @@map("branches")
 }

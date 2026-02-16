@@ -1,5 +1,6 @@
 
 import express from 'express';
+import crypto from 'crypto';
 import pg from 'pg';
 import cors from 'cors';
 import path from 'path';
@@ -1042,6 +1043,7 @@ const tenantMiddleware = async (req, res, next) => {
         }
 
         req.tenantId = tenantId;
+        req.organizationId = tenantId; // Map to organization_id used in database
         req.branchId = req.headers['x-branch-id'];
 
         next();
@@ -2600,6 +2602,11 @@ app.get('/api/settings/landing', async (req, res) => {
             });
         }
 
+        // Fetch complementary info from Tenant table
+        const tenant = await prisma.tenant.findUnique({
+            where: { subdomain: organizationId }
+        });
+
         const normalized = {
             businessName: data.businessName || 'CitaPlanner Elite',
             primaryColor: data.primaryColor || '#630E14',
@@ -2619,7 +2626,19 @@ app.get('/api/settings/landing', async (req, res) => {
             footerText: data.footerText || '',
             socialInstagram: data.socialInstagram || '',
             socialFacebook: data.socialFacebook || '',
-            socialTwitter: data.socialTwitter || ''
+            socialTwitter: data.socialTwitter || '',
+            subdomain: organizationId,
+            bridge: tenant ? {
+                enabled: tenant.bridgeEnabled || false,
+                webhookUrl: tenant.bridgeWebhookUrl || '',
+                apiKey: tenant.bridgeApiKey || '',
+                satelliteId: tenant.bridgeSatelliteId || 3
+            } : {
+                enabled: false,
+                webhookUrl: '',
+                apiKey: '',
+                satelliteId: 3
+            }
         };
         res.json(normalized);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -2678,6 +2697,68 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
         });
 
         res.json({ success: true, settings: updated });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- BRIDGE SETTINGS & INTERCONNECTIVITY ---
+app.put('/api/settings/bridge', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { enabled, webhookUrl, satelliteId } = req.body;
+        const subdomain = req.tenantId;
+
+        await prisma.tenant.update({
+            where: { subdomain },
+            data: {
+                bridgeEnabled: enabled,
+                bridgeWebhookUrl: webhookUrl,
+                bridgeSatelliteId: parseInt(satelliteId) || 3
+            }
+        });
+
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/settings/bridge/rotate-key', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const subdomain = req.tenantId;
+        const newKey = crypto.randomUUID();
+
+        await prisma.tenant.update({
+            where: { subdomain },
+            data: { bridgeApiKey: newKey }
+        });
+
+        res.json({ success: true, key: newKey });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/settings/bridge/test', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const tenant = await prisma.tenant.findUnique({
+            where: { subdomain: req.tenantId }
+        });
+
+        if (!tenant || !tenant.bridgeWebhookUrl) {
+            return res.status(400).json({ success: false, message: "Webhook no configurado" });
+        }
+
+        console.log(`[BRIDGE] Testing handshake for: ${req.tenantId} -> ${tenant.bridgeWebhookUrl}`);
+
+        const response = await axios.post(tenant.bridgeWebhookUrl, {
+            type: 'HANDSHAKE',
+            satelliteId: tenant.bridgeSatelliteId,
+            timestamp: new Date().toISOString()
+        }, {
+            headers: { 'X-Aurum-Key': tenant.bridgeApiKey },
+            timeout: 5000
+        }).catch(e => ({ status: 500, data: { message: e.message } }));
+
+        if (response.status === 200) {
+            res.json({ success: true, message: "Handshake Exitoso con Aurum Holding" });
+        } else {
+            res.json({ success: false, message: "Holding Offline o Error de Configuración" });
+        }
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

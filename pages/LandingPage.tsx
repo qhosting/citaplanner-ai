@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
+import {
   ArrowRight, Sparkles, Loader2, Clock, MapPin, Instagram, Facebook,
-  CalendarDays, Zap, Globe, Shield, Phone, Heart, 
+  CalendarDays, Zap, Globe, Shield, Phone, Heart,
   Menu, X, MessageSquare, Eye, Mail, MessageCircle,
   Linkedin, Twitter, ShieldCheck, Activity, ChevronUp
 } from 'lucide-react';
@@ -81,11 +81,11 @@ export const LandingPage: React.FC = () => {
           api.getLandingSettings(),
           api.getServices()
         ]);
-        
+
         if (s.status === 'fulfilled' && s.value) {
           setSettings({ ...DEFAULT_SETTINGS, ...s.value });
         }
-        
+
         if (sv.status === 'fulfilled' && sv.value) {
           const activeServices = sv.value.filter(svItem => svItem.status === 'ACTIVE').slice(0, 3);
           setServices(activeServices.length > 0 ? activeServices : sv.value.slice(0, 3));
@@ -99,11 +99,29 @@ export const LandingPage: React.FC = () => {
     init();
   }, []);
 
-  const slides = settings.heroSlides && settings.heroSlides.length > 0 
-    ? settings.heroSlides 
-    : [{ image: "https://images.unsplash.com/photo-1560066984-138dadb4c035", title: "Citaplanner", subtitle: "ELITE", text: "Gestiona tu negocio con inteligencia." }];
+  useEffect(() => {
+    if (settings.seoTitle) document.title = settings.seoTitle;
 
-  const whatsappLink = settings.contactPhone ? `https://wa.me/${settings.contactPhone.replace(/\D/g, '')}` : '#';
+    const updateMeta = (name: string, content: string) => {
+      let meta = document.querySelector(`meta[name="${name}"]`);
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', name);
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', content);
+    };
+
+    if (settings.seoDescription) updateMeta('description', settings.seoDescription);
+    if (settings.seoKeywords) updateMeta('keywords', settings.seoKeywords);
+  }, [settings.seoTitle, settings.seoDescription, settings.seoKeywords]);
+
+  const slides = settings.heroSlides && settings.heroSlides.length > 0
+    ? settings.heroSlides
+    : [{ image: "https://images.unsplash.com/photo-1560066984-138dadb4c035", title: settings.businessName || "Citaplanner", subtitle: "ELITE", text: settings.slogan || "Gestiona tu negocio con inteligencia." }];
+
+  const waTarget = settings.whatsappPhone || settings.contactPhone;
+  const whatsappLink = waTarget ? `https://wa.me/${waTarget.replace(/\D/g, '')}` : '#';
 
   if (loading) {
     return (
@@ -116,10 +134,10 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] font-inter selection:bg-[#C5A028] selection:text-white overflow-x-hidden scroll-smooth">
-      
+
       {/* Floating WhatsApp Concierge */}
-      {settings.showWhatsappButton && settings.contactPhone && (
-        <a 
+      {(settings.showWhatsappButton ?? true) && waTarget && (
+        <a
           href={whatsappLink}
           target="_blank"
           rel="noopener noreferrer"
@@ -128,7 +146,7 @@ export const LandingPage: React.FC = () => {
           <div className="relative">
             <div className="absolute inset-0 bg-[#C5A028] rounded-full animate-ping opacity-25 scale-125" />
             <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-[#C5A028] to-[#8C6F1B] flex items-center justify-center text-black shadow-[0_25px_60px_-15px_rgba(197,160,40,0.5)] hover:scale-110 transition-all duration-500">
-               <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
+              <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
             </div>
           </div>
         </a>
@@ -138,7 +156,7 @@ export const LandingPage: React.FC = () => {
       <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#C5A028]/20 shadow-2xl' : 'bg-transparent py-8'}`}>
         <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
           <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
-          
+
           <div className="hidden lg:flex items-center gap-10">
             <a href="#services" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Servicios</a>
             <a href="#about" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:text-[#C5A028]">Santuario</a>
@@ -158,22 +176,22 @@ export const LandingPage: React.FC = () => {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-2xl animate-entrance p-8 flex flex-col">
-           <div className="flex justify-between items-center mb-20">
-              <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
-              <button onClick={() => setMobileMenuOpen(false)} className="p-4 bg-white/5 rounded-2xl text-[#C5A028] border border-[#C5A028]/20">
-                <X size={32} />
-              </button>
-           </div>
-           <div className="flex flex-col gap-10 text-center">
-              <a href="#services" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Servicios</a>
-              <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Santuario</a>
-              <div className="h-px bg-white/10 w-24 mx-auto my-4" />
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-black text-[#C5A028] uppercase tracking-[0.2em]">Acceso Staff</Link>
-              <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="gold-btn py-6 rounded-[2rem] text-sm uppercase tracking-[0.4em] font-black mx-auto w-full max-w-xs">Reservar Ahora</Link>
-           </div>
-           <div className="mt-auto text-center border-t border-white/5 pt-10">
-              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{settings.businessName}</p>
-           </div>
+          <div className="flex justify-between items-center mb-20">
+            <LogoCitaplanner color={settings.primaryColor} customUrl={settings.logoUrl} />
+            <button onClick={() => setMobileMenuOpen(false)} className="p-4 bg-white/5 rounded-2xl text-[#C5A028] border border-[#C5A028]/20">
+              <X size={32} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-10 text-center">
+            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Servicios</a>
+            <a href="#about" onClick={() => setMobileMenuOpen(false)} className="text-3xl font-black text-white uppercase tracking-tighter">Santuario</a>
+            <div className="h-px bg-white/10 w-24 mx-auto my-4" />
+            <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="text-2xl font-black text-[#C5A028] uppercase tracking-[0.2em]">Acceso Staff</Link>
+            <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="gold-btn py-6 rounded-[2rem] text-sm uppercase tracking-[0.4em] font-black mx-auto w-full max-w-xs">Reservar Ahora</Link>
+          </div>
+          <div className="mt-auto text-center border-t border-white/5 pt-10">
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{settings.businessName}</p>
+          </div>
         </div>
       )}
 
@@ -200,47 +218,64 @@ export const LandingPage: React.FC = () => {
       {/* Services Section */}
       <section id="services" className="py-48 bg-[#050505] relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-8">
-           <div className="mb-32">
-              <span className="text-[11px] font-black uppercase tracking-[0.6em] text-[#C5A028] mb-8 block">Le Menu d'Excellence</span>
-              <h2 className="text-6xl md:text-[100px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
-                Invierte en tu <br/> <span className="italic font-light text-[#C5A028]">Propia Mirada.</span>
-              </h2>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
-              {services.map((s, i) => (
-                <div key={i} className="group bg-[#0a0a0a] rounded-[4.5rem] border border-white/5 hover:border-[#C5A028]/40 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl">
-                   <div className="h-[300px] overflow-hidden relative">
-                      <img src={s.imageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9'} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
-                   </div>
-                   <div className="p-12">
-                      <span className="text-[9px] font-black text-[#C5A028] uppercase tracking-[0.4em] mb-6 block">{s.category}</span>
-                      <h3 className="text-2xl font-playfair font-bold text-white mb-6 group-hover:text-[#C5A028] transition-colors">{s.name}</h3>
-                      <p className="text-zinc-500 font-medium leading-relaxed mb-10 min-h-[80px]">{s.description || 'Protocolo exclusivo diseñado para armonizar tus rasgos.'}</p>
-                      <div className="pt-8 border-t border-white/5">
-                        <Link to="/book" className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-white group-hover:text-[#C5A028] transition-all">RESERVAR EXPERIENCIA <ArrowRight size={18} className="text-[#C5A028]" /></Link>
-                      </div>
-                   </div>
+          <div className="mb-32">
+            <span className="text-[11px] font-black uppercase tracking-[0.6em] text-[#C5A028] mb-8 block">Le Menu d'Excellence</span>
+            <h2 className="text-6xl md:text-[100px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
+              Invierte en tu <br /> <span className="italic font-light text-[#C5A028]">Propia Mirada.</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
+            {services.map((s, i) => (
+              <div key={i} className="group bg-[#0a0a0a] rounded-[4.5rem] border border-white/5 hover:border-[#C5A028]/40 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl">
+                <div className="h-[300px] overflow-hidden relative">
+                  <img src={s.imageUrl || 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9'} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
                 </div>
-              ))}
-           </div>
+                <div className="p-12">
+                  <span className="text-[9px] font-black text-[#C5A028] uppercase tracking-[0.4em] mb-6 block">{s.category}</span>
+                  <h3 className="text-2xl font-playfair font-bold text-white mb-6 group-hover:text-[#C5A028] transition-colors">{s.name}</h3>
+                  <p className="text-zinc-500 font-medium leading-relaxed mb-10 min-h-[80px]">{s.description || 'Protocolo exclusivo diseñado para armonizar tus rasgos.'}</p>
+                  <div className="pt-8 border-t border-white/5">
+                    <Link to="/book" className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-white group-hover:text-[#C5A028] transition-all">RESERVAR EXPERIENCIA <ArrowRight size={18} className="text-[#C5A028]" /></Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* --- ELITE UPGRADED FOOTER --- */}
       <footer className="bg-[#050505] pt-32 pb-12 border-t border-white/5 relative overflow-hidden">
-         {/* Subtle background glow */}
-         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-[#C5A028]/5 blur-[120px] rounded-full pointer-events-none" />
-         
-         <div className="max-w-7xl mx-auto px-8 relative z-10">
-            {/* Top Footer: Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 mb-24">
-               {/* Column 1: Brand */}
-               <div className="lg:col-span-4 space-y-10">
-                  <LogoCitaplanner size={32} color={settings.primaryColor} customUrl={settings.logoUrl} />
-                  <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
-                    {settings.businessName} opera bajo los estándares del ecosistema de capital Aurum. Fusionamos alta tecnología con protocolos de estética de nivel máster para resultados sin precedentes.
-                  </p>
-                  <div className="flex items-center gap-4">
+        {/* Subtle background glow */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-[#C5A028]/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-8 relative z-10">
+          {/* Top Footer: Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 mb-24">
+            {/* Column 1: Brand */}
+            <div className="lg:col-span-4 space-y-10">
+              <LogoCitaplanner size={32} color={settings.primaryColor} customUrl={settings.logoUrl} />
+              <p className="text-zinc-500 text-sm leading-relaxed max-w-sm">
+                {settings.footerText || `${settings.businessName} opera bajo los estándares del ecosistema de capital Aurum. Fusionamos alta tecnología con protocolos de estética de nivel máster para resultados sin precedentes.`}
+              </p>
+              <div className="flex items-center gap-4">
+                {(settings.socialInstagram) && (
+                  <a href={settings.socialInstagram} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                    <Instagram size={20} />
+                  </a>
+                )}
+                {(settings.socialFacebook) && (
+                  <a href={settings.socialFacebook} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                    <Facebook size={20} />
+                  </a>
+                )}
+                {(settings.socialTwitter) && (
+                  <a href={settings.socialTwitter} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
+                    <Twitter size={20} />
+                  </a>
+                )}
+                {!settings.socialInstagram && !settings.socialFacebook && !settings.socialTwitter && (
+                  <>
                     <a href={settings.socialLinks?.instagram || '#'} className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
                       <Instagram size={20} />
                     </a>
@@ -250,108 +285,110 @@ export const LandingPage: React.FC = () => {
                     <a href="#" className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-[#C5A028] hover:border-[#C5A028]/40 transition-all">
                       <Linkedin size={20} />
                     </a>
-                  </div>
-               </div>
-
-               {/* Column 2: Navigation */}
-               <div className="lg:col-span-2 space-y-10">
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Navegación</h4>
-                  <ul className="space-y-4">
-                    {['Inicio', 'Servicios', 'Santuario', 'Agendar'].map((item) => (
-                      <li key={item}>
-                        <a href={`#${item.toLowerCase()}`} className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
-                          <div className="w-1 h-1 rounded-full bg-[#C5A028] scale-0 group-hover:scale-100 transition-transform" /> {item}
-                        </a>
-                      </li>
-                    ))}
-                    <li>
-                      <Link to="/login" className="text-[11px] font-black text-[#C5A028] uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
-                         <ShieldCheck size={14} /> Acceso Staff
-                      </Link>
-                    </li>
-                  </ul>
-               </div>
-
-               {/* Column 3: Contact */}
-               <div className="lg:col-span-3 space-y-10">
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Contacto Elite</h4>
-                  <div className="space-y-6">
-                    <div className="flex gap-4">
-                      <MapPin size={18} className="text-[#C5A028] shrink-0" />
-                      {settings.googleMapsUrl ? (
-                        <a href={settings.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed hover:text-[#C5A028] transition-colors">{settings.address}</a>
-                      ) : (
-                        <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-4">
-                      <Phone size={18} className="text-[#C5A028] shrink-0" />
-                      <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest">{settings.contactPhone}</p>
-                    </div>
-                    <div className="flex gap-4">
-                      <Mail size={18} className="text-[#C5A028] shrink-0" />
-                      <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest">concierge@{settings.businessName.toLowerCase().replace(/\s/g, '')}.mx</p>
-                    </div>
-                  </div>
-               </div>
-
-               {/* Column 4: Network Status */}
-               <div className="lg:col-span-3">
-                  <div className="glass-card p-8 rounded-[2.5rem] border-white/5 bg-gradient-to-tr from-white/[0.02] to-transparent">
-                    <div className="flex items-center justify-between mb-8">
-                      <h4 className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Network Status</h4>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                        <span className="text-[8px] font-black text-emerald-500 uppercase">Live</span>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Node ID</span>
-                        <span className="text-[9px] text-zinc-400 font-mono">AUM-NODE-MX-01</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Latency</span>
-                        <span className="text-[9px] text-zinc-400 font-mono">14ms</span>
-                      </div>
-                      <div className="pt-4 border-t border-white/5">
-                        <div className="flex items-center gap-2 text-[#C5A028]">
-                          <ShieldCheck size={12} />
-                          <span className="text-[8px] font-black uppercase tracking-widest">Aurum Shield Active</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-               </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Bottom Footer */}
-            <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-               <div className="flex items-center gap-3">
-                  <Shield size={16} className="text-zinc-700" />
-                  <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em]">
-                    Aurum Capital Technology • 8888
-                  </p>
-               </div>
-               
-               <div className="flex items-center gap-10">
-                  <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Privacidad</a>
-                  <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Protocolos Legales</a>
-                  <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="p-3 bg-white/5 rounded-xl text-zinc-500 hover:text-[#C5A028] transition-all border border-white/5">
-                    <ChevronUp size={16} />
-                  </button>
-               </div>
+            {/* Column 2: Navigation */}
+            <div className="lg:col-span-2 space-y-10">
+              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Navegación</h4>
+              <ul className="space-y-4">
+                {['Inicio', 'Servicios', 'Santuario', 'Agendar'].map((item) => (
+                  <li key={item}>
+                    <a href={`#${item.toLowerCase()}`} className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
+                      <div className="w-1 h-1 rounded-full bg-[#C5A028] scale-0 group-hover:scale-100 transition-transform" /> {item}
+                    </a>
+                  </li>
+                ))}
+                <li>
+                  <Link to="/login" className="text-[11px] font-black text-[#C5A028] uppercase tracking-widest hover:text-white transition-colors flex items-center gap-2 group">
+                    <ShieldCheck size={14} /> Acceso Staff
+                  </Link>
+                </li>
+              </ul>
             </div>
 
-            <div className="mt-12 text-center">
-               <p className="text-[8px] font-bold text-zinc-800 uppercase tracking-[1em] mb-4">In Precision We Trust</p>
-               <div className="flex justify-center gap-4 text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em]">
-                  <span>© 2026 {settings.businessName}</span>
-                  <span className="text-zinc-900">|</span>
-                  <span>Infrastructure by QHosting</span>
-               </div>
+            {/* Column 3: Contact */}
+            <div className="lg:col-span-3 space-y-10">
+              <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] border-l-2 border-[#C5A028] pl-4">Contacto Elite</h4>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <MapPin size={18} className="text-[#C5A028] shrink-0" />
+                  {settings.googleMapsUrl ? (
+                    <a href={settings.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed hover:text-[#C5A028] transition-colors">{settings.address}</a>
+                  ) : (
+                    <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest leading-relaxed">{settings.address}</p>
+                  )}
+                </div>
+                <div className="flex gap-4">
+                  <Phone size={18} className="text-[#C5A028] shrink-0" />
+                  <p className="text-zinc-400 text-[11px] font-black uppercase tracking-widest">{settings.contactPhone}</p>
+                </div>
+                <div className="flex gap-4">
+                  <Mail size={18} className="text-[#C5A028] shrink-0" />
+                  <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest">concierge@{settings.businessName.toLowerCase().replace(/\s/g, '')}.mx</p>
+                </div>
+              </div>
             </div>
-         </div>
+
+            {/* Column 4: Network Status */}
+            <div className="lg:col-span-3">
+              <div className="glass-card p-8 rounded-[2.5rem] border-white/5 bg-gradient-to-tr from-white/[0.02] to-transparent">
+                <div className="flex items-center justify-between mb-8">
+                  <h4 className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Network Status</h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                    <span className="text-[8px] font-black text-emerald-500 uppercase">Live</span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Node ID</span>
+                    <span className="text-[9px] text-zinc-400 font-mono">AUM-NODE-MX-01</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Latency</span>
+                    <span className="text-[9px] text-zinc-400 font-mono">14ms</span>
+                  </div>
+                  <div className="pt-4 border-t border-white/5">
+                    <div className="flex items-center gap-2 text-[#C5A028]">
+                      <ShieldCheck size={12} />
+                      <span className="text-[8px] font-black uppercase tracking-widest">Aurum Shield Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Footer */}
+          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
+            <div className="flex items-center gap-3">
+              <Shield size={16} className="text-zinc-700" />
+              <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em]">
+                Aurum Capital Technology • 8888
+              </p>
+            </div>
+
+            <div className="flex items-center gap-10">
+              <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Privacidad</a>
+              <a href="#" className="text-[9px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Protocolos Legales</a>
+              <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="p-3 bg-white/5 rounded-xl text-zinc-500 hover:text-[#C5A028] transition-all border border-white/5">
+                <ChevronUp size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-[8px] font-bold text-zinc-800 uppercase tracking-[1em] mb-4">In Precision We Trust</p>
+            <div className="flex justify-center gap-4 text-[9px] font-black text-zinc-700 uppercase tracking-[0.2em]">
+              <span>© 2026 {settings.businessName}</span>
+              <span className="text-zinc-900">|</span>
+              <span>Infrastructure by QHosting</span>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
