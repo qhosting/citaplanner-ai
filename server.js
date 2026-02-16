@@ -350,6 +350,21 @@ const initDB = async () => {
     try {
         await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
 
+        // Create tables if not exists
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS branches (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                address VARCHAR(500),
+                phone VARCHAR(50),
+                manager VARCHAR(255),
+                status VARCHAR(20) DEFAULT 'ACTIVE',
+                organization_id VARCHAR(50) DEFAULT 'demo',
+                tenant_id UUID,
+                created_at TIMESTAMP DEFAULT now()
+            );
+        `);
+
         // --- MIGRACIÓN: ASEGURAR COLUMNAS ---
         // Si las tablas ya existen de una versión previa, CREATE TABLE IF NOT EXISTS no las actualiza.
         await client.query(`
@@ -2385,13 +2400,13 @@ app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, r
 
 app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
-        const { name, role, email, aurum_employee_id, weeklySchedule, exceptions } = req.body;
+        const { name, role, email, aurumEmployeeId, weeklySchedule, exceptions } = req.body;
         const pro = await prisma.professional.create({
             data: {
                 name,
                 role,
                 email,
-                aurumEmployeeId: aurum_employee_id,
+                aurumEmployeeId: aurumEmployeeId,
                 weeklySchedule: weeklySchedule || [],
                 exceptions: exceptions || [],
                 organizationId: req.tenantId || 'demo',
@@ -2400,6 +2415,51 @@ app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, 
             }
         });
         res.json({ success: true, id: pro.id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const branches = await prisma.branch.findMany({
+            where: { organizationId: req.tenantId || 'demo' }
+        });
+        res.json(branches);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, address, phone, manager, status } = req.body;
+        const branch = await prisma.branch.create({
+            data: {
+                name,
+                address,
+                phone,
+                manager,
+                status: status || 'ACTIVE',
+                organizationId: req.tenantId || 'demo',
+                tenantId: req.tenantId
+            }
+        });
+        res.json({ success: true, id: branch.id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, address, phone, manager, status } = req.body;
+        await prisma.branch.update({
+            where: { id: req.params.id },
+            data: { name, address, phone, manager, status }
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        await prisma.branch.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

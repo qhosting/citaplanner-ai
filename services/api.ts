@@ -95,9 +95,8 @@ export const api = {
   // PROXY IA SEGURO (NUEVO)
   generateAIContent: async (params: { model?: string, contents: any, config?: any }) => {
     try {
-      const res = await fetch(`${API_URL}/ai/generate`, {
+      const res = await fetchWithAuth(`${API_URL}/ai/generate`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify(params)
       });
       const data = await res.json();
@@ -133,31 +132,11 @@ export const api = {
     } catch { return null; }
   },
 
-  uploadImage: async (file: File): Promise<string | null> => {
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      // fetchWithAuth handles FormData headers automatically via getHeaders check? 
-      // Actually my implementation of fetchWithAuth calls getHeaders which checks body type, 
-      // BUT getHeaders was defined to take bool. fetchWithAuth should be careful.
-      // Re-implementing simplified upload logic locally or fixing fetchWithAuth.
-      // For upload we need careful header handling (no Content-Type).
-
-      const userStr = localStorage.getItem('citaPlannerUser');
-      const token = userStr ? JSON.parse(userStr).token : null;
-      const headers: any = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(`${API_URL}/upload`, { method: 'POST', headers, body: formData });
-      const data = await res.json();
-      return data.success ? data.url : null;
-    } catch { return null; }
-  },
-
+  // Settings & Landing
   getLandingSettings: async (): Promise<LandingSettings> => {
     try {
-      const res = await fetch(`${API_URL}/settings/landing`, { headers: getHeaders() });
-      return await res.json();
+      const res = await fetchWithAuth(`${API_URL}/settings/landing`);
+      return res.ok ? await res.json() : {} as LandingSettings;
     } catch { return {} as LandingSettings; }
   },
 
@@ -211,6 +190,7 @@ export const api = {
     } catch { return false; }
   },
 
+  // Clients CRUD
   getClients: async (): Promise<Client[]> => {
     const res = await fetchWithAuth(`${API_URL}/clients`);
     return res.ok ? await res.json() : [];
@@ -237,111 +217,10 @@ export const api = {
     return res.ok;
   },
 
+  // Services CRUD
   getServices: async (): Promise<Service[]> => {
     const res = await fetchWithAuth(`${API_URL}/services`);
     return res.ok ? await res.json() : [];
-  },
-
-  getAppointments: async (): Promise<Appointment[]> => {
-    const res = await fetchWithAuth(`${API_URL}/appointments`);
-    return res.ok ? await res.json() : [];
-  },
-
-  createAppointment: async (a: Omit<Appointment, 'id' | 'tenantId'>) => {
-    const res = await fetchWithAuth(`${API_URL}/appointments`, {
-      method: 'POST',
-      body: JSON.stringify(a)
-    });
-    return await res.json();
-  },
-
-  getProducts: async (): Promise<Product[]> => {
-    const res = await fetchWithAuth(`${API_URL}/products`);
-    return res.ok ? await res.json() : [];
-  },
-
-  getInventoryMovements: async (): Promise<InventoryMovement[]> => {
-    const res = await fetchWithAuth(`${API_URL}/inventory/movements`);
-    return res.ok ? await res.json() : [];
-  },
-
-  createProduct: async (p: Product): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/products`, {
-      method: 'POST',
-      body: JSON.stringify(p)
-    });
-    return res.ok;
-  },
-
-  updateProduct: async (p: Product): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/products/${p.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(p)
-    });
-    return res.ok;
-  },
-
-  getProfessionals: async (): Promise<Professional[]> => {
-    const res = await fetchWithAuth(`${API_URL}/professionals`);
-    return res.ok ? await res.json() : [];
-  },
-
-  createProfessional: async (p: Omit<Professional, 'id' | 'tenantId'>): Promise<{ success: boolean; id?: string }> => {
-    const res = await fetchWithAuth(`${API_URL}/professionals`, {
-      method: 'POST',
-      body: JSON.stringify(p)
-    });
-    return await res.json();
-  },
-
-  updateProfessional: async (p: Professional): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/professionals/${p.id}`, {
-      method: 'PUT',
-      body: JSON.stringify(p)
-    });
-    return res.ok;
-  },
-
-  updatePassword: async (id: string, current: string, next: string): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/users/${id}/password`, {
-      method: 'PUT',
-      body: JSON.stringify({ current, next })
-    });
-    return res.ok;
-  },
-
-  updateProfile: async (id: string, data: any): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/users/${id}/profile`, {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-    return res.ok;
-  },
-
-  updatePreferences: async (id: string, prefs: NotificationPreferences): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/users/${id}/preferences`, {
-      method: 'PUT',
-      body: JSON.stringify(prefs)
-    });
-    return res.ok;
-  },
-
-  getProfessionalAppointments: async (proId: string): Promise<Appointment[]> => {
-    const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/appointments`);
-    return res.ok ? await res.json() : [];
-  },
-
-  completeAppointment: async (id: string, notes: string): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/complete`, {
-      method: 'POST',
-      body: JSON.stringify({ notes })
-    });
-    return res.ok;
-  },
-
-  cancelAppointment: async (id: string): Promise<boolean> => {
-    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/cancel`, { method: 'POST' });
-    return res.ok;
   },
 
   updateService: async (s: Service): Promise<boolean> => {
@@ -372,6 +251,130 @@ export const api = {
     } catch { return false; }
   },
 
+  // Appointments CRUD
+  getAppointments: async (): Promise<Appointment[]> => {
+    const res = await fetchWithAuth(`${API_URL}/appointments`);
+    return res.ok ? await res.json() : [];
+  },
+
+  createAppointment: async (a: Omit<Appointment, 'id' | 'tenantId'>) => {
+    const res = await fetchWithAuth(`${API_URL}/appointments`, {
+      method: 'POST',
+      body: JSON.stringify(a)
+    });
+    return await res.json();
+  },
+
+  completeAppointment: async (id: string, notes: string): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ notes })
+    });
+    return res.ok;
+  },
+
+  cancelAppointment: async (id: string): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/appointments/${id}/cancel`, { method: 'POST' });
+    return res.ok;
+  },
+
+  // Products CRUD
+  getProducts: async (): Promise<Product[]> => {
+    const res = await fetchWithAuth(`${API_URL}/products`);
+    return res.ok ? await res.json() : [];
+  },
+
+  createProduct: async (p: Product): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/products`, {
+      method: 'POST',
+      body: JSON.stringify(p)
+    });
+    return res.ok;
+  },
+
+  updateProduct: async (p: Product): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/products/${p.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(p)
+    });
+    return res.ok;
+  },
+
+  getInventoryMovements: async (): Promise<InventoryMovement[]> => {
+    const res = await fetchWithAuth(`${API_URL}/inventory/movements`);
+    return res.ok ? await res.json() : [];
+  },
+
+  // Professionals CRUD
+  getProfessionals: async (): Promise<Professional[]> => {
+    const res = await fetchWithAuth(`${API_URL}/professionals`);
+    return res.ok ? await res.json() : [];
+  },
+
+  createProfessional: async (p: Omit<Professional, 'id'>): Promise<{ success: boolean; id?: string }> => {
+    const res = await fetchWithAuth(`${API_URL}/professionals`, {
+      method: 'POST',
+      body: JSON.stringify(p)
+    });
+    return await res.json();
+  },
+
+  updateProfessional: async (p: Professional): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/professionals/${p.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(p)
+    });
+    return res.ok;
+  },
+
+  deleteProfessional: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals/${id}`, {
+        method: 'DELETE'
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  getProfessionalAppointments: async (proId: string): Promise<Appointment[]> => {
+    const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/appointments`);
+    return res.ok ? await res.json() : [];
+  },
+
+  getCalendarLink: async (proId: string): Promise<{ url: string, icalToken: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/calendar/link`);
+      if (!res.ok) throw new Error("Falla al obtener link");
+      return await res.json();
+    } catch { return { url: '', icalToken: '' }; }
+  },
+
+  // User / Profile
+  updatePassword: async (id: string, current: string, next: string): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ current, next })
+    });
+    return res.ok;
+  },
+
+  updateProfile: async (id: string, data: any): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    return res.ok;
+  },
+
+  updatePreferences: async (id: string, prefs: NotificationPreferences): Promise<boolean> => {
+    const res = await fetchWithAuth(`${API_URL}/users/${id}/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(prefs)
+    });
+    return res.ok;
+  },
+
+  // Notifications
   getVapidPublicKey: async (): Promise<string | null> => {
     try {
       const res = await fetch(`${API_URL}/notifications/vapid-public-key`, { headers: getHeaders() });
@@ -393,6 +396,7 @@ export const api = {
     } catch { return false; }
   },
 
+  // Sales
   processSale: async (saleData: any): Promise<{ success: boolean, saleId?: string, date?: string }> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/sales`, {
@@ -404,6 +408,7 @@ export const api = {
     } catch { return { success: false }; }
   },
 
+  // SaaS / Billing
   getSaasPlans: async (): Promise<SaasPlan[]> => {
     try {
       const res = await fetch(`${API_URL}/saas/plans`, { headers: getHeaders() });
@@ -421,7 +426,7 @@ export const api = {
     } catch { return { error: "Error de red" }; }
   },
 
-  // NEW: Forgot Password Methods
+  // Forgot Password
   requestPasswordReset: async (email: string, tenantId?: string) => {
     try {
       const res = await fetch(`${API_URL}/auth/forgot-password`, {
@@ -444,39 +449,28 @@ export const api = {
     } catch { return { success: false, error: "Error de red" }; }
   },
 
-  // NEW: Calendar Sync Methods
-  getCalendarLink: async (proId: string): Promise<{ url: string, icalToken: string }> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/professionals/${proId}/calendar/link`);
-      if (!res.ok) throw new Error("Falla al obtener link");
-      return await res.json();
-    } catch { return { url: '', icalToken: '' }; }
-  },
-
   // Branches CRUD
   getBranches: async (): Promise<Branch[]> => {
     try {
-      const res = await fetch(`${API_URL}/branches`, { headers: getHeaders() });
+      const res = await fetchWithAuth(`${API_URL}/branches`);
       return res.ok ? await res.json() : [];
     } catch { return []; }
   },
 
-  createBranch: async (b: Omit<Branch, 'id'>): Promise<boolean> => {
+  createBranch: async (b: Omit<Branch, 'id'>): Promise<{ success: boolean, id?: string }> => {
     try {
-      const res = await fetch(`${API_URL}/branches`, {
+      const res = await fetchWithAuth(`${API_URL}/branches`, {
         method: 'POST',
-        headers: getHeaders(),
         body: JSON.stringify(b)
       });
-      return res.ok;
-    } catch { return false; }
+      return await res.json();
+    } catch { return { success: false }; }
   },
 
   updateBranch: async (b: Branch): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/branches/${b.id}`, {
+      const res = await fetchWithAuth(`${API_URL}/branches/${b.id}`, {
         method: 'PUT',
-        headers: getHeaders(),
         body: JSON.stringify(b)
       });
       return res.ok;
@@ -485,64 +479,8 @@ export const api = {
 
   deleteBranch: async (id: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${API_URL}/branches/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      return res.ok;
-    } catch { return false; }
-  },
-
-  // Professionals CRUD
-  getProfessionals: async (): Promise<Professional[]> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/professionals`);
-      return res.ok ? await res.json() : [];
-    } catch { return []; }
-  },
-
-  createProfessional: async (p: Omit<Professional, 'id'>): Promise<{ success: boolean, id?: string }> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/professionals`, {
-        method: 'POST',
-        body: JSON.stringify(p)
-      });
-      return await res.json();
-    } catch { return { success: false }; }
-  },
-
-  updateProfessional: async (p: Professional): Promise<boolean> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/professionals/${p.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(p)
-      });
-      return res.ok;
-    } catch { return false; }
-  },
-
-  deleteProfessional: async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/professionals/${id}`, {
+      const res = await fetchWithAuth(`${API_URL}/branches/${id}`, {
         method: 'DELETE'
-      });
-      return res.ok;
-    } catch { return false; }
-  },
-
-  // Settings & Landing
-  getLandingSettings: async (): Promise<LandingSettings> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/settings/landing`);
-      return res.ok ? await res.json() : {} as LandingSettings;
-    } catch { return {} as LandingSettings; }
-  },
-
-  updateLandingSettings: async (s: LandingSettings): Promise<boolean> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/settings/landing`, {
-        method: 'PUT',
-        body: JSON.stringify(s)
       });
       return res.ok;
     } catch { return false; }

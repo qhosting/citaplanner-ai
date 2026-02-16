@@ -38,6 +38,7 @@ model Tenant {
   settings          Setting[]
   subscriptions     Subscription[]
   billingLogs       BillingLog[]
+  branches          Branch[]
 
   @@map("tenants")
 }
@@ -260,4 +261,20 @@ model Transaction {
   createdAt      DateTime? @default(now()) @map("created_at")
 
   @@map("transactions")
+}
+
+model Branch {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String    @db.VarChar(255)
+  address        String?
+  phone          String?   @db.VarChar(50)
+  manager        String?   @db.VarChar(255)
+  status         String?   @default("ACTIVE") @db.VarChar(20)
+  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+
+  @@map("branches")
 }

@@ -61,7 +61,7 @@ export interface Professional {
   name: string;
   role: string;
   email: string;
-  aurum_employee_id?: string;
+  aurumEmployeeId?: string;
   weeklySchedule: any[];
   exceptions: any[];
   serviceIds?: string[];
