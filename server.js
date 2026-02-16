@@ -491,10 +491,13 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
-                -- Custom Domain Migration
+                -- Custom Domain & Organization ID Migration
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='custom_domain') THEN
                         ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
+                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
                     END IF;
                 END IF;
 
