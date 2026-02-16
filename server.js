@@ -503,6 +503,26 @@ const initDB = async () => {
                         ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
                     END IF;
 
+                    -- Add plan_type if missing (CRITICAL)
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='plan_type') THEN
+                        ALTER TABLE tenants ADD COLUMN plan_type VARCHAR(20) DEFAULT 'ELITE';
+                    END IF;
+
+                    -- Add features if missing (CRITICAL - Fixed P2022)
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='features') THEN
+                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}';
+                    END IF;
+
+                    -- Add status if missing
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='status') THEN
+                        ALTER TABLE tenants ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
+                    END IF;
+
+                    -- Add openpay_id if missing
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='openpay_id') THEN
+                        ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
+                    END IF;
+
                     -- ENSURE UNIQUE CONSTRAINTS (Critical for Seeding)
                     IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_subdomain_key') THEN
                         ALTER TABLE tenants ADD CONSTRAINT tenants_subdomain_key UNIQUE (subdomain);
