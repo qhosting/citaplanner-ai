@@ -251,6 +251,23 @@ export const api = {
     } catch { return false; }
   },
 
+  exportServices: async (): Promise<Service[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/services/export`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  importServices: async (services: any[]): Promise<{ success: boolean; count?: number; error?: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/services/import`, {
+        method: 'POST',
+        body: JSON.stringify({ services })
+      });
+      return await res.json();
+    } catch { return { success: false, error: "Network Error" }; }
+  },
+
   // Appointments CRUD
   getAppointments: async (): Promise<Appointment[]> => {
     const res = await fetchWithAuth(`${API_URL}/appointments`);

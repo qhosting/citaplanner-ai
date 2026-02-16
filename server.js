@@ -1110,7 +1110,6 @@ app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) 
                 phone: phone || '',
                 manager: manager || '',
                 status: 'ACTIVE',
-                tenantId: req.tenantId,
                 organizationId: req.organizationId || 'demo'
             }
         });
@@ -2364,8 +2363,7 @@ app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) 
                 status,
                 description,
                 imageUrl,
-                organizationId: targetTenant,
-                tenantId: targetTenant // Linking both for now as per schema confusion
+                organizationId: targetTenant
             }
         });
 
@@ -2375,7 +2373,54 @@ app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) 
         }
 
         res.json({ success: true, service: newService });
+    } catch (e) {
+        console.error("Error creating service:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/services/export', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const services = await prisma.service.findMany({
+            where: { organizationId: req.tenantId },
+            orderBy: { name: 'asc' }
+        });
+        res.json(services);
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/services/import', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { services } = req.body;
+        if (!Array.isArray(services)) throw new Error("Formato de datos de importación inválido");
+
+        const created = [];
+        for (const s of services) {
+            const newS = await prisma.service.create({
+                data: {
+                    name: s.name,
+                    duration: parseInt(s.duration) || 30,
+                    price: parseFloat(s.price) || 0,
+                    category: s.category || 'General',
+                    status: s.status || 'ACTIVE',
+                    description: s.description || '',
+                    imageUrl: s.imageUrl || '',
+                    organizationId: req.tenantId
+                }
+            });
+            created.push(newS);
+        }
+
+        // Invalidate Cache
+        if (redisClient && redisClient.isOpen) {
+            await redisClient.del(`services:${req.tenantId} `);
+        }
+
+        res.json({ success: true, count: created.length });
+    } catch (e) {
+        console.error("Import Error:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {
@@ -2462,50 +2507,6 @@ app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const branches = await prisma.branch.findMany({
-            where: { organizationId: req.tenantId || 'demo' }
-        });
-        res.json(branches);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const { name, address, phone, manager, status } = req.body;
-        const branch = await prisma.branch.create({
-            data: {
-                name,
-                address,
-                phone,
-                manager,
-                status: status || 'ACTIVE',
-                organizationId: req.tenantId || 'demo',
-                tenantId: req.tenantId
-            }
-        });
-        res.json({ success: true, id: branch.id });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const { name, address, phone, manager, status } = req.body;
-        await prisma.branch.update({
-            where: { id: req.params.id },
-            data: { name, address, phone, manager, status }
-        });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        await prisma.branch.delete({ where: { id: req.params.id } });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 app.put('/api/professionals/:id', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
