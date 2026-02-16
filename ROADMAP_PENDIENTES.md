@@ -68,15 +68,15 @@
   - **Impacto**: Completado (Resolved Auth & Defaults)
   - **Estimación**: Completado
 
-- [ ] **Public Booking: Contexto Multi-tenant**
+- [x] **Public Booking: Contexto Multi-tenant**
   - **Motivo**: `/book` carga datos genéricos o de demo
-  - **Impacto**: Clientes ven datos incorrectos si entran por dominio personalizado
-  - **Estimación**: 2 horas
+  - **Impacto**: Completado (Dynamic Styling, Logo & Address)
+  - **Estimación**: Completado
 
-- [ ] **Clientes: Importación Masiva & Exportación**
+- [x] **Clientes: Importación Masiva & Exportación**
   - **Motivo**: Gestión de bases de datos grandes
-  - **Impacto**: Funcionalidad clave para migración de nuevos tenants
-  - **Estimación**: 3 horas
+  - **Impacto**: Completado (CSV Import/Export)
+  - **Estimación**: Completado
 
 **Última actualización**: 2026-02-16 (v5.6 Tenant Booking Update)
 **Estado**: 🚀 Sistema robusto. Enfocados en Polish Visual y Estabilidad de Módulos.
