@@ -88,10 +88,10 @@
   - **Impacto**: Completado (Colores, branding, servicios, galería y contacto dinámicos por tenant)
   - **Estimación**: Completado
 
-- [x] **Fix: Integridad de Datos (UUID) & Auth (Env Cleanup)**
-  - **Motivo**: Error colisión ID Integer vs UUID en LandingSettings y fallo login Modo Dios por \r en .env
-  - **Impacto**: Completado (DB Re-schema + Env Sanitization)
+- [x] **Fix: Integridad de Datos, Galería & Auth Nexus**
+  - **Motivo**: Error colisión ID, falta de columnas JSON para galería y fallo login Modo Dios.
+  - **Impacto**: Completado (API v6.0: Soporte total para Galería/Services/Hero, Registro seguro restringido a Master Hub, Auth Fixed)
   - **Estimación**: Completado
 
-**Última actualización**: 2026-02-24 (v5.9 Data Integrity & Auth Fix)
-**Estado**: 🚀 Sistema estable. Infraestructura y base de datos sincronizadas con Prisma.
+**Última actualización**: 2026-02-25 (v6.0 Nexus Master Multi-tenant stability)
+**Estado**: 🚀 Sistema estable. Infraestructura sincronizada, registros seguros y branding premium operativo.
