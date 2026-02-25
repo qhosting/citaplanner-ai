@@ -78,6 +78,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       category: formData.category || 'General',
       status: formData.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE',
       imageUrl: formData.imageUrl || '',
+      careInstructions: formData.careInstructions || '',
       tenantId: user?.tenantId || '',
     };
 
@@ -243,6 +244,20 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Detalles sobre los beneficios y la técnica..."
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-2">Instrucciones de Cuidado (IA)</label>
+              <div className="relative">
+                <ShieldCheck size={16} className="absolute left-5 top-6 text-[#D4AF37]/50" />
+                <textarea
+                  rows={3}
+                  className="w-full pl-14 pr-5 py-5 bg-black/40 border border-white/10 rounded-3xl text-white outline-none focus:border-[#D4AF37] resize-none font-medium text-sm leading-relaxed"
+                  value={formData.careInstructions || ''}
+                  onChange={(e) => setFormData({ ...formData, careInstructions: e.target.value })}
+                  placeholder="Instrucciones que la IA enviará al cliente post-cita..."
                 />
               </div>
             </div>

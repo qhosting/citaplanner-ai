@@ -22,6 +22,10 @@ import jwt from 'jsonwebtoken';
 import { google } from 'googleapis';
 import ics from 'ics';
 import Openpay from 'openpay';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import cron from 'node-cron';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.API_KEY || "");
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -506,7 +510,6 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
-                -- Services
                 IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'services') THEN
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='organization_id') THEN
                         ALTER TABLE services ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
@@ -516,6 +519,9 @@ const initDB = async () => {
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='tenant_id') THEN
                         ALTER TABLE services ADD COLUMN tenant_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='care_instructions') THEN
+                        ALTER TABLE services ADD COLUMN care_instructions TEXT;
                     END IF;
                 END IF;
 
@@ -529,6 +535,15 @@ const initDB = async () => {
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='branch_id') THEN
                         ALTER TABLE appointments ADD COLUMN branch_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='reminder_sent') THEN
+                        ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
+                        ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='updated_at') THEN
+                        ALTER TABLE appointments ADD COLUMN updated_at TIMESTAMP DEFAULT now();
                     END IF;
                 END IF;
 
@@ -580,7 +595,7 @@ const initDB = async () => {
                         ALTER TABLE tenants ADD COLUMN plan_type VARCHAR(20) DEFAULT 'ELITE';
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='features') THEN
-                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}';
+                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true, "ai_automation": true}';
                     END IF;
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='openpay_id') THEN
                         ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
@@ -846,6 +861,20 @@ const initDB = async () => {
             value JSONB NOT NULL,
             tenant_id UUID REFERENCES tenants(id),
             PRIMARY KEY(key, tenant_id)
+        );
+
+            CREATE TABLE IF NOT EXISTS leads(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            phone VARCHAR(50) NOT NULL,
+            email VARCHAR(255),
+            source VARCHAR(50) DEFAULT 'MANUAL',
+            status VARCHAR(50) DEFAULT 'NEW',
+            notes TEXT,
+            tenant_id UUID REFERENCES tenants(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
         );
 
             CREATE TABLE IF NOT EXISTS integration_logs(
@@ -2220,6 +2249,66 @@ app.get('/api/calendar/feed/:token.ics', async (req, res) => {
     } catch (e) { res.status(500).send(e.message); }
 });
 
+app.get('/api/calendar/tenant/feed/:token.ics', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const tenant = await prisma.tenant.findFirst({
+            where: { icalToken: token }
+        });
+
+        if (!tenant) return res.status(404).send('Feed de tenant no encontrado');
+
+        const appointments = await prisma.appointment.findMany({
+            where: { organizationId: tenant.organizationId || 'demo' },
+            include: { professional: true }
+        });
+
+        const events = appointments.map(app => {
+            const startStr = app.startDateTime.toISOString();
+            const endStr = app.endDateTime.toISOString();
+            const s = new Date(startStr);
+            const e = new Date(endStr);
+
+            return {
+                start: [s.getFullYear(), s.getMonth() + 1, s.getDate(), s.getHours(), s.getMinutes()],
+                end: [e.getFullYear(), e.getMonth() + 1, e.getDate(), e.getHours(), e.getMinutes()],
+                title: `[${app.professional?.name || 'Gral'}] ${app.title}`,
+                description: `Cliente: ${app.clientName}\nNotas: ${app.notes || ''}\nAtiende: ${app.professional?.name || 'No asignado'}`,
+                status: 'CONFIRMED',
+                busyStatus: 'BUSY'
+            };
+        });
+
+        const { error, value } = ics.createEvents(events);
+        if (error) throw error;
+
+        res.set('Content-Type', 'text/calendar; charset=utf-8');
+        res.send(value);
+    } catch (e) { res.status(500).send(e.message); }
+});
+
+app.get('/api/tenants/calendar/link', authenticateToken, async (req, res) => {
+    try {
+        const tenant = await prisma.tenant.findFirst({
+            where: { organizationId: req.tenantId }
+        });
+        if (!tenant) return res.status(404).json({ error: "Tenant no encontrado" });
+
+        let icalToken = tenant.icalToken;
+        if (!icalToken) {
+            icalToken = Array.from(Array(24), () => Math.floor(Math.random() * 36).toString(36)).join('');
+            await prisma.tenant.update({
+                where: { id: tenant.id },
+                data: { icalToken }
+            });
+        }
+
+        res.json({ icalToken });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+
 
 app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
     try {
@@ -2792,6 +2881,113 @@ app.delete('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- LEADS ENDPOINTS ---
+
+app.get('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const leads = await prisma.lead.findMany({
+            where: { organizationId: req.tenantId },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(leads);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { name, phone, email, source, notes } = req.body;
+        const newLead = await prisma.lead.create({
+            data: {
+                name,
+                phone,
+                email,
+                source: source || 'MANUAL',
+                status: 'NEW',
+                notes,
+                organizationId: req.tenantId
+            }
+        });
+        res.json({ success: true, lead: newLead });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// WEBHOOK for n8n/Facebook/WhatsApp
+app.post('/api/leads/webhook', async (req, res) => {
+    try {
+        const { name, phone, email, source, tenantId, notes } = req.body;
+
+        const tenant = await prisma.tenant.findFirst({
+            where: {
+                OR: [
+                    { id: tenantId },
+                    { subdomain: tenantId }
+                ]
+            }
+        });
+
+        if (!tenant) return res.status(404).json({ error: "Tenant host no detectado" });
+
+        const newLead = await prisma.lead.create({
+            data: {
+                name,
+                phone,
+                email,
+                source: source || 'EXTERNAL_API',
+                status: 'NEW',
+                notes: notes || 'Lead capturado vía webhook',
+                organizationId: tenant.organizationId
+            }
+        });
+
+        res.json({ success: true, leadId: newLead.id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, notes, name, phone, email } = req.body;
+        const updated = await prisma.lead.update({
+            where: { id },
+            data: { status, notes, name, phone, email, updatedAt: new Date() }
+        });
+        res.json({ success: true, lead: updated });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/leads/:id/convert', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const lead = await prisma.lead.findUnique({ where: { id } });
+        if (!lead) return res.status(404).json({ error: "Lead no encontrado" });
+
+        const newClient = await prisma.user.create({
+            data: {
+                name: lead.name,
+                phone: lead.phone,
+                email: lead.email,
+                role: 'CLIENT',
+                organizationId: req.tenantId,
+                preferences: { notes: lead.notes, convertedFrom: 'LEAD', leadId: lead.id }
+            }
+        });
+
+        await prisma.lead.update({
+            where: { id },
+            data: { status: 'CONVERTED' }
+        });
+
+        res.json({ success: true, client: newClient });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        await prisma.lead.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const professionals = await prisma.professional.findMany({
@@ -3145,6 +3341,98 @@ app.post('/api/settings/bridge/test', authenticateToken, tenantMiddleware, async
 });
 
 
+app.post('/api/ai/concierge', async (req, res) => {
+    try {
+        const { message, context } = req.body;
+        const tenantId = req.tenantId || context?.tenantId;
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-pro",
+            tools: [
+                {
+                    functionDeclarations: [
+                        {
+                            name: "get_services",
+                            description: "Obtiene la lista de servicios disponibles, precios y descripciones.",
+                            parameters: { type: "OBJECT", properties: {}, required: [] }
+                        },
+                        {
+                            name: "check_availability",
+                            description: "Consulta los horarios disponibles para una fecha específica.",
+                            parameters: {
+                                type: "OBJECT",
+                                properties: {
+                                    date: { type: "STRING", description: "Fecha en formato YYYY-MM-DD" }
+                                },
+                                required: ["date"]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const chat = model.startChat({
+            history: context?.history || [],
+            generationConfig: { maxOutputTokens: 1000 }
+        });
+
+        // Set system instruction via context if needed or hardcoded
+        const systemPrompt = `Eres el Concierge Inteligente de Aurum. Ayudas al cliente con:
+        1. Consultar servicios y precios.
+        2. Ver disponibilidad de citas.
+        3. Instrucciones de cuidado post-cita.
+        Solo agenda citas de forma tentativa. Siempre sé amable y sofisticado.
+        ID del Tenant actual: ${tenantId}`;
+
+        const result = await chat.sendMessageStream(`${systemPrompt}\n\nCliente: ${message}`);
+
+        // Handle potential function calls (simplified for first pass)
+        let fullText = "";
+        for await (const chunk of result.stream) {
+            const part = chunk.candidates[0].content.parts[0];
+            if (part.functionCall) {
+                const call = part.functionCall;
+                let functionResponse = {};
+
+                if (call.name === "get_services") {
+                    const services = await prisma.service.findMany({ where: { organizationId: tenantId, status: 'ACTIVE' } });
+                    functionResponse = { services: services.map(s => ({ name: s.name, price: s.price, duration: s.duration, description: s.description, careInstructions: s.careInstructions })) };
+                } else if (call.name === "check_availability") {
+                    const { date } = call.args;
+                    // Mock availability check based on existing appointments
+                    const apps = await prisma.appointment.findMany({
+                        where: {
+                            organizationId: tenantId,
+                            startDateTime: { gte: new Date(date), lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000) }
+                        }
+                    });
+                    functionResponse = {
+                        unavailable_slots: apps.map(a => a.startDateTime.toISOString()),
+                        info: "Considera que abrimos de 9am a 8pm."
+                    };
+                }
+
+                const result2 = await chat.sendMessage([{
+                    functionResponse: {
+                        name: call.name,
+                        response: functionResponse
+                    }
+                }]);
+                fullText = result2.response.text();
+                break;
+            } else {
+                fullText += chunk.text();
+            }
+        }
+
+        res.json({ text: fullText });
+    } catch (e) {
+        console.error("AI Concierge Error:", e);
+        res.status(500).json({ error: "El nodo cerebral está recalibrando. Intenta en un momento." });
+    }
+});
+
 app.get('/api/notifications/vapid-public-key', (req, res) => {
     res.json({ publicKey: vapidKeys.publicKey });
 });
@@ -3163,6 +3451,98 @@ app.post('/api/notifications/subscribe', async (req, res) => {
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+// --- AI AUTOMATIONS (WORKERS) ---
+
+// 1. Appointment Reminders (24h before)
+cron.schedule('0 * * * *', async () => {
+    console.log("🕒 Running AI Reminder Worker...");
+    try {
+        const tomorrow = new Date();
+        tomorrow.setHours(tomorrow.getHours() + 24);
+
+        const apps = await prisma.appointment.findMany({
+            where: {
+                status: 'SCHEDULED',
+                reminderSent: false,
+                startDateTime: {
+                    gte: new Date(),
+                    lte: tomorrow
+                }
+            },
+            include: { tenant: true }
+        });
+
+        for (const app of apps) {
+            // Only if AI Automation is enabled for this tenant
+            if (app.tenant?.features?.ai_automation) {
+                const dateStr = app.startDateTime.toLocaleString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+                const message = `🌟 Recordatorio Aurum: Hola ${app.clientName}, te esperamos mañana ${dateStr} para tu cita de "${app.title}". ¿Deseas confirmar tu asistencia?`;
+                await sendWhatsAppMessage(app.clientPhone, message, app.branchId);
+
+                await prisma.appointment.update({
+                    where: { id: app.id },
+                    data: { reminderSent: true }
+                });
+            }
+        }
+    } catch (e) { console.error("❌ Reminder Worker Error:", e); }
+});
+
+// 2. Post-Appointment Care Instructions (3h after completion)
+cron.schedule('30 * * * *', async () => {
+    console.log("🕒 Running AI Care Instruction Worker...");
+    try {
+        const threeHoursAgo = new Date();
+        threeHoursAgo.setHours(threeHoursAgo.getHours() - 3);
+
+        const apps = await prisma.appointment.findMany({
+            where: {
+                status: 'COMPLETED',
+                careSent: false,
+                updatedAt: { lte: threeHoursAgo }
+            },
+            include: { service: true, tenant: true }
+        });
+
+        for (const app of apps) {
+            if (app.tenant?.features?.ai_automation && app.service?.careInstructions) {
+                const message = `🌸 En Aurum nos importa tu belleza: Para prolongar los resultados de tu "${app.service.name}", te recomendamos:\n\n${app.service.careInstructions}\n\n¡Esperamos verte pronto!`;
+                await sendWhatsAppMessage(app.clientPhone, message, app.branchId);
+
+                await prisma.appointment.update({
+                    where: { id: app.id },
+                    data: { careSent: true }
+                });
+            }
+        }
+    } catch (e) { console.error("❌ Care Worker Error:", e); }
+});
+
+// 3. Birthday Greetings (6 AM Daily)
+cron.schedule('0 6 * * *', async () => {
+    console.log("🕒 Running AI Birthday Worker...");
+    try {
+        const today = new Date();
+        const monthDay = `${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+
+        const clients = await prisma.user.findMany({
+            where: {
+                role: 'CLIENT',
+                preferences: { path: ['birthDate'], string_contains: monthDay }
+            }
+        });
+
+        for (const client of clients) {
+            const tenant = await prisma.tenant.findUnique({ where: { subdomain: client.organizationId } });
+            if (tenant?.features?.ai_automation) {
+                const message = `🎂 ¡Feliz Cumpleaños ${client.name}! En ${tenant.name} celebramos tu día. Visítanos este mes y recibe un 15% de regalo en tu próximo servicio. ✨`;
+                await sendWhatsAppMessage(client.phone, message, null);
+            }
+        }
+    } catch (e) { console.error("❌ Birthday Worker Error:", e); }
+});
+
 
 // INITIALIZE INFRASTRUCTURE
 

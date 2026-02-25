@@ -12,6 +12,7 @@ export interface TenantFeatures {
   marketing_pro: boolean;
   inventory_advanced: boolean;
   analytics_nexus: boolean;
+  ai_automation: boolean;
 }
 
 export interface Tenant {
@@ -25,6 +26,8 @@ export interface Tenant {
   suspendedAt?: string;
   trialEndsAt?: string;
   createdAt: string;
+  icalToken?: string;
+  organizationId?: string;
 }
 
 export interface BridgeSettings {
@@ -115,6 +118,7 @@ export interface Service {
   tenantId?: string;
   description: string;
   imageUrl?: string;
+  careInstructions?: string;
 }
 
 export interface Appointment {
@@ -290,4 +294,20 @@ export interface SaasPlan {
   currency: string;
   description: string;
   features: TenantFeatures;
+}
+
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'INTERESTED' | 'CONVERTED' | 'LOST';
+export type LeadSource = 'FACEBOOK' | 'WHATSAPP' | 'INSTAGRAM' | 'MANUAL';
+
+export interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  source: LeadSource;
+  status: LeadStatus;
+  notes?: string;
+  tenantId: string;
+  createdAt: string;
+  updatedAt: string;
 }

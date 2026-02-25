@@ -21,6 +21,9 @@ model Appointment {
   tenantId        String?   @db.Uuid @map("tenant_id")
   organizationId  String?   @default("demo") @db.VarChar(50) @map("organization_id")
   notes           String?
+  reminderSent    Boolean?  @default(false) @map("reminder_sent")
+  careSent        Boolean?  @default(false) @map("care_sent")
+  updatedAt       DateTime? @default(now()) @updatedAt @db.Timestamp(6) @map("updated_at")
   tenants         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("appointments")
@@ -235,6 +238,7 @@ model Service {
   tenantId        String?  @db.Uuid @map("tenant_id")
   organizationId  String?  @default("demo") @db.VarChar(50) @map("organization_id")
   branchId        String?  @db.Uuid @map("branch_id")
+  careInstructions String? @map("care_instructions")
   tenants         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("services")

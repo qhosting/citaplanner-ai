@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import {
    Settings, Save, Globe, Zap, Building2, Loader2,
-   ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Link as LinkIcon, RefreshCw, Server, ShieldAlert, Activity, Wifi, MapPin
+   ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Link as LinkIcon, RefreshCw, Server, ShieldAlert, Activity, Wifi, MapPin,
+   Calendar, Copy, ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -16,6 +17,8 @@ export const SettingsPage: React.FC = () => {
 
    const [landingSettings, setLandingSettings] = useState<LandingSettings | null>(null);
    const [integrationLogs, setIntegrationLogs] = useState<any[]>([]);
+   const [masterIcalToken, setMasterIcalToken] = useState<string>('');
+   const [generatingToken, setGeneratingToken] = useState(false);
 
    useEffect(() => {
       loadData();
@@ -29,10 +32,26 @@ export const SettingsPage: React.FC = () => {
 
          const logs = await api.getIntegrationLogs();
          setIntegrationLogs(logs);
+
+         const { icalToken } = await api.getTenantCalendarLink();
+         setMasterIcalToken(icalToken);
       } catch (e) {
          toast.error("Falla en sincronización de consola.");
       } finally {
          setLoading(false);
+      }
+   };
+
+   const handleActivateMasterIcal = async () => {
+      setGeneratingToken(true);
+      try {
+         const { icalToken } = await api.getTenantCalendarLink();
+         setMasterIcalToken(icalToken);
+         toast.success("Calendario Maestro Activado");
+      } catch (e) {
+         toast.error("Error al activar feed maestro");
+      } finally {
+         setGeneratingToken(false);
       }
    };
 
@@ -297,6 +316,56 @@ export const SettingsPage: React.FC = () => {
                               />
                            </div>
                         </div>
+                     </section>
+
+                     <section className="bg-zinc-900/40 p-10 rounded-[3rem] border border-white/5 space-y-8">
+                        <div>
+                           <h4 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                              <Calendar className="text-[#D4AF37]" size={24} /> Sincronización Maestra (iCal)
+                           </h4>
+                           <p className="text-[10px] text-zinc-500 font-bold uppercase mt-2 max-w-2xl">
+                              Genera un feed único que consolida todas las agendas de tus especialistas. Ideal para que tú como Admin visualices la operación completa en tu Apple Calendar u Outlook.
+                           </p>
+                        </div>
+
+                        {!masterIcalToken ? (
+                           <button
+                              onClick={handleActivateMasterIcal}
+                              disabled={generatingToken}
+                              className="bugambilia-btn text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3"
+                           >
+                              {generatingToken ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                              Activar Calendario Maestro
+                           </button>
+                        ) : (
+                           <div className="space-y-6 animate-entrance">
+                              <div className="bg-black/60 p-6 rounded-[2.5rem] border border-[#CE4676]/20">
+                                 <label className="text-[8px] font-black text-[#CE4676] uppercase tracking-[0.3em] mb-4 block ml-2">Feed URL de suscripción (Público Seguro)</label>
+                                 <div className="flex gap-4">
+                                    <input
+                                       type="text"
+                                       readOnly
+                                       className="flex-1 bg-white/5 border border-white/5 p-4 rounded-xl text-[10px] font-mono text-zinc-400 outline-none"
+                                       value={`${window.location.origin}/api/calendar/tenant/feed/${masterIcalToken}.ics`}
+                                    />
+                                    <button
+                                       onClick={() => {
+                                          navigator.clipboard.writeText(`${window.location.origin}/api/calendar/tenant/feed/${masterIcalToken}.ics`);
+                                          toast.success("Enlace maestro copiado.");
+                                       }}
+                                       className="p-4 bg-[#CE4676] text-white rounded-xl hover:scale-105 transition-transform"
+                                    >
+                                       <Copy size={18} />
+                                    </button>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-4 px-6 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
+                                 <Check className="text-emerald-500" size={14} /> Sincronización activa en tiempo real
+                                 <span className="mx-2 opacity-20">|</span>
+                                 <ExternalLink size={14} /> Actualización automática cada 15 min
+                              </div>
+                           </div>
+                        )}
                      </section>
 
                      <section className="bg-[#D4AF37]/5 border border-[#D4AF37]/10 p-8 rounded-[3.5rem] flex items-center gap-6">

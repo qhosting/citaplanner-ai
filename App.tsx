@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CalendarDays, Package, Clock, LogOut,
   Sparkles, ShoppingBag, Megaphone, Settings,
   ChevronDown, BriefcaseMedical, Scissors, MapPin, Feather, Globe, BarChart3, Loader2,
-  ShieldCheck, Activity, Cpu, Cloud, ShieldAlert, ArrowLeft
+  ShieldCheck, Activity, Cpu, Cloud, ShieldAlert, ArrowLeft, UserPlus
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -38,6 +38,7 @@ const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').the
 const SuperAdminPage = lazy(() => import('./pages/SuperAdminPage').then(m => ({ default: (m as any).SuperAdminPage || (m as any).default })));
 const PlansPage = lazy(() => import('./pages/PlansPage').then(m => ({ default: (m as any).PlansPage || (m as any).default })));
 const WebBuilderPage = lazy(() => import('./pages/WebBuilderPage').then(m => ({ default: (m as any).WebBuilderPage || (m as any).default })));
+const LeadsPage = lazy(() => import('./pages/LeadsPage').then(m => ({ default: (m as any).LeadsPage || (m as any).default })));
 
 // --- OPTIMIZACIÓN: Caché de consultas ---
 const queryClient = new QueryClient({
@@ -175,6 +176,7 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
                     <Link to="/services" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Scissors size={14} /> Servicios</Link>
                     <Link to="/inventory" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Package size={14} /> Inventario</Link>
                     <Link to="/marketing" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#CE4676] hover:bg-white/10 rounded-2xl transition-all"><Megaphone size={14} /> Marketing</Link>
+                    <Link to="/leads" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#CE4676] bg-[#CE4676]/10 hover:bg-[#CE4676]/20 rounded-2xl transition-all"><UserPlus size={14} /> Gestión de Leads</Link>
                     <Link to="/web-builder" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 rounded-2xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.1)]"><Globe size={14} /> Builder Web</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
                     <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/40 rounded-2xl transition-all"><Settings size={14} /> Configuración</Link>
@@ -318,6 +320,7 @@ const MainLayout = () => {
             <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
             <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
             <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
             <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF', 'STUDIO_OWNER', 'GOD_MODE']}><ProfessionalDashboard /></ProtectedRoute>} />
             <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER', 'STUDIO_OWNER', 'GOD_MODE']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

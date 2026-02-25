@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { LandingSettings, Service } from '../types';
+import { AIConciergeWidget } from '../components/AIConciergeWidget';
 
 const DEFAULT_SETTINGS: LandingSettings = {
   businessName: 'CitaPlanner',

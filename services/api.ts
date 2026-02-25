@@ -1,5 +1,5 @@
 
-import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule, SaasPlan } from "../types";
+import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule, SaasPlan, Lead } from "../types";
 import { AurumConnectorService } from "./aurumConnector";
 
 const API_URL = '/api';
@@ -468,6 +468,14 @@ export const api = {
     } catch { return { error: "Error de red" }; }
   },
 
+  getTenantCalendarLink: async (): Promise<{ icalToken: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/tenants/calendar/link`);
+      if (!res.ok) throw new Error("Falla al obtener link maestro");
+      return await res.json();
+    } catch { return { icalToken: '' }; }
+  },
+
   // Forgot Password
   requestPasswordReset: async (email: string, tenantId?: string) => {
     try {
@@ -543,5 +551,49 @@ export const api = {
       }
       return null;
     } catch { return null; }
+  },
+
+  // Leads CRUD
+  getLeads: async (): Promise<Lead[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/leads`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createLead: async (l: Partial<Lead>): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/leads`, {
+        method: 'POST',
+        body: JSON.stringify(l)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  updateLead: async (l: Partial<Lead>): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/leads/${l.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(l)
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  convertLead: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/leads/${id}/convert`, {
+        method: 'POST'
+      });
+      return res.ok;
+    } catch { return false; }
+  },
+
+  deleteLead: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/leads/${id}`, { method: 'DELETE' });
+      return res.ok;
+    } catch { return false; }
   }
 };
