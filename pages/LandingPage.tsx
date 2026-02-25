@@ -65,6 +65,7 @@ export const LandingPage: React.FC = () => {
 
   // Dynamic accent color from tenant settings
   const accent = settings.primaryColor || '#C5A028';
+  const isShulaDark = settings.templateId === 'shula_dark';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -241,18 +242,29 @@ export const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative h-screen min-h-[750px] w-full bg-black overflow-hidden">
+        {isShulaDark && (
+          <div className="absolute inset-4 md:inset-8 border border-white/20 z-30 pointer-events-none rounded-[2rem] md:rounded-[4rem]" style={{ borderColor: `${accent}40` }} />
+        )}
         {slides.map((slide, index) => (
           <div key={index} className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
             <div className="absolute inset-0 bg-black/60 z-10" />
             <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
             <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
               <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
+                {isShulaDark && (
+                  <div className="inline-block px-4 py-2 border rounded-full mb-6 relative overflow-hidden" style={{ borderColor: `${accent}80` }}>
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
+                    <span className="text-[9px] font-black uppercase tracking-[0.4em] relative z-10 text-white">PREMIUM STUDIO</span>
+                  </div>
+                )}
                 <span className="text-[11px] font-black uppercase tracking-[1em] mb-8 block" style={{ color: accent }}>{settings.seoKeywords?.split(',')[0] || settings.businessName}</span>
-                <h1 className="text-6xl md:text-[120px] font-playfair font-black text-white leading-none tracking-tighter mb-10">
-                  {slide.title} {slide.subtitle && <span className="italic font-light" style={{ color: accent }}>{slide.subtitle}</span>}
+                <h1 className={`text-6xl md:text-[120px] font-playfair font-black leading-none tracking-tighter mb-10 ${isShulaDark ? 'text-transparent bg-clip-text' : 'text-white'}`} style={isShulaDark ? { backgroundImage: `linear-gradient(to right, #fff, ${accent})` } : {}}>
+                  {slide.title} {slide.subtitle && <span className="italic font-light" style={{ color: accent, WebkitTextFillColor: accent }}>{slide.subtitle}</span>}
                 </h1>
                 <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed mb-14">{slide.text}</p>
-                <Link to="/book" className="px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block text-black" style={{ backgroundColor: accent }}>Reservar Experiencia</Link>
+                <Link to="/book" className={`px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block text-black ${isShulaDark ? 'shadow-[0_0_40px_rgba(212,175,55,0.3)]' : ''}`} style={{ backgroundColor: accent }}>
+                  Reservar Experiencia
+                </Link>
               </div>
             </div>
           </div>
