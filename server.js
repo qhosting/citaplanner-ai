@@ -678,201 +678,199 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
-            END $$;
-        `);
-
         // 0. Preliminary Tables (Independent of others)
         await client.query(`
-            CREATE TABLE IF NOT EXISTS landing_settings (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
-                primary_color VARCHAR(20) DEFAULT '#630E14',
-                secondary_color VARCHAR(20) DEFAULT '#C5A028',
-                template_id VARCHAR(20) DEFAULT 'citaplanner',
-                slogan TEXT,
-                about_text TEXT,
-                address TEXT,
-                contact_phone VARCHAR(20),
-                hero_image_url TEXT,
-                organization_id VARCHAR(50) UNIQUE DEFAULT 'demo',
-                seo_title VARCHAR(100),
-                seo_description TEXT,
-                seo_keywords TEXT,
-                latitude DOUBLE PRECISION,
-                longitude DOUBLE PRECISION,
-                whatsapp_phone VARCHAR(20),
-                footer_text TEXT,
-                social_instagram VARCHAR(255),
-                social_facebook VARCHAR(255),
-                social_twitter VARCHAR(255),
-                features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
-            );
+            CREATE TABLE IF NOT EXISTS landing_settings(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
+            primary_color VARCHAR(20) DEFAULT '#630E14',
+            secondary_color VARCHAR(20) DEFAULT '#C5A028',
+            template_id VARCHAR(20) DEFAULT 'citaplanner',
+            slogan TEXT,
+            about_text TEXT,
+            address TEXT,
+            contact_phone VARCHAR(20),
+            hero_image_url TEXT,
+            logo_url TEXT,
+            organization_id VARCHAR(50) UNIQUE DEFAULT 'demo',
+            seo_title VARCHAR(100),
+            seo_description TEXT,
+            seo_keywords TEXT,
+            latitude DOUBLE PRECISION,
+            longitude DOUBLE PRECISION,
+            whatsapp_phone VARCHAR(20),
+            footer_text TEXT,
+            social_instagram VARCHAR(255),
+            social_facebook VARCHAR(255),
+            social_twitter VARCHAR(255),
+            features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
+        );
         `);
 
         // 1. Fundamental Tables (Expanded for Modo Dios)
         await client.query(`
-            CREATE TABLE IF NOT EXISTS tenants (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                name VARCHAR(100) NOT NULL,
-                subdomain VARCHAR(50) NOT NULL,
-                custom_domain VARCHAR(255),
-                status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED, TRIAL
+            CREATE TABLE IF NOT EXISTS tenants(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            name VARCHAR(100) NOT NULL,
+            subdomain VARCHAR(50) NOT NULL,
+            custom_domain VARCHAR(255),
+            status VARCHAR(20) DEFAULT 'ACTIVE', --ACTIVE, SUSPENDED, TRIAL
                 plan_type VARCHAR(20) DEFAULT 'ELITE',
-                features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
-                openpay_id VARCHAR(100),
-                suspended_at TIMESTAMP,
-                trial_ends_at TIMESTAMP,
-                last_login_at TIMESTAMP,
-                bridge_enabled BOOLEAN DEFAULT FALSE,
-                bridge_webhook_url TEXT,
-                bridge_api_key UUID DEFAULT gen_random_uuid(),
-                bridge_satellite_id INTEGER DEFAULT 3,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
+            openpay_id VARCHAR(100),
+            suspended_at TIMESTAMP,
+            trial_ends_at TIMESTAMP,
+            last_login_at TIMESTAMP,
+            bridge_enabled BOOLEAN DEFAULT FALSE,
+            bridge_webhook_url TEXT,
+            bridge_api_key UUID DEFAULT gen_random_uuid(),
+            bridge_satellite_id INTEGER DEFAULT 3,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS subscriptions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID REFERENCES tenants(id),
-                plan_id VARCHAR(50),
-                status VARCHAR(20) DEFAULT 'INACTIVE',
-                provider VARCHAR(20) DEFAULT 'MERCADOPAGO',
-                external_id VARCHAR(100),
-                current_period_start TIMESTAMP,
-                current_period_end TIMESTAMP,
-                created_at TIMESTAMP DEFAULT NOW(),
-                updated_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS subscriptions(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id),
+            plan_id VARCHAR(50),
+            status VARCHAR(20) DEFAULT 'INACTIVE',
+            provider VARCHAR(20) DEFAULT 'MERCADOPAGO',
+            external_id VARCHAR(100),
+            current_period_start TIMESTAMP,
+            current_period_end TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS billing_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                tenant_id UUID REFERENCES tenants(id),
-                amount DECIMAL(12, 2),
-                currency VARCHAR(10) DEFAULT 'MXN',
-                status VARCHAR(20),
-                provider VARCHAR(20),
-                description TEXT,
-                invoice_url TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS billing_logs(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id),
+            amount DECIMAL(12, 2),
+            currency VARCHAR(10) DEFAULT 'MXN',
+            status VARCHAR(20),
+            provider VARCHAR(20),
+            description TEXT,
+            invoice_url TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS branches (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(255) NOT NULL,
-                address VARCHAR(500),
-                phone VARCHAR(50),
-                manager VARCHAR(255),
-                status VARCHAR(20) DEFAULT 'ACTIVE',
-                tenant_id UUID REFERENCES tenants(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS branches(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            address VARCHAR(500),
+            phone VARCHAR(50),
+            manager VARCHAR(255),
+            status VARCHAR(20) DEFAULT 'ACTIVE',
+            tenant_id UUID REFERENCES tenants(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(100),
-                phone VARCHAR(20),
-                email VARCHAR(100),
-                password VARCHAR(100),
-                role VARCHAR(20),
-                related_id VARCHAR(100),
-                branch_id UUID REFERENCES branches(id),
-                tenant_id UUID REFERENCES tenants(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                preferences JSONB DEFAULT '{}',
-                push_subscription JSONB,
-                skin_type VARCHAR(100),
-                allergies TEXT,
-                medical_conditions TEXT,
-                avatar TEXT,
-                loyalty_points INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS users(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(100),
+            phone VARCHAR(20),
+            email VARCHAR(100),
+            password VARCHAR(100),
+            role VARCHAR(20),
+            related_id VARCHAR(100),
+            branch_id UUID REFERENCES branches(id),
+            tenant_id UUID REFERENCES tenants(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            preferences JSONB DEFAULT '{}',
+            push_subscription JSONB,
+            skin_type VARCHAR(100),
+            allergies TEXT,
+            medical_conditions TEXT,
+            avatar TEXT,
+            loyalty_points INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS professionals (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(255) NOT NULL,
-                role VARCHAR(255),
-                email VARCHAR(255),
-                aurum_employee_id VARCHAR(50),
-                weekly_schedule JSONB DEFAULT '[]',
-                exceptions JSONB DEFAULT '[]',
-                service_ids TEXT,
-                tenant_id UUID REFERENCES tenants(id),
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS professionals(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            role VARCHAR(255),
+            email VARCHAR(255),
+            aurum_employee_id VARCHAR(50),
+            weekly_schedule JSONB DEFAULT '[]',
+            exceptions JSONB DEFAULT '[]',
+            service_ids TEXT,
+            tenant_id UUID REFERENCES tenants(id),
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS services (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(255) NOT NULL,
-                duration INTEGER NOT NULL,
-                price DECIMAL(12, 2) NOT NULL,
-                category VARCHAR(100),
-                status VARCHAR(20) DEFAULT 'ACTIVE',
-                description TEXT,
-                image_url TEXT,
-                tenant_id UUID REFERENCES tenants(id),
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo'
-            );
+            CREATE TABLE IF NOT EXISTS services(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            duration INTEGER NOT NULL,
+            price DECIMAL(12, 2) NOT NULL,
+            category VARCHAR(100),
+            status VARCHAR(20) DEFAULT 'ACTIVE',
+            description TEXT,
+            image_url TEXT,
+            tenant_id UUID REFERENCES tenants(id),
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo'
+        );
 
-            CREATE TABLE IF NOT EXISTS appointments (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                title VARCHAR(255) NOT NULL,
-                start_date_time TIMESTAMP NOT NULL,
-                end_date_time TIMESTAMP NOT NULL,
-                client_name VARCHAR(255),
-                client_phone VARCHAR(50),
-                status VARCHAR(20) DEFAULT 'SCHEDULED',
-                description TEXT,
-                notes TEXT,
-                professional_id UUID REFERENCES professionals(id),
-                service_id UUID REFERENCES services(id),
-                tenant_id UUID REFERENCES tenants(id),
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo'
-            );
+            CREATE TABLE IF NOT EXISTS appointments(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            title VARCHAR(255) NOT NULL,
+            start_date_time TIMESTAMP NOT NULL,
+            end_date_time TIMESTAMP NOT NULL,
+            client_name VARCHAR(255),
+            client_phone VARCHAR(50),
+            status VARCHAR(20) DEFAULT 'SCHEDULED',
+            description TEXT,
+            notes TEXT,
+            professional_id UUID REFERENCES professionals(id),
+            service_id UUID REFERENCES services(id),
+            tenant_id UUID REFERENCES tenants(id),
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo'
+        );
 
-            CREATE TABLE IF NOT EXISTS settings (
-                key VARCHAR(100) NOT NULL,
-                value JSONB NOT NULL,
-                tenant_id UUID REFERENCES tenants(id),
-                PRIMARY KEY(key, tenant_id)
-            );
+            CREATE TABLE IF NOT EXISTS settings(
+            key VARCHAR(100) NOT NULL,
+            value JSONB NOT NULL,
+            tenant_id UUID REFERENCES tenants(id),
+            PRIMARY KEY(key, tenant_id)
+        );
 
-            CREATE TABLE IF NOT EXISTS integration_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                platform VARCHAR(50),
-                event_type VARCHAR(100),
-                payload JSONB,
-                response TEXT,
-                status VARCHAR(20),
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS integration_logs(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            platform VARCHAR(50),
+            event_type VARCHAR(100),
+            payload JSONB,
+            response TEXT,
+            status VARCHAR(20),
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS products (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(255) NOT NULL,
-                price DECIMAL(12, 2),
-                stock INTEGER DEFAULT 0,
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS products(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
+            price DECIMAL(12, 2),
+            stock INTEGER DEFAULT 0,
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
-            CREATE TABLE IF NOT EXISTS transactions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                amount DECIMAL(12, 2),
-                mp_payment_id VARCHAR(100),
-                mp_status VARCHAR(50),
-                branch_id UUID REFERENCES branches(id),
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                created_at TIMESTAMP DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS transactions(
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            amount DECIMAL(12, 2),
+            mp_payment_id VARCHAR(100),
+            mp_status VARCHAR(50),
+            branch_id UUID REFERENCES branches(id),
+            organization_id VARCHAR(50) DEFAULT 'demo',
+            created_at TIMESTAMP DEFAULT NOW()
+        );
 
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
@@ -884,7 +882,7 @@ const initDB = async () => {
         try {
             const masterIdRes = await client.query(`
                 INSERT INTO tenants(name, subdomain, status, plan_type, organization_id)
-                VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
+        VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
                 ON CONFLICT(subdomain) DO UPDATE SET organization_id = 'master', name = EXCLUDED.name 
                 RETURNING id
             `);
@@ -898,10 +896,10 @@ const initDB = async () => {
         // 3. Seeding Default Branch
         const branchRes = await client.query(`
             INSERT INTO branches(name, organization_id, tenant_id)
-            VALUES('Sucursal Central', 'demo', $1) 
+        VALUES('Sucursal Central', 'demo', $1) 
             ON CONFLICT DO NOTHING
             RETURNING id
-        `, [masterId]);
+            `, [masterId]);
 
         let defaultBranchId = branchRes.rows[0]?.id;
         if (!defaultBranchId) {
@@ -909,14 +907,8 @@ const initDB = async () => {
             defaultBranchId = b.rows[0].id;
         }
 
-        // 4. Default Landing Settings
-        const settingsCheck = await client.query("SELECT id FROM landing_settings WHERE id = 1");
-        if (settingsCheck.rowCount === 0) {
-            await client.query(`
-                INSERT INTO landing_settings(id, business_name, primary_color, secondary_color, template_id, slogan, about_text, address, contact_phone)
-                VALUES(1, 'CitaPlanner Elite', '#630E14', '#C5A028', 'citaplanner', 'Gestión de Lujo Simplificada', 'Plataforma líder en gestión de citas.', 'Av. Principal 123, CDMX', '+52 55 1234 5678')
-            `);
-        }
+        // 4. Default Landing Settings (Seeded via Prisma in get route if missing)
+        // No manual id=1 insert here to avoid UUID conflicts
 
         // 5. Seeding Services
         const serviceCount = await client.query("SELECT count(*) FROM services");
@@ -942,7 +934,7 @@ const initDB = async () => {
             console.log("🛠️ Seeding Nexus Superintendent...");
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES('Superintendente Nexus', 'nexus', 'nexus@aurum.ai', $1, 'GOD_MODE', $2, $3, 'master', '{"whatsapp":true,"email":true}')
+        VALUES('Superintendente Nexus', 'nexus', 'nexus@aurum.ai', $1, 'GOD_MODE', $2, $3, 'master', '{"whatsapp":true,"email":true}')
             `, [bcrypt.hashSync('nexus123', 10), defaultBranchId, masterId]);
         }
 
@@ -950,10 +942,10 @@ const initDB = async () => {
         const adminPhone = process.env.SEED_ADMIN_PHONE || 'admin';
         const adminExists = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [adminPhone]);
         if (adminExists.rows.length === 0) {
-            console.log(`🛠️ Seeding Default Admin (${adminPhone})...`);
+            console.log(`🛠️ Seeding Default Admin(${ adminPhone })...`);
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+        VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
             `, [
                 process.env.SEED_ADMIN_NAME || 'Admin Master',
                 adminPhone,
@@ -972,8 +964,8 @@ const initDB = async () => {
                 console.log("🛠️ Seeding QHosting Admin...");
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                    VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-                `, [
+        VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+            `, [
                     process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
                     process.env.QHOSTING_ADMIN_PHONE,
                     process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
@@ -983,12 +975,12 @@ const initDB = async () => {
                 ]);
             } else {
                 await client.query(`
-                    UPDATE users SET 
-                        name = COALESCE($1, name),
-                        email = COALESCE($2, email),
-                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END
+                    UPDATE users SET
+        name = COALESCE($1, name),
+            email = COALESCE($2, email),
+            password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END
                     WHERE phone = $5 AND organization_id = 'demo'
-                `, [
+            `, [
                     process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
                     process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
                     process.env.QHOSTING_ADMIN_PASSWORD || null,
@@ -1004,10 +996,10 @@ const initDB = async () => {
             const existingGod = await client.query("SELECT id FROM users WHERE phone = $1", [godPhone]);
 
             if (existingGod.rows.length === 0) {
-                console.log(`🛠️ Seeding GOD_MODE Admin (${godPhone})...`);
+                console.log(`🛠️ Seeding GOD_MODE Admin(${ godPhone })...`);
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                    VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+        VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
                 `, [
                     process.env.GOD_MODE_NAME || 'Super Admin Nexus',
                     godPhone,
@@ -1016,24 +1008,24 @@ const initDB = async () => {
                     defaultBranchId,
                     masterId
                 ]);
-                console.log(`✅ GOD_MODE Admin created (phone: ${godPhone})`);
+                console.log(`✅ GOD_MODE Admin created(phone: ${ godPhone })`);
             } else {
                 // Update credentials if env vars changed
                 await client.query(`
-                    UPDATE users SET 
-                        name = COALESCE($1, name),
-                        email = COALESCE($2, email),
-                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
-                        role = 'GOD_MODE'
+                    UPDATE users SET
+        name = COALESCE($1, name),
+            email = COALESCE($2, email),
+            password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
+                role = 'GOD_MODE'
                     WHERE phone = $5
-                `, [
+            `, [
                     process.env.GOD_MODE_NAME || 'Super Admin Nexus',
                     process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
                     process.env.GOD_MODE_PASSWORD || null,
                     process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD, 10) : null,
                     godPhone
                 ]);
-                console.log(`ℹ️ GOD_MODE Admin updated (phone: ${godPhone})`);
+                console.log(`ℹ️ GOD_MODE Admin updated(phone: ${ godPhone })`);
             }
         }
 
@@ -1047,25 +1039,25 @@ const initDB = async () => {
                 console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
                 const shulaIdRes = await client.query(`
                     INSERT INTO tenants(name, subdomain, custom_domain, status, plan_type, organization_id)
-                    VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
+        VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
                     RETURNING id
-                `);
+            `);
                 const shulaId = shulaIdRes.rows[0].id;
 
                 // Seed Shula Landing
                 await client.query(`
                     INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url)
-                    VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada', 
-                    'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.', 
-                    'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
+        VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada',
+            'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.',
+            'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
                     ON CONFLICT(organization_id) DO NOTHING
-                `);
+            `);
 
                 // Seed Shula Branch
                 await client.query(`
                     INSERT INTO branches(name, organization_id, tenant_id)
-                    VALUES('Shula Studio Matriz', 'shula', $1)
-                `, [shulaId]);
+        VALUES('Shula Studio Matriz', 'shula', $1)
+            `, [shulaId]);
                 console.log("✅ Shula Studio Node Provisioned.");
             }
         } catch (shulaErr) {
@@ -1088,19 +1080,19 @@ const tenantMiddleware = async (req, res, next) => {
         let tenantId = 'demo';
 
         if (req.path.includes('/api/settings/landing')) {
-            console.log(`[TENANT DEBUG] Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN}`);
+            console.log(`[TENANT DEBUG]Host: ${ host } | ROOT_DOMAIN: ${ ROOT_DOMAIN } `);
         }
 
         // 1. Subdomain Detection (e.g., shula.citaplanner.com)
-        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
-            const subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
+        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ ROOT_DOMAIN } `) {
+            const subdomain = host.replace(`.${ ROOT_DOMAIN } `, '').replace('www.', '');
             if (subdomain) {
                 tenantId = subdomain;
-                console.log(`[TENANT] Detected subdomain: ${tenantId}`);
+                console.log(`[TENANT] Detected subdomain: ${ tenantId } `);
             }
         }
         // 2. Custom Domain Detection (e.g., shulastudio.com)
-        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
+        else if (host !== ROOT_DOMAIN && host !== `www.${ ROOT_DOMAIN } ` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
             // Remove www. for lookup if present
             const cleanHost = host.replace('www.', '');
 
@@ -1116,14 +1108,14 @@ const tenantMiddleware = async (req, res, next) => {
 
             if (tenant) {
                 tenantId = tenant.subdomain;
-                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId}`);
+                console.log(`[TENANT] Detected custom domain: ${ host } -> ${ tenantId } `);
             } else {
-                console.warn(`[TENANT] No tenant found for custom domain: ${host}`);
+                console.warn(`[TENANT] No tenant found for custom domain: ${ host } `);
                 tenantId = req.headers['x-tenant-id'] || 'demo';
             }
         } else {
             tenantId = req.headers['x-tenant-id'] || 'demo';
-            console.log(`[TENANT] Fallback/Root detected: ${tenantId}`);
+            console.log(`[TENANT] Fallback / Root detected: ${ tenantId } `);
         }
 
         req.tenantId = tenantId;
@@ -1161,8 +1153,8 @@ const authenticateToken = (req, res, next) => {
 // AURUM HUB INTEGRATION (PROXY)
 app.post('/api/integrations/aurum/sync', async (req, res) => {
     // Stub for syncing business identity with Master Hub
-    console.log(`[AURUM HUB] Syncing identity for tenant: ${req.tenantId} `);
-    res.json({ success: true, status: 'SYNCED', hubId: `hub_${req.tenantId} ` });
+    console.log(`[AURUM HUB] Syncing identity for tenant: ${ req.tenantId } `);
+    res.json({ success: true, status: 'SYNCED', hubId: `hub_${ req.tenantId } ` });
 });
 
 app.get('/api/integrations/aurum/status', async (req, res) => {
@@ -1235,7 +1227,7 @@ app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (r
 
 app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
-        console.log(`[MASTER] Global Tenant List requested by: ${req.user.phone} (${req.user.id})`);
+        console.log(`[MASTER] Global Tenant List requested by: ${ req.user.phone } (${ req.user.id })`);
         // We include subscriptions but use a try-catch for safety during migrations
         const tenants = await prisma.tenant.findMany({
             include: {
@@ -1244,10 +1236,10 @@ app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) =
             orderBy: { createdAt: 'desc' }
         });
 
-        console.log(`[MASTER] Found ${tenants.length} tenants in database.`);
+        console.log(`[MASTER] Found ${ tenants.length } tenants in database.`);
         res.json(tenants);
     } catch (e) {
-        console.error(`[MASTER ERROR] Failed to fetch tenants:`, e);
+        console.error(`[MASTER ERROR] Failed to fetch tenants: `, e);
         // Fallback: try without relations if schema is in flux
         try {
             const basicTenants = await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
@@ -1397,7 +1389,7 @@ app.get('/api/saas/health/deep', authenticateToken, checkGodMode, async (req, re
             status: 'HEALTHY',
             database: {
                 connected: true,
-                latency: `${dbLatency}ms`,
+                latency: `${ dbLatency } ms`,
                 tenants: tenantCount
             },
             engine: {
@@ -1447,9 +1439,9 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
             });
         }
 
-        if (!owner) return res.status(404).json({ error: `No se encontraron usuarios registrados en el nodo '${tenant.subdomain}'. Crea un administrador primero.` });
+        if (!owner) return res.status(404).json({ error: `No se encontraron usuarios registrados en el nodo '${tenant.subdomain}'.Crea un administrador primero.` });
 
-        console.log(`[MASTER] Impersonating ${owner.phone} (role: ${owner.role}) for tenant ${tenant.subdomain}`);
+        console.log(`[MASTER] Impersonating ${ owner.phone } (role: ${ owner.role }) for tenant ${ tenant.subdomain }`);
 
         const token = jwt.sign({
             id: owner.id,
@@ -1631,7 +1623,7 @@ app.put('/api/saas/tenants/:id/subscription', authenticateToken, checkGodMode, a
                 amount: 0,
                 status: 'SUCCESS',
                 provider: 'MANUAL_ADMIN',
-                description: `Ajuste manual: Plan ${planId || '-'} | Status ${status || '-'} | Trial ${trialDays || 0}d`
+                description: `Ajuste manual: Plan ${ planId || '-' } | Status ${ status || '-' } | Trial ${ trialDays || 0 } d`
             }
         });
 
@@ -1726,8 +1718,8 @@ app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
             const chargeRequest = {
                 method: 'card',
                 amount: plan.price,
-                description: `Suscripción CitaPlanner - ${plan.title}`,
-                order_id: `CP-${Date.now()}`,
+                description: `Suscripción CitaPlanner - ${ plan.title } `,
+                order_id: `CP - ${ Date.now() } `,
                 customer: {
                     name: user?.name || 'Cliente SaaS',
                     email: payerEmail,
@@ -1735,69 +1727,69 @@ app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
                 },
                 send_email: true,
                 confirm: false,
-                redirect_url: `${process.env.ROOT_DOMAIN}/settings?status=success`
-            };
+                redirect_url: `${ process.env.ROOT_DOMAIN }/settings?status=success`
+    };
 
-            return openpay.charges.create(chargeRequest, async (error, charge) => {
-                if (error) return res.status(500).json({ error: error.description });
+    return openpay.charges.create(chargeRequest, async (error, charge) => {
+        if (error) return res.status(500).json({ error: error.description });
 
-                // Save PENDING Subscription
-                await prisma.subscription.create({
-                    data: {
-                        tenantId: req.user.tenantId,
-                        planId: plan.id,
-                        status: 'PENDING',
-                        provider: 'OPENPAY',
-                        externalId: charge.id,
-                        currentPeriodStart: new Date(),
-                        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                    }
-                });
-
-                res.json({ id: charge.id, init_point: charge.payment_method.url });
-            });
-        }
-
-        // Mercado Pago Logic (Refactored for externalId)
-        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
-            return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
-        }
-
-        const preapproval = new PreApproval(mpClient);
-        const result = await preapproval.create({
-            body: {
-                reason: `Suscripción CitaPlanner - ${plan.title}`,
-                external_reference: req.user.tenantId || "demo",
-                payer_email: payerEmail,
-                auto_recurring: {
-                    frequency: 1,
-                    frequency_type: 'months',
-                    transaction_amount: plan.price,
-                    currency_id: 'MXN'
-                },
-                back_url: `${ROOT_DOMAIN}/settings?status=success`,
-                status: 'pending'
-            }
-        });
-
+        // Save PENDING Subscription
         await prisma.subscription.create({
             data: {
                 tenantId: req.user.tenantId,
                 planId: plan.id,
                 status: 'PENDING',
-                provider: 'MERCADOPAGO',
-                externalId: result.id,
+                provider: 'OPENPAY',
+                externalId: charge.id,
                 currentPeriodStart: new Date(),
                 currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             }
         });
 
-        res.json({ id: result.id, init_point: result.init_point });
+        res.json({ id: charge.id, init_point: charge.payment_method.url });
+    });
+}
+
+// Mercado Pago Logic (Refactored for externalId)
+if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
+    return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
+}
+
+const preapproval = new PreApproval(mpClient);
+const result = await preapproval.create({
+    body: {
+        reason: `Suscripción CitaPlanner - ${plan.title}`,
+        external_reference: req.user.tenantId || "demo",
+        payer_email: payerEmail,
+        auto_recurring: {
+            frequency: 1,
+            frequency_type: 'months',
+            transaction_amount: plan.price,
+            currency_id: 'MXN'
+        },
+        back_url: `${ROOT_DOMAIN}/settings?status=success`,
+        status: 'pending'
+    }
+});
+
+await prisma.subscription.create({
+    data: {
+        tenantId: req.user.tenantId,
+        planId: plan.id,
+        status: 'PENDING',
+        provider: 'MERCADOPAGO',
+        externalId: result.id,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    }
+});
+
+res.json({ id: result.id, init_point: result.init_point });
 
     } catch (e) {
-        console.error("❌ SaaS Sub Error:", e);
-        res.status(500).json({ error: "Error al iniciar suscripción" });
-    }
+    console.error("❌ SaaS Sub Error:", e);
+    res.status(500).json({ error: "Error al iniciar suscripción" });
+}
 });
 
 
