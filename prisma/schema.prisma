@@ -120,7 +120,7 @@ model InventoryMovement {
 }
 
 model LandingSetting {
-  id               Int     @id @default(autoincrement())
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   businessName     String? @default("CitaPlanner Elite") @db.VarChar(100) @map("business_name")
   primaryColor     String? @default("#630E14") @db.VarChar(20) @map("primary_color")
   secondaryColor   String? @default("#C5A028") @db.VarChar(20) @map("secondary_color")
@@ -130,6 +130,7 @@ model LandingSetting {
   address          String?
   contactPhone     String? @db.VarChar(20) @map("contact_phone")
   heroImageUrl    String? @map("hero_image_url")
+  logoUrl         String? @map("logo_url")
   organizationId   String? @unique(map: "idx_landing_org_unique") @default("demo") @db.VarChar(50) @map("organization_id")
   features         Json?   @default("{\"ai\": true, \"inventory\": true, \"marketing\": true}")
   seoTitle         String? @db.VarChar(100) @map("seo_title")

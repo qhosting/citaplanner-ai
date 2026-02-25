@@ -673,6 +673,9 @@ const initDB = async () => {
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_twitter') THEN
                         ALTER TABLE landing_settings ADD COLUMN social_twitter VARCHAR(255);
                     END IF;
+                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='logo_url') THEN
+                        ALTER TABLE landing_settings ADD COLUMN logo_url TEXT;
+                    END IF;
                 END IF;
 
             END $$;
@@ -2317,7 +2320,7 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
         console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
 
         if (user) {
-            console.log(`[AUTH DEBUG] Verifying password for user: ${user.phone}`);
+            console.log(`[AUTH DEBUG] Verifying password for user: ${user.phone} (Received length: ${password?.length || 0})`);
             const validPassword = await bcrypt.compare(password, user.password);
 
             if (!validPassword) {
