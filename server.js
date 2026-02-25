@@ -2298,21 +2298,28 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
         console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
 
         if (user) {
+            console.log(`[AUTH DEBUG] Verifying password for user: ${user.phone}`);
             const validPassword = await bcrypt.compare(password, user.password);
 
-            if (!validPassword) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+            if (!validPassword) {
+                console.warn(`[AUTH DEBUG] Password mismatch for user: ${user.phone}`);
+                return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+            }
 
-            // Use the user's actual organizationId for the token/session to represent their identity accurately
-            const userTenantId = user.organizationId || req.tenantId;
+            // Normalización para GOD_MODE: Si viene de demo/master, permitirle usar el tenant actual
+            let userTenantId = user.organizationId || req.tenantId;
+            if (user.role === 'GOD_MODE' && (userTenantId === 'demo' || userTenantId === 'master' || !userTenantId)) {
+                userTenantId = req.tenantId || userTenantId || 'master';
+            }
 
-            console.log(`[AUTH] Success for: ${phone} | Assigned Tenant: ${userTenantId}`);
+            console.log(`[AUTH] Success: ${user.phone} | Role: ${user.role} | Target Tenant: ${userTenantId}`);
 
             const token = jwt.sign({
                 id: user.id,
                 role: user.role,
                 tenantId: userTenantId,
                 branchId: user.branchId
-            }, JWT_SECRET, { expiresIn: '1h' });
+            }, JWT_SECRET, { expiresIn: '8h' });
 
             const refreshToken = jwt.sign({
                 id: user.id,
