@@ -678,6 +678,9 @@ const initDB = async () => {
                     END IF;
                 END IF;
 
+            END $$;
+        `);
+
         // 0. Preliminary Tables (Independent of others)
         await client.query(`
             CREATE TABLE IF NOT EXISTS landing_settings(
@@ -942,7 +945,7 @@ const initDB = async () => {
         const adminPhone = process.env.SEED_ADMIN_PHONE || 'admin';
         const adminExists = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [adminPhone]);
         if (adminExists.rows.length === 0) {
-            console.log(`🛠️ Seeding Default Admin(${ adminPhone })...`);
+            console.log(`🛠️ Seeding Default Admin(${adminPhone})...`);
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
         VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
@@ -996,7 +999,7 @@ const initDB = async () => {
             const existingGod = await client.query("SELECT id FROM users WHERE phone = $1", [godPhone]);
 
             if (existingGod.rows.length === 0) {
-                console.log(`🛠️ Seeding GOD_MODE Admin(${ godPhone })...`);
+                console.log(`🛠️ Seeding GOD_MODE Admin(${godPhone})...`);
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
         VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
@@ -1008,7 +1011,7 @@ const initDB = async () => {
                     defaultBranchId,
                     masterId
                 ]);
-                console.log(`✅ GOD_MODE Admin created(phone: ${ godPhone })`);
+                console.log(`✅ GOD_MODE Admin created(phone: ${godPhone})`);
             } else {
                 // Update credentials if env vars changed
                 await client.query(`
@@ -1025,7 +1028,7 @@ const initDB = async () => {
                     process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD, 10) : null,
                     godPhone
                 ]);
-                console.log(`ℹ️ GOD_MODE Admin updated(phone: ${ godPhone })`);
+                console.log(`ℹ️ GOD_MODE Admin updated(phone: ${godPhone})`);
             }
         }
 
@@ -1080,19 +1083,19 @@ const tenantMiddleware = async (req, res, next) => {
         let tenantId = 'demo';
 
         if (req.path.includes('/api/settings/landing')) {
-            console.log(`[TENANT DEBUG]Host: ${ host } | ROOT_DOMAIN: ${ ROOT_DOMAIN } `);
+            console.log(`[TENANT DEBUG]Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN} `);
         }
 
         // 1. Subdomain Detection (e.g., shula.citaplanner.com)
-        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ ROOT_DOMAIN } `) {
-            const subdomain = host.replace(`.${ ROOT_DOMAIN } `, '').replace('www.', '');
+        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN} `) {
+            const subdomain = host.replace(`.${ROOT_DOMAIN} `, '').replace('www.', '');
             if (subdomain) {
                 tenantId = subdomain;
-                console.log(`[TENANT] Detected subdomain: ${ tenantId } `);
+                console.log(`[TENANT] Detected subdomain: ${tenantId} `);
             }
         }
         // 2. Custom Domain Detection (e.g., shulastudio.com)
-        else if (host !== ROOT_DOMAIN && host !== `www.${ ROOT_DOMAIN } ` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
+        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN} ` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
             // Remove www. for lookup if present
             const cleanHost = host.replace('www.', '');
 
@@ -1108,14 +1111,14 @@ const tenantMiddleware = async (req, res, next) => {
 
             if (tenant) {
                 tenantId = tenant.subdomain;
-                console.log(`[TENANT] Detected custom domain: ${ host } -> ${ tenantId } `);
+                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId} `);
             } else {
-                console.warn(`[TENANT] No tenant found for custom domain: ${ host } `);
+                console.warn(`[TENANT] No tenant found for custom domain: ${host} `);
                 tenantId = req.headers['x-tenant-id'] || 'demo';
             }
         } else {
             tenantId = req.headers['x-tenant-id'] || 'demo';
-            console.log(`[TENANT] Fallback / Root detected: ${ tenantId } `);
+            console.log(`[TENANT] Fallback / Root detected: ${tenantId} `);
         }
 
         req.tenantId = tenantId;
@@ -1153,8 +1156,8 @@ const authenticateToken = (req, res, next) => {
 // AURUM HUB INTEGRATION (PROXY)
 app.post('/api/integrations/aurum/sync', async (req, res) => {
     // Stub for syncing business identity with Master Hub
-    console.log(`[AURUM HUB] Syncing identity for tenant: ${ req.tenantId } `);
-    res.json({ success: true, status: 'SYNCED', hubId: `hub_${ req.tenantId } ` });
+    console.log(`[AURUM HUB] Syncing identity for tenant: ${req.tenantId} `);
+    res.json({ success: true, status: 'SYNCED', hubId: `hub_${req.tenantId} ` });
 });
 
 app.get('/api/integrations/aurum/status', async (req, res) => {
@@ -1227,7 +1230,7 @@ app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (r
 
 app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
     try {
-        console.log(`[MASTER] Global Tenant List requested by: ${ req.user.phone } (${ req.user.id })`);
+        console.log(`[MASTER] Global Tenant List requested by: ${req.user.phone} (${req.user.id})`);
         // We include subscriptions but use a try-catch for safety during migrations
         const tenants = await prisma.tenant.findMany({
             include: {
@@ -1236,7 +1239,7 @@ app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) =
             orderBy: { createdAt: 'desc' }
         });
 
-        console.log(`[MASTER] Found ${ tenants.length } tenants in database.`);
+        console.log(`[MASTER] Found ${tenants.length} tenants in database.`);
         res.json(tenants);
     } catch (e) {
         console.error(`[MASTER ERROR] Failed to fetch tenants: `, e);
@@ -1389,7 +1392,7 @@ app.get('/api/saas/health/deep', authenticateToken, checkGodMode, async (req, re
             status: 'HEALTHY',
             database: {
                 connected: true,
-                latency: `${ dbLatency } ms`,
+                latency: `${dbLatency} ms`,
                 tenants: tenantCount
             },
             engine: {
@@ -1441,7 +1444,7 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
 
         if (!owner) return res.status(404).json({ error: `No se encontraron usuarios registrados en el nodo '${tenant.subdomain}'.Crea un administrador primero.` });
 
-        console.log(`[MASTER] Impersonating ${ owner.phone } (role: ${ owner.role }) for tenant ${ tenant.subdomain }`);
+        console.log(`[MASTER] Impersonating ${owner.phone} (role: ${owner.role}) for tenant ${tenant.subdomain}`);
 
         const token = jwt.sign({
             id: owner.id,
@@ -1623,7 +1626,7 @@ app.put('/api/saas/tenants/:id/subscription', authenticateToken, checkGodMode, a
                 amount: 0,
                 status: 'SUCCESS',
                 provider: 'MANUAL_ADMIN',
-                description: `Ajuste manual: Plan ${ planId || '-' } | Status ${ status || '-' } | Trial ${ trialDays || 0 } d`
+                description: `Ajuste manual: Plan ${planId || '-'} | Status ${status || '-'} | Trial ${trialDays || 0} d`
             }
         });
 
@@ -1718,8 +1721,8 @@ app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
             const chargeRequest = {
                 method: 'card',
                 amount: plan.price,
-                description: `Suscripción CitaPlanner - ${ plan.title } `,
-                order_id: `CP - ${ Date.now() } `,
+                description: `Suscripción CitaPlanner - ${plan.title} `,
+                order_id: `CP - ${Date.now()} `,
                 customer: {
                     name: user?.name || 'Cliente SaaS',
                     email: payerEmail,
@@ -1727,69 +1730,69 @@ app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
                 },
                 send_email: true,
                 confirm: false,
-                redirect_url: `${ process.env.ROOT_DOMAIN }/settings?status=success`
-    };
+                redirect_url: `${process.env.ROOT_DOMAIN}/settings?status=success`
+            };
 
-    return openpay.charges.create(chargeRequest, async (error, charge) => {
-        if (error) return res.status(500).json({ error: error.description });
+            return openpay.charges.create(chargeRequest, async (error, charge) => {
+                if (error) return res.status(500).json({ error: error.description });
 
-        // Save PENDING Subscription
+                // Save PENDING Subscription
+                await prisma.subscription.create({
+                    data: {
+                        tenantId: req.user.tenantId,
+                        planId: plan.id,
+                        status: 'PENDING',
+                        provider: 'OPENPAY',
+                        externalId: charge.id,
+                        currentPeriodStart: new Date(),
+                        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    }
+                });
+
+                res.json({ id: charge.id, init_point: charge.payment_method.url });
+            });
+        }
+
+        // Mercado Pago Logic (Refactored for externalId)
+        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
+            return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
+        }
+
+        const preapproval = new PreApproval(mpClient);
+        const result = await preapproval.create({
+            body: {
+                reason: `Suscripción CitaPlanner - ${plan.title}`,
+                external_reference: req.user.tenantId || "demo",
+                payer_email: payerEmail,
+                auto_recurring: {
+                    frequency: 1,
+                    frequency_type: 'months',
+                    transaction_amount: plan.price,
+                    currency_id: 'MXN'
+                },
+                back_url: `${ROOT_DOMAIN}/settings?status=success`,
+                status: 'pending'
+            }
+        });
+
         await prisma.subscription.create({
             data: {
                 tenantId: req.user.tenantId,
                 planId: plan.id,
                 status: 'PENDING',
-                provider: 'OPENPAY',
-                externalId: charge.id,
+                provider: 'MERCADOPAGO',
+                externalId: result.id,
                 currentPeriodStart: new Date(),
                 currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             }
         });
 
-        res.json({ id: charge.id, init_point: charge.payment_method.url });
-    });
-}
-
-// Mercado Pago Logic (Refactored for externalId)
-if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
-    return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
-}
-
-const preapproval = new PreApproval(mpClient);
-const result = await preapproval.create({
-    body: {
-        reason: `Suscripción CitaPlanner - ${plan.title}`,
-        external_reference: req.user.tenantId || "demo",
-        payer_email: payerEmail,
-        auto_recurring: {
-            frequency: 1,
-            frequency_type: 'months',
-            transaction_amount: plan.price,
-            currency_id: 'MXN'
-        },
-        back_url: `${ROOT_DOMAIN}/settings?status=success`,
-        status: 'pending'
-    }
-});
-
-await prisma.subscription.create({
-    data: {
-        tenantId: req.user.tenantId,
-        planId: plan.id,
-        status: 'PENDING',
-        provider: 'MERCADOPAGO',
-        externalId: result.id,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    }
-});
-
-res.json({ id: result.id, init_point: result.init_point });
+        res.json({ id: result.id, init_point: result.init_point });
 
     } catch (e) {
-    console.error("❌ SaaS Sub Error:", e);
-    res.status(500).json({ error: "Error al iniciar suscripción" });
-}
+        console.error("❌ SaaS Sub Error:", e);
+        res.status(500).json({ error: "Error al iniciar suscripción" });
+    }
 });
 
 
