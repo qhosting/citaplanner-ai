@@ -102,6 +102,7 @@ export interface Product {
   tenantId?: string;
   batchNumber?: string;
   expiryDate?: string;
+  description?: string;
 }
 
 export interface Service {

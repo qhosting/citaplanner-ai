@@ -11,12 +11,12 @@ interface InventoryModalProps {
   initialData?: Product;
 }
 
-export const InventoryModal: React.FC<InventoryModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  mode, 
-  initialData 
+export const InventoryModal: React.FC<InventoryModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  mode,
+  initialData
 }) => {
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
@@ -29,7 +29,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     status: 'ACTIVE',
     usage: 'RETAIL',
     batchNumber: '',
-    expiryDate: ''
+    expiryDate: '',
+    description: ''
   });
 
   const [restockAmount, setRestockAmount] = useState(0);
@@ -49,7 +50,8 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
         status: 'ACTIVE',
         usage: 'RETAIL',
         batchNumber: '',
-        expiryDate: ''
+        expiryDate: '',
+        description: ''
       });
       setRestockAmount(0);
     }
@@ -116,30 +118,30 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
         <form onSubmit={handleSubmit} className="p-10 overflow-y-auto space-y-8 custom-scrollbar bg-[#080808]/50">
           {mode === 'restock' ? (
-             <div className="space-y-8">
-               <div className="bg-white/5 p-8 rounded-3xl border border-white/10">
-                 <h4 className="font-black text-xl text-white uppercase tracking-tight mb-2">{formData.name}</h4>
-                 <div className="flex gap-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                   <span className="flex items-center gap-2"><Fingerprint size={12}/> SKU: {formData.sku}</span>
-                   <span className="flex items-center gap-2 text-emerald-500"><Package size={12}/> Stock Actual: {formData.stock}</span>
-                 </div>
-               </div>
-               <div>
-                 <label className="block text-[10px] font-black text-[#D4AF37] uppercase mb-4 block ml-1 tracking-widest">Cantidad a Ingresar</label>
-                 <div className="flex items-center gap-6">
-                    <input 
-                      type="number" min="1" required autoFocus
-                      className="flex-1 bg-black/60 border border-white/10 rounded-2xl p-6 text-2xl font-black text-white focus:border-emerald-500 outline-none transition-all"
-                      value={restockAmount}
-                      onChange={(e) => setRestockAmount(Number(e.target.value))}
-                    />
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Nuevo Total Red</p>
-                      <p className="text-3xl font-black text-white">{(formData.stock || 0) + restockAmount}</p>
-                    </div>
-                 </div>
-               </div>
-             </div>
+            <div className="space-y-8">
+              <div className="bg-white/5 p-8 rounded-3xl border border-white/10">
+                <h4 className="font-black text-xl text-white uppercase tracking-tight mb-2">{formData.name}</h4>
+                <div className="flex gap-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                  <span className="flex items-center gap-2"><Fingerprint size={12} /> SKU: {formData.sku}</span>
+                  <span className="flex items-center gap-2 text-emerald-500"><Package size={12} /> Stock Actual: {formData.stock}</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-[#D4AF37] uppercase mb-4 block ml-1 tracking-widest">Cantidad a Ingresar</label>
+                <div className="flex items-center gap-6">
+                  <input
+                    type="number" min="1" required autoFocus
+                    className="flex-1 bg-black/60 border border-white/10 rounded-2xl p-6 text-2xl font-black text-white focus:border-emerald-500 outline-none transition-all"
+                    value={restockAmount}
+                    onChange={(e) => setRestockAmount(Number(e.target.value))}
+                  />
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Nuevo Total Red</p>
+                    <p className="text-3xl font-black text-white">{(formData.stock || 0) + restockAmount}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="md:col-span-2">
@@ -150,33 +152,43 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                   value={formData.name}
                   onChange={(e) => {
                     const name = e.target.value;
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      name, 
-                      sku: mode === 'create' ? generateSKU(name) : prev.sku 
+                    setFormData(prev => ({
+                      ...prev,
+                      name,
+                      sku: mode === 'create' ? generateSKU(name) : prev.sku
                     }));
                   }}
                   placeholder="Ej: Pigmento Master Dark Brown"
                 />
               </div>
 
+              <div className="md:col-span-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Descripción Técnica</label>
+                <textarea
+                  className="w-full bg-black/60 border border-white/10 rounded-2xl p-5 text-white outline-none focus:border-[#D4AF37] transition-all font-medium resize-none h-24"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Especificaciones, marca o detalles relevantes del activo..."
+                />
+              </div>
+
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Uso en Protocolo</label>
                 <div className="grid grid-cols-2 gap-3">
-                   <button
+                  <button
                     type="button"
-                    onClick={() => setFormData({...formData, usage: 'RETAIL'})}
+                    onClick={() => setFormData({ ...formData, usage: 'RETAIL' })}
                     className={`flex items-center justify-center gap-2 py-4 rounded-xl border font-black text-[9px] uppercase tracking-widest transition-all ${formData.usage === 'RETAIL' ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37]' : 'border-white/5 text-slate-600 hover:text-white'}`}
-                   >
-                     <ShoppingBag size={14} /> Venta
-                   </button>
-                   <button
+                  >
+                    <ShoppingBag size={14} /> Venta
+                  </button>
+                  <button
                     type="button"
-                    onClick={() => setFormData({...formData, usage: 'INTERNAL'})}
+                    onClick={() => setFormData({ ...formData, usage: 'INTERNAL' })}
                     className={`flex items-center justify-center gap-2 py-4 rounded-xl border font-black text-[9px] uppercase tracking-widest transition-all ${formData.usage === 'INTERNAL' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : 'border-white/5 text-slate-600 hover:text-white'}`}
-                   >
-                     <Beaker size={14} /> Insumo
-                   </button>
+                  >
+                    <Beaker size={14} /> Insumo
+                  </button>
                 </div>
               </div>
 
@@ -187,11 +199,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     required type="text"
                     className="w-full bg-black/60 border border-white/10 rounded-l-2xl p-5 text-white outline-none focus:border-[#D4AF37] font-mono font-bold"
                     value={formData.sku}
-                    onChange={(e) => setFormData({...formData, sku: e.target.value.toUpperCase()})}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
                   />
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => setFormData({...formData, sku: generateSKU(formData.name)})}
+                    onClick={() => setFormData({ ...formData, sku: generateSKU(formData.name) })}
                     className="px-5 bg-white/5 border border-l-0 border-white/10 rounded-r-2xl hover:bg-white/10 text-slate-500 transition-all"
                   >
                     <RefreshCw size={18} />
@@ -200,33 +212,33 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
               </div>
 
               <div className="md:col-span-2 space-y-8 pt-4 border-t border-white/5">
-                 <h4 className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] flex items-center gap-3">
-                   <Fingerprint size={16} /> Trazabilidad Técnica
-                 </h4>
-                 <div className="grid grid-cols-2 gap-8">
-                   <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Número de Lote</label>
-                      <input 
-                        type="text"
-                        className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-white font-mono text-sm outline-none focus:border-[#D4AF37]"
-                        placeholder="BATCH-XXXX"
-                        value={formData.batchNumber}
-                        onChange={e => setFormData({...formData, batchNumber: e.target.value})}
+                <h4 className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] flex items-center gap-3">
+                  <Fingerprint size={16} /> Trazabilidad Técnica
+                </h4>
+                <div className="grid grid-cols-2 gap-8">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Número de Lote</label>
+                    <input
+                      type="text"
+                      className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-white font-mono text-sm outline-none focus:border-[#D4AF37]"
+                      placeholder="BATCH-XXXX"
+                      value={formData.batchNumber}
+                      onChange={e => setFormData({ ...formData, batchNumber: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Fecha de Caducidad</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
+                      <input
+                        type="date"
+                        className="w-full pl-14 pr-5 py-4 bg-black/60 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#D4AF37]"
+                        value={formData.expiryDate}
+                        onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
                       />
-                   </div>
-                   <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase mb-3 block ml-1 tracking-widest">Fecha de Caducidad</label>
-                      <div className="relative">
-                        <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
-                        <input 
-                          type="date"
-                          className="w-full pl-14 pr-5 py-4 bg-black/60 border border-white/10 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#D4AF37]"
-                          value={formData.expiryDate}
-                          onChange={e => setFormData({...formData, expiryDate: e.target.value})}
-                        />
-                      </div>
-                   </div>
-                 </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="md:col-span-2 pt-4 border-t border-white/5">
@@ -240,7 +252,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       type="number" min="0" step="0.01"
                       className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-white font-black outline-none focus:border-[#D4AF37]"
                       value={formData.cost}
-                      onChange={(e) => setFormData({...formData, cost: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, cost: Number(e.target.value) })}
                     />
                   </div>
                   <div>
@@ -250,7 +262,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       disabled={formData.usage === 'INTERNAL'}
                       className={`w-full bg-black/60 border rounded-2xl p-4 text-white font-black outline-none transition-all ${formData.usage === 'INTERNAL' ? 'opacity-30 border-white/5' : 'border-white/10 focus:border-[#D4AF37]'}`}
                       value={formData.usage === 'INTERNAL' ? 0 : formData.price}
-                      onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -266,7 +278,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
               <div className="md:col-span-2 pt-4 border-t border-white/5">
                 <h4 className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] mb-8 flex items-center gap-3">
-                   <Package size={16} /> Auditoría de Stock
+                  <Package size={16} /> Auditoría de Stock
                 </h4>
                 <div className="grid grid-cols-2 gap-8">
                   <div>
@@ -275,7 +287,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       type="number" min="0"
                       className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-white font-black outline-none focus:border-[#D4AF37]"
                       value={formData.stock}
-                      onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
                     />
                   </div>
                   <div>
@@ -284,7 +296,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       type="number" min="1"
                       className="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-white font-black outline-none focus:border-[#D4AF37]"
                       value={formData.minStock}
-                      onChange={(e) => setFormData({...formData, minStock: Number(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, minStock: Number(e.target.value) })}
                     />
                   </div>
                 </div>
