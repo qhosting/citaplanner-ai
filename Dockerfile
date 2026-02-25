@@ -9,6 +9,14 @@ FROM node:20-alpine AS builder
 # 8888 - Protection: Clean Work Environment
 WORKDIR /app
 
+# Install build dependencies for Prisma and native modules
+RUN apk add --no-cache libc6-compat openssl
+
+# Set npm config to be more resilient to network glitches
+RUN npm config set fetch-retries 10 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
 # Dependency Caching
 COPY package*.json ./
 RUN npm install
@@ -27,7 +35,7 @@ FROM node:20-alpine AS runner
 RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.19/main' >> /etc/apk/repositories && \
     echo 'http://dl-cdn.alpinelinux.org/alpine/v3.19/community' >> /etc/apk/repositories && \
     apk update && \
-    apk add --no-cache postgresql-client mongodb-tools
+    apk add --no-cache postgresql-client mongodb-tools libc6-compat openssl
 
 WORKDIR /app
 
@@ -37,7 +45,8 @@ ENV PORT=3000
 
 # Install Only Production Dependencies
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm config set fetch-retries 10 && \
+    npm install --only=production
 
 # Copy Backend Core
 COPY server.js ./
