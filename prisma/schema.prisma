@@ -120,7 +120,7 @@ model InventoryMovement {
 }
 
 model LandingSetting {
-  id               Int     @id @default(1)
+  id               Int     @id @default(autoincrement())
   businessName     String? @default("CitaPlanner Elite") @db.VarChar(100) @map("business_name")
   primaryColor     String? @default("#630E14") @db.VarChar(20) @map("primary_color")
   secondaryColor   String? @default("#C5A028") @db.VarChar(20) @map("secondary_color")

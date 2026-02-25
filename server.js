@@ -1080,28 +1080,47 @@ const initDB = async () => {
 
 const tenantMiddleware = async (req, res, next) => {
     try {
-        const host = (req.headers.host || '').toLowerCase();
+        const fullHost = (req.headers.host || '').toLowerCase();
+        const host = fullHost.split(':')[0];
         let tenantId = 'demo';
 
-        // 1. Hybrid Detection: Subdomains
+        if (req.path.includes('/api/settings/landing')) {
+            console.log(`[TENANT DEBUG] Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN}`);
+        }
+
+        // 1. Subdomain Detection (e.g., shula.citaplanner.com)
         if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
             const subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
-            if (subdomain) tenantId = subdomain;
+            if (subdomain) {
+                tenantId = subdomain;
+                console.log(`[TENANT] Detected subdomain: ${tenantId}`);
+            }
         }
-        // 2. High Authority Detection: Custom Domains (e.g. shulastudio.com)
+        // 2. Custom Domain Detection (e.g., shulastudio.com)
         else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
-            const tenant = await prisma.tenant.findUnique({
-                where: { customDomain: host },
+            // Remove www. for lookup if present
+            const cleanHost = host.replace('www.', '');
+
+            const tenant = await prisma.tenant.findFirst({
+                where: {
+                    OR: [
+                        { customDomain: host },
+                        { customDomain: cleanHost }
+                    ]
+                },
                 select: { subdomain: true }
             });
 
             if (tenant) {
                 tenantId = tenant.subdomain;
+                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId}`);
             } else {
+                console.warn(`[TENANT] No tenant found for custom domain: ${host}`);
                 tenantId = req.headers['x-tenant-id'] || 'demo';
             }
         } else {
             tenantId = req.headers['x-tenant-id'] || 'demo';
+            console.log(`[TENANT] Fallback/Root detected: ${tenantId}`);
         }
 
         req.tenantId = tenantId;
@@ -2870,42 +2889,45 @@ app.get('/api/settings/landing', async (req, res) => {
 
         // Initialize default with Rich Data (Shula Studio Template)
         if (!data) {
-            data = await prisma.landingSetting.create({
-                data: {
-                    organizationId,
-                    businessName: organizationId === 'demo' ? 'Shula Studio' : organizationId.toUpperCase(),
-                    primaryColor: '#D4AF37', // Gold
-                    secondaryColor: '#000000', // Black
-                    templateId: 'shula_dark',
-                    slogan: 'Realza tu belleza natural con expertos en imagen.',
-                    aboutText: 'Somos un estudio especializado en micropigmentación y estética avanzada. Nuestro compromiso es resaltar tu belleza única mediante técnicas innovadoras y personalizadas. Con años de experiencia, transformamos miradas y sonrisas.',
-                    address: 'Av. Masaryk 123, Polanco, CDMX',
-                    contactPhone: '+52 55 1234 5678',
-                    whatsappPhone: '5512345678',
-                    heroImageUrl: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=2070&auto=format&fit=crop', // Elegant dark aesthetic
-                    logoUrl: '',
-                    seoTitle: 'Shula Studio - Micropigmentación & Estética',
-                    seoDescription: 'Expertos en Cejas, Labios y Ojos. Resultados naturales y duraderos.',
-                    seoKeywords: 'micropigmentacion, cejas, labios, belleza, cdmx',
-                    footerText: '© 2026 Shula Studio. Todos los derechos reservados.',
-                    socialInstagram: 'https://instagram.com/shulastudio',
-                    socialFacebook: 'https://facebook.com/shulastudio',
-                    features: { ai: true, inventory: true, marketing: true },
+            console.log(`[LANDING] Creating default settings for org: ${organizationId}`);
+            try {
+                // If it's shula, we want specifically the shula branding
+                const isShula = organizationId === 'shula' || organizationId === 'master';
 
-                    // JSON Fields
-                    services: [
-                        { title: 'Microblading Cejas 3D', price: '4500', description: 'Técnica pelo a pelo para un look natural y definido.' },
-                        { title: 'Baby Lips (Acuarela)', price: '3800', description: 'Color suave y natural para tus labios con efecto volumen.' },
-                        { title: 'Delineado de Ojos', price: '2500', description: 'Realza tu mirada con un delineado permanente sutil.' },
-                        { title: 'Lifting de Pestañas', price: '1200', description: 'Curvatura natural y tratamiento de keratina.' }
-                    ],
+                data = await prisma.landingSetting.create({
+                    data: {
+                        organizationId,
+                        businessName: isShula ? 'Shula Studio Global' : organizationId.toUpperCase(),
+                        primaryColor: '#D4AF37', // Gold
+                        secondaryColor: '#000000', // Black
+                        templateId: 'shula_dark',
+                        slogan: isShula ? 'Elegancia en cada detalle de tu mirada' : 'Gestión Inteligente de Citas',
+                        aboutText: isShula ? 'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.' : 'Plataforma líder en gestión de servicios y citas.',
+                        address: 'Ciudad de México',
+                        contactPhone: '+52 55 1234 5678',
+                        whatsappPhone: '525512345678',
+                        heroImageUrl: 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899',
+                        logoUrl: '',
+                        seoTitle: isShula ? 'Shula Studio - Pestañas & Cejas' : `${organizationId.toUpperCase()} - Reservas`,
+                        features: { ai: true, inventory: true, marketing: true }
+                    }
+                });
+            } catch (createErr) {
+                console.warn(`[LANDING] Failed to persist default settings for ${organizationId}, returning in-memory fallback.`, createErr.message);
+                // Return a valid object so the frontend works even if DB fails to create the default record
+                data = {
+                    organizationId,
+                    businessName: organizationId === 'shula' ? 'Shula Studio Global' : organizationId.toUpperCase(),
+                    primaryColor: '#D4AF37',
+                    secondaryColor: '#000000',
+                    templateId: 'shula_dark',
                     images: [
                         { url: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=2070&auto=format&fit=crop', caption: 'Resultados Naturales' },
                         { url: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop', caption: 'Estudio Premium' },
                         { url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?q=80&w=1935&auto=format&fit=crop', caption: 'Atención Personalizada' }
                     ]
-                }
-            });
+                };
+            }
         }
 
         // Fetch complementary info from Tenant table
