@@ -2958,6 +2958,9 @@ app.get('/api/settings/landing', async (req, res) => {
             socialTwitter: data.socialTwitter || '',
             images: data.images || [],
             services: data.services || [],
+            heroSlides: data.heroSlides || [],
+            stats: data.stats || [],
+            testimonials: data.testimonials || [],
             subdomain: organizationId,
             bridge: tenant ? {
                 enabled: tenant.bridgeEnabled || false,
@@ -3004,7 +3007,10 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 socialFacebook: settings.socialFacebook,
                 socialTwitter: settings.socialTwitter,
                 images: settings.images,
-                services: settings.services
+                services: settings.services,
+                heroSlides: settings.heroSlides,
+                stats: settings.stats,
+                testimonials: settings.testimonials
             },
             create: {
                 organizationId,
@@ -3029,7 +3035,10 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
                 socialFacebook: settings.socialFacebook,
                 socialTwitter: settings.socialTwitter,
                 images: settings.images,
-                services: settings.services
+                services: settings.services,
+                heroSlides: settings.heroSlides,
+                stats: settings.stats,
+                testimonials: settings.testimonials
             }
         });
 
