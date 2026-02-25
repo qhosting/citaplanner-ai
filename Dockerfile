@@ -1,52 +1,48 @@
-# --------------------------------------------------------
-# CITAPLANNER AI - DOCKERFILE (EASYPANEL/PRODUCTION)
-# PROTOCOLS: 148721091 (Materialization) | 520 (Abundance)
-# --------------------------------------------------------
-
 # --- STAGE 1: BUILDER ---
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
-# 8888 - Protection: Clean Work Environment
 WORKDIR /app
 
-# Install build dependencies for Prisma and native modules
-RUN apk add --no-cache libc6-compat openssl
+# Install build dependencies
+RUN apt-get update && apt-get install -y openssl python3 build-essential && rm -rf /var/lib/apt/lists/*
 
-# Set npm config to be more resilient to network glitches
+# Optimize NPM for problematic network connections
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 RUN npm config set fetch-retries 10 && \
     npm config set fetch-retry-mintimeout 20000 && \
-    npm config set fetch-retry-maxtimeout 120000
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set network-timeout 100000
 
-# Dependency Caching
+# Dependency Caching - Using ci for stability
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy Source Code
 COPY . .
+
+# Generate Prisma Client (Manually here to handle potential failure better)
+RUN npx prisma generate
 
 # Build Frontend (Vite -> /dist)
 RUN npm run build
 
 # --- STAGE 2: RUNNER ---
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
-# Install Backup Tools (PostgreSQL Client & MongoDB Tools)
-# Alpine requires community/edge repos for some tools
-RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.19/main' >> /etc/apk/repositories && \
-    echo 'http://dl-cdn.alpinelinux.org/alpine/v3.19/community' >> /etc/apk/repositories && \
-    apk update && \
-    apk add --no-cache postgresql-client mongodb-tools libc6-compat openssl
+# Install Production Tools
+RUN apt-get update && apt-get install -y postgresql-client openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Environment Setup
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
 # Install Only Production Dependencies
 COPY package*.json ./
 RUN npm config set fetch-retries 10 && \
-    npm install --only=production
+    npm ci --only=production
 
 # Copy Backend Core
 COPY server.js ./
@@ -55,14 +51,13 @@ COPY middleware ./middleware
 COPY schemas ./schemas
 COPY prisma ./prisma
 
-# Generate Prisma Client
+# Generate Prisma Client for Production
 RUN npx prisma generate
 
 # Copy Frontend Build from Builder
 COPY --from=builder /app/dist ./dist
 
-# 419 488 71 - Growth: Expose Service
 EXPOSE 3000
 
-# Start Monolithic Node Server (Auto-Migrations Included in server.js)
+# Start Monolithic Node Server
 CMD ["node", "server.js"]
