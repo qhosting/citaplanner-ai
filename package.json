@@ -24,6 +24,7 @@
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "googleapis": "^170.1.0",
@@ -47,8 +48,8 @@
     "sonner": "1.7.0",
     "vite-plugin-pwa": "^1.2.0",
     "web-push": "^3.6.7",
-    "zod": "3.24.1",
-    "dotenv": "^17.2.3"
+    "xlsx": "^0.18.5",
+    "zod": "3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

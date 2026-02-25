@@ -6,6 +6,7 @@ import { Service } from '../types';
 import { ServiceModal } from '../components/ServiceModal';
 import { api } from '../services/api';
 import { TableRowSkeleton, CardSkeleton } from '../components/Skeleton';
+import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 
 export const ServicesPage: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -67,14 +68,25 @@ export const ServicesPage: React.FC = () => {
   };
 
   const handleExport = async () => {
-    toast.info("Generando archivo de exportación...");
+    toast.info("Generando ecosistema de exportación XLSX...");
     const data = await api.exportServices();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `servicios_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
+    if (data.length === 0) {
+      toast.error("No hay servicios para exportar");
+      return;
+    }
+
+    // Normalizar para Excel
+    const excelData = data.map(s => ({
+      Nombre: s.name,
+      Categoría: s.category,
+      Precio: s.price,
+      Duración: s.duration,
+      Estado: s.status,
+      Descripción: s.description,
+      ImagenURL: s.imageUrl
+    }));
+
+    exportToExcel(excelData, `servicios_${new Date().toISOString().split('T')[0]}`);
     toast.success("Catálogo exportado exitosamente");
   };
 
@@ -82,23 +94,33 @@ export const ServicesPage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const json = JSON.parse(event.target?.result as string);
-        toast.info("Sincronizando catálogo importado...");
-        const res = await api.importServices(json);
-        if (res.success) {
-          toast.success(`${res.count} servicios integrados al ecosistema`);
-          loadServices();
-        } else {
-          toast.error("Falla en la importación: " + res.error);
-        }
-      } catch (err) {
-        toast.error("Formato de archivo inválido");
+    try {
+      toast.info("Analizando matriz XLSX...");
+      const data = await importFromExcel(file);
+
+      // Mapear de vuelta a estructura de base de datos
+      const mappedData = data.map((item: any) => ({
+        name: item.Nombre || item.name,
+        category: item.Categoría || item.category,
+        price: item.Precio || item.price,
+        duration: item.Duración || item.duration,
+        status: item.Estado || item.status,
+        description: item.Descripción || item.description,
+        imageUrl: item.ImagenURL || item.imageUrl
+      }));
+
+      toast.info("Sincronizando catálogo importado...");
+      const res = await api.importServices(mappedData);
+      if (res.success) {
+        toast.success(`${res.count} servicios integrados al ecosistema`);
+        loadServices();
+      } else {
+        toast.error("Falla en la importación: " + res.error);
       }
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      toast.error("Error al procesar archivo Excel");
+    }
+    e.target.value = ''; // Reset input
   };
 
   return (
@@ -120,10 +142,10 @@ export const ServicesPage: React.FC = () => {
           </div>
 
           <div className="flex bg-card-theme p-1.5 rounded-2xl border border-theme gap-1">
-            <button onClick={handleExport} title="Exportar Servicios" className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all"><Download size={18} /></button>
+            <button onClick={handleExport} title="Exportar Servicios XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all"><Download size={18} /></button>
             <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all cursor-pointer">
               <Upload size={18} />
-              <input type="file" className="hidden" accept=".json" onChange={handleImport} />
+              <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
             </label>
           </div>
 

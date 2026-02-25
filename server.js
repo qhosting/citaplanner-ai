@@ -2587,15 +2587,15 @@ app.get('/api/services/export', authenticateToken, tenantMiddleware, async (req,
 app.post('/api/services/import', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const { services } = req.body;
-        if (!Array.isArray(services)) throw new Error("Formato de datos de importación inválido");
+        if (!Array.isArray(services)) return res.status(400).json({ success: false, error: "Datos inválidos" });
 
         const created = [];
         for (const s of services) {
             const newS = await prisma.service.create({
                 data: {
                     name: s.name,
-                    duration: parseInt(s.duration) || 30,
-                    price: parseFloat(s.price) || 0,
+                    duration: parseInt(s.duration || 30),
+                    price: parseFloat(s.price || 0),
                     category: s.category || 'General',
                     status: s.status || 'ACTIVE',
                     description: s.description || '',
@@ -2606,16 +2606,51 @@ app.post('/api/services/import', authenticateToken, tenantMiddleware, async (req
             created.push(newS);
         }
 
-        // Invalidate Cache
-        if (redisClient && redisClient.isOpen) {
-            await redisClient.del(`services:${req.tenantId} `);
+        if (redisClient && redisClient.isOpen) await redisClient.del(`services:${req.tenantId}`);
+        res.json({ success: true, count: created.length });
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// --- PRODUCTS IMPORT/EXPORT ---
+app.get('/api/products/export', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const products = await prisma.product.findMany({
+            where: { organizationId: req.tenantId },
+            orderBy: { name: 'asc' }
+        });
+        res.json(products);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/products/import', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { products } = req.body;
+        if (!Array.isArray(products)) return res.status(400).json({ success: false, error: "Datos inválidos" });
+
+        const created = [];
+        for (const p of products) {
+            const newP = await prisma.product.create({
+                data: {
+                    name: p.name,
+                    sku: p.sku || `SKU-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+                    price: parseFloat(p.price || 0),
+                    cost: parseFloat(p.cost || 0),
+                    stock: parseInt(p.stock || 0),
+                    minStock: parseInt(p.minStock || 5),
+                    category: p.category || 'General',
+                    usage: p.usage || 'RETAIL',
+                    description: p.description || '',
+                    organizationId: req.tenantId,
+                    branchId: req.branchId || null
+                }
+            });
+            created.push(newP);
         }
 
+        const branchKey = req.branchId || 'global';
+        if (redisClient && redisClient.isOpen) await redisClient.del(`products:${req.tenantId}:${branchKey}`);
         res.json({ success: true, count: created.length });
-    } catch (e) {
-        console.error("Import Error:", e);
-        res.status(500).json({ error: e.message });
-    }
+    } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {

@@ -330,6 +330,23 @@ export const api = {
     return res.ok ? await res.json() : [];
   },
 
+  exportProducts: async (): Promise<Product[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/products/export`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  importProducts: async (products: any[]): Promise<{ success: boolean; count?: number; error?: string }> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/products/import`, {
+        method: 'POST',
+        body: JSON.stringify({ products })
+      });
+      return await res.json();
+    } catch { return { success: false, error: "Network Error" }; }
+  },
+
   // Professionals CRUD
   getProfessionals: async (): Promise<Professional[]> => {
     const res = await fetchWithAuth(`${API_URL}/professionals`);
