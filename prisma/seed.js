@@ -4,18 +4,18 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Starting database seeding...');
+    console.log('🌱 Starting database seeding on remote database...');
 
     // 1. Seed Master Tenant
-    const masterTenant = await prisma.tenant.upsert({
+    const masterTenant = await prisma.tenants.upsert({
         where: { subdomain: 'master' },
         update: { name: 'Aurum Global Nexus' },
         create: {
             name: 'Aurum Global Nexus',
             subdomain: 'master',
             status: 'ACTIVE',
-            planType: 'LEGACY',
-            organizationId: 'demo',
+            plan_type: 'LEGACY',
+            organization_id: 'demo',
             features: {
                 ai_scheduler: true,
                 marketing_pro: true,
@@ -24,22 +24,22 @@ async function main() {
             }
         }
     });
-    console.log('✅ Master Tenant created:', masterTenant.id);
+    console.log('✅ Master Tenant created/verified:', masterTenant.id);
 
     // 2. Seed Default Branch
-    let defaultBranch = await prisma.branch.findFirst({
+    let defaultBranch = await prisma.branches.findFirst({
         where: {
-            organizationId: 'demo',
-            tenantId: masterTenant.id
+            organization_id: 'demo',
+            tenant_id: masterTenant.id
         }
     });
 
     if (!defaultBranch) {
-        defaultBranch = await prisma.branch.create({
+        defaultBranch = await prisma.branches.create({
             data: {
                 name: 'Sucursal Central',
-                organizationId: 'demo',
-                tenantId: masterTenant.id
+                organization_id: 'demo',
+                tenant_id: masterTenant.id
             }
         });
         console.log('✅ Default Branch created:', defaultBranch.id);
@@ -48,20 +48,20 @@ async function main() {
     }
 
     // 3. Seed Default Landing Settings
-    const landingSettings = await prisma.landingSetting.upsert({
+    const landingSettings = await prisma.landing_settings.upsert({
         where: { id: 1 },
         update: {},
         create: {
             id: 1,
-            businessName: 'CitaPlanner Elite',
-            primaryColor: '#630E14',
-            secondaryColor: '#C5A028',
-            templateId: 'citaplanner',
+            business_name: 'CitaPlanner Elite',
+            primary_color: '#630E14',
+            secondary_color: '#C5A028',
+            template_id: 'citaplanner',
             slogan: 'Gestión de Lujo Simplificada',
-            aboutText: 'Plataforma líder en gestión de citas.',
+            about_text: 'Plataforma líder en gestión de citas.',
             address: 'Av. Principal 123, CDMX',
-            contactPhone: '+52 55 1234 5678',
-            organizationId: 'demo',
+            contact_phone: '+52 55 1234 5678',
+            organization_id: 'demo',
             features: {
                 ai: true,
                 inventory: true,
@@ -72,7 +72,7 @@ async function main() {
     console.log('✅ Landing Settings created/updated');
 
     // 4. Seed Services
-    const existingServices = await prisma.service.count();
+    const existingServices = await prisma.services.count();
 
     if (existingServices === 0) {
         const servicesToSeed = [
@@ -83,9 +83,9 @@ async function main() {
                 description: 'NATURAL',
                 duration: 90,
                 status: 'ACTIVE',
-                branchId: defaultBranch.id,
-                tenantId: masterTenant.id,
-                organizationId: 'demo'
+                branch_id: defaultBranch.id,
+                tenant_id: masterTenant.id,
+                organization_id: 'demo'
             },
             {
                 category: 'UÑAS',
@@ -94,14 +94,14 @@ async function main() {
                 description: '1 TONO',
                 duration: 45,
                 status: 'ACTIVE',
-                branchId: defaultBranch.id,
-                tenantId: masterTenant.id,
-                organizationId: 'demo'
+                branch_id: defaultBranch.id,
+                tenant_id: masterTenant.id,
+                organization_id: 'demo'
             }
         ];
 
         for (const service of servicesToSeed) {
-            await prisma.service.create({ data: service });
+            await prisma.services.create({ data: service });
         }
         console.log('✅ Services seeded:', servicesToSeed.length);
     } else {
@@ -109,89 +109,104 @@ async function main() {
     }
 
     // 5. Seed Users & Professionals
-    const existingUsers = await prisma.user.count();
+    const existingUsers = await prisma.users.count();
 
-    if (existingUsers === 0) {
+    if (existingUsers < 2) { // Allow more seeding if only some users exist
         // Create Admin User
-        await prisma.user.create({
-            data: {
-                name: 'Admin Master',
-                phone: 'admin',
-                email: 'admin@aurum.ai',
-                password: bcrypt.hashSync('123', 10),
-                role: 'ADMIN',
-                branchId: defaultBranch.id,
-                organizationId: 'demo',
-                preferences: {
-                    whatsapp: true,
-                    email: true
+        const adminPhone = process.env.SEED_ADMIN_PHONE || 'admin';
+        const existingAdmin = await prisma.users.findFirst({ where: { phone: adminPhone, organization_id: 'demo' } });
+
+        if (!existingAdmin) {
+            await prisma.users.create({
+                data: {
+                    name: 'Admin Master',
+                    phone: adminPhone,
+                    email: 'admin@aurum.ai',
+                    password: bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
+                    role: 'ADMIN',
+                    branch_id: defaultBranch.id,
+                    organization_id: 'demo',
+                    preferences: {
+                        whatsapp: true,
+                        email: true
+                    }
                 }
-            }
-        });
-        console.log('✅ Admin user created (phone: admin, password: 123)');
+            });
+            console.log(`✅ Admin user created (phone: ${adminPhone})`);
+        }
 
         // Create Professional
-        const defaultSchedule = [
-            { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-            { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-            { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-            { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
-            { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
-        ];
-
-        const professional = await prisma.professional.create({
-            data: {
-                name: 'Dra. Ana Elite',
-                role: 'Dermatología',
-                email: 'ana@aurum.ai',
-                branchId: defaultBranch.id,
-                tenantId: masterTenant.id,
-                weeklySchedule: defaultSchedule,
-                exceptions: [],
-                serviceIds: '[]',
-                organizationId: 'demo'
-            }
+        let professional = await prisma.professionals.findFirst({
+            where: { email: 'ana@aurum.ai', organization_id: 'demo' }
         });
+
+        if (!professional) {
+            const defaultSchedule = [
+                { dayOfWeek: 1, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 2, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 3, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 4, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] },
+                { dayOfWeek: 5, isEnabled: true, slots: [{ start: "09:00", end: "18:00" }] }
+            ];
+
+            professional = await prisma.professionals.create({
+                data: {
+                    name: 'Dra. Ana Elite',
+                    role: 'Dermatología',
+                    email: 'ana@aurum.ai',
+                    branch_id: defaultBranch.id,
+                    tenant_id: masterTenant.id,
+                    weekly_schedule: defaultSchedule,
+                    exceptions: [],
+                    service_ids: '[]',
+                    organization_id: 'demo'
+                }
+            });
+            console.log('✅ Professional created:', professional.id);
+        }
 
         // Create Professional User
-        await prisma.user.create({
-            data: {
-                name: 'Dra. Ana Elite',
-                phone: 'pro',
-                email: 'ana@aurum.ai',
-                password: bcrypt.hashSync('pro123', 10),
-                role: 'PROFESSIONAL',
-                relatedId: professional.id,
-                branchId: defaultBranch.id,
-                organizationId: 'demo'
-            }
-        });
-        console.log('✅ Professional user created (phone: pro, password: pro123)');
+        const existingPro = await prisma.users.findFirst({ where: { phone: 'pro', organization_id: 'demo' } });
+        if (!existingPro) {
+            await prisma.users.create({
+                data: {
+                    name: 'Dra. Ana Elite',
+                    phone: 'pro',
+                    email: 'ana@aurum.ai',
+                    password: bcrypt.hashSync('pro123', 10),
+                    role: 'PROFESSIONAL',
+                    related_id: professional.id,
+                    branch_id: defaultBranch.id,
+                    organization_id: 'demo'
+                }
+            });
+            console.log('✅ Professional user created (phone: pro, password: pro123)');
+        }
     } else {
-        console.log('ℹ️ Users already exist, skipping default user creation');
+        console.log('ℹ️ System users already exist, skipping default user creation');
     }
 
     // 6. Seed Special QHosting Admin
     const qhostingAdminPhone = process.env.QHOSTING_ADMIN_PHONE;
 
     if (qhostingAdminPhone) {
-        const existingQAdmin = await prisma.user.findFirst({
+        const existingQAdmin = await prisma.users.findFirst({
             where: {
                 phone: qhostingAdminPhone,
-                organizationId: 'demo'
+                organization_id: 'demo'
             }
         });
 
         if (!existingQAdmin) {
-            await prisma.user.create({
+            await prisma.users.create({
                 data: {
                     name: process.env.QHOSTING_ADMIN_NAME || 'Admin QHosting',
                     phone: qhostingAdminPhone,
                     email: process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
                     password: bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
                     role: 'ADMIN',
-                    branchId: defaultBranch.id,
-                    organizationId: 'demo',
+                    branch_id: defaultBranch.id,
+                    organization_id: 'demo',
                     preferences: {
                         whatsapp: true,
                         email: true
@@ -202,6 +217,42 @@ async function main() {
         } else {
             console.log('ℹ️ QHosting Admin user already exists');
         }
+    }
+
+    // 7. Seed GOD_MODE Super Admin
+    const godPhone = process.env.GOD_MODE_PHONE || 'godadmin';
+    const existingGodMode = await prisma.users.findFirst({
+        where: {
+            OR: [
+                { role: 'GOD_MODE' },
+                { phone: godPhone }
+            ]
+        }
+    });
+
+    if (!existingGodMode) {
+        const godPassword = process.env.GOD_MODE_PASSWORD || 'G0d@dmin2026!';
+        const godName = process.env.GOD_MODE_NAME || 'Super Admin Nexus';
+        const godEmail = process.env.GOD_MODE_EMAIL || 'god@aurum.ai';
+
+        await prisma.users.create({
+            data: {
+                name: godName,
+                phone: godPhone,
+                email: godEmail,
+                password: bcrypt.hashSync(godPassword, 10),
+                role: 'GOD_MODE',
+                branch_id: defaultBranch.id,
+                organization_id: 'demo',
+                preferences: {
+                    whatsapp: true,
+                    email: true
+                }
+            }
+        });
+        console.log(`✅ GOD_MODE Super Admin created (phone: ${godPhone})`);
+    } else {
+        console.log('ℹ️ GOD_MODE Super Admin already exists:', existingGodMode.phone);
     }
 
     console.log('🎉 Database seeding completed!');

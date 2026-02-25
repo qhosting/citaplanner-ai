@@ -995,6 +995,45 @@ const initDB = async () => {
             }
         }
 
+        // GOD_MODE CONFIGURABLE ADMIN (UPSERT LOGIC)
+        if (process.env.GOD_MODE_PHONE) {
+            const godPhone = process.env.GOD_MODE_PHONE;
+            const existingGod = await client.query("SELECT id FROM users WHERE phone = $1", [godPhone]);
+
+            if (existingGod.rows.length === 0) {
+                console.log(`🛠️ Seeding GOD_MODE Admin (${godPhone})...`);
+                await client.query(`
+                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                    VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                `, [
+                    process.env.GOD_MODE_NAME || 'Super Admin Nexus',
+                    godPhone,
+                    process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
+                    bcrypt.hashSync(process.env.GOD_MODE_PASSWORD || 'G0d@dmin2026!', 10),
+                    defaultBranchId,
+                    masterId
+                ]);
+                console.log(`✅ GOD_MODE Admin created (phone: ${godPhone})`);
+            } else {
+                // Update credentials if env vars changed
+                await client.query(`
+                    UPDATE users SET 
+                        name = COALESCE($1, name),
+                        email = COALESCE($2, email),
+                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
+                        role = 'GOD_MODE'
+                    WHERE phone = $5
+                `, [
+                    process.env.GOD_MODE_NAME || 'Super Admin Nexus',
+                    process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
+                    process.env.GOD_MODE_PASSWORD || null,
+                    process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD, 10) : null,
+                    godPhone
+                ]);
+                console.log(`ℹ️ GOD_MODE Admin updated (phone: ${godPhone})`);
+            }
+        }
+
 
 
 
@@ -2226,12 +2265,34 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
     try {
         console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
 
-        let user = await prisma.user.findFirst({ where: { phone, organizationId: req.tenantId } });
+        // Search by phone OR email
+        let user = await prisma.user.findFirst({
+            where: {
+                OR: [{ phone }, { email: phone }],
+                organizationId: req.tenantId
+            }
+        });
 
-        // Fallback for Global SuperAdmin (nexus) if logging in from root domain
-        if (!user && (req.tenantId === 'demo' || !req.tenantId) && phone === 'nexus') {
-            console.log(`[AUTH DEBUG] Global Admin detected, redirecting search to 'master' tenant`);
-            user = await prisma.user.findFirst({ where: { phone, organizationId: 'master' } });
+        // Fallback 1: Try 'demo' org (where seed users live)
+        if (!user) {
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [{ phone }, { email: phone }],
+                    organizationId: 'demo'
+                }
+            });
+            if (user) console.log(`[AUTH DEBUG] Found user in 'demo' org fallback`);
+        }
+
+        // Fallback 2: GOD_MODE can login from any domain
+        if (!user) {
+            user = await prisma.user.findFirst({
+                where: {
+                    OR: [{ phone }, { email: phone }],
+                    role: 'GOD_MODE'
+                }
+            });
+            if (user) console.log(`[AUTH DEBUG] GOD_MODE global login detected`);
         }
 
         console.log(`[AUTH DEBUG] User Found: ${user ? 'YES' : 'NO'} (ID: ${user?.id})`);
