@@ -143,6 +143,11 @@ model LandingSetting {
   socialInstagram  String? @db.VarChar(255) @map("social_instagram")
   socialFacebook   String? @db.VarChar(255) @map("social_facebook")
   socialTwitter    String? @db.VarChar(255) @map("social_twitter")
+  images           Json?   @default("[]")
+  services         Json?   @default("[]")
+  heroSlides       Json?   @default("[]") @map("hero_slides")
+  stats            Json?   @default("[]")
+  testimonials     Json?   @default("[]")
 
   @@map("landing_settings")
 }

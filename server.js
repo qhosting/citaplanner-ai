@@ -706,6 +706,11 @@ const initDB = async () => {
             social_instagram VARCHAR(255),
             social_facebook VARCHAR(255),
             social_twitter VARCHAR(255),
+            images JSONB DEFAULT '[]',
+            services JSONB DEFAULT '[]',
+            hero_slides JSONB DEFAULT '[]',
+            stats JSONB DEFAULT '[]',
+            testimonials JSONB DEFAULT '[]',
             features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
         );
         `);
@@ -1002,7 +1007,7 @@ const initDB = async () => {
                 console.log(`🛠️ Seeding GOD_MODE Admin(${godPhone})...`);
                 await client.query(`
                     INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-        VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                    VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'master', '{"whatsapp":true,"email":true}')
                 `, [
                     process.env.GOD_MODE_NAME || 'Super Admin Nexus',
                     godPhone,
@@ -1016,12 +1021,13 @@ const initDB = async () => {
                 // Update credentials if env vars changed
                 await client.query(`
                     UPDATE users SET
-        name = COALESCE($1, name),
-            email = COALESCE($2, email),
-            password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
-                role = 'GOD_MODE'
+                        name = COALESCE($1, name),
+                        email = COALESCE($2, email),
+                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
+                        role = 'GOD_MODE',
+                        organization_id = 'master'
                     WHERE phone = $5
-            `, [
+                `, [
                     process.env.GOD_MODE_NAME || 'Super Admin Nexus',
                     process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
                     process.env.GOD_MODE_PASSWORD || null,
@@ -1049,10 +1055,12 @@ const initDB = async () => {
 
                 // Seed Shula Landing
                 await client.query(`
-                    INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url)
-        VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada',
-            'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.',
-            'beauty', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899')
+                    INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url, images, services)
+                    VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada',
+                    'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.',
+                    'shula_dark', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899',
+                    '[{"url": "https://images.unsplash.com/photo-1560750588-73207b1ef5b8", "caption": "Mirada Perfecta"}, {"url": "https://images.unsplash.com/photo-1522337660859-02fbefca4702", "caption": "Estudio Luxury"}]'::jsonb,
+                    '[{"title": "Pestañas Clásicas", "price": "$550"}, {"title": "Diseño Pro", "price": "$350"}]'::jsonb)
                     ON CONFLICT(organization_id) DO NOTHING
             `);
 
@@ -1086,16 +1094,20 @@ const tenantMiddleware = async (req, res, next) => {
             console.log(`[TENANT DEBUG]Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN} `);
         }
 
+        if (host === `master.${ROOT_DOMAIN}`) {
+            tenantId = 'master';
+            console.log(`[TENANT] Master Hub detected: ${tenantId}`);
+        }
         // 1. Subdomain Detection (e.g., shula.citaplanner.com)
-        if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN} `) {
-            const subdomain = host.replace(`.${ROOT_DOMAIN} `, '').replace('www.', '');
+        else if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
+            const subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
             if (subdomain) {
                 tenantId = subdomain;
-                console.log(`[TENANT] Detected subdomain: ${tenantId} `);
+                console.log(`[TENANT] Detected subdomain: ${tenantId}`);
             }
         }
         // 2. Custom Domain Detection (e.g., shulastudio.com)
-        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN} ` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
+        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
             // Remove www. for lookup if present
             const cleanHost = host.replace('www.', '');
 
@@ -1111,14 +1123,15 @@ const tenantMiddleware = async (req, res, next) => {
 
             if (tenant) {
                 tenantId = tenant.subdomain;
-                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId} `);
+                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId}`);
             } else {
-                console.warn(`[TENANT] No tenant found for custom domain: ${host} `);
+                console.warn(`[TENANT] No tenant found for custom domain: ${host}`);
                 tenantId = req.headers['x-tenant-id'] || 'demo';
             }
         } else {
-            tenantId = req.headers['x-tenant-id'] || 'demo';
-            console.log(`[TENANT] Fallback / Root detected: ${tenantId} `);
+            // ROOT DOMAIN (citaplanner.com) -> Always DEMO but displayed as CitaPlanner
+            tenantId = 'demo';
+            console.log(`[TENANT] Root Domain detected: ${tenantId}`);
         }
 
         req.tenantId = tenantId;
@@ -1635,8 +1648,11 @@ app.put('/api/saas/tenants/:id/subscription', authenticateToken, checkGodMode, a
 });
 
 
-app.post('/api/saas/register', validateRequest(saasRegisterSchema), async (req, res) => {
+app.post('/api/saas/register', authenticateToken, checkGodMode, validateRequest(saasRegisterSchema), async (req, res) => {
     try {
+        if (req.tenantId !== 'master') {
+            return res.status(403).json({ error: "Creación de tenants solo permitida desde el HUB Master" });
+        }
         const { name, subdomain, adminPhone, adminEmail, adminPassword } = req.body;
 
         const existing = await prisma.tenant.findUnique({ where: { subdomain } });
@@ -2908,9 +2924,18 @@ app.get('/api/settings/landing', async (req, res) => {
                         address: 'Ciudad de México',
                         contactPhone: '+52 55 1234 5678',
                         whatsappPhone: '525512345678',
-                        heroImageUrl: 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899',
+                        heroImageUrl: isShula ? 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899' : 'https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2074&auto=format&fit=crop',
                         logoUrl: '',
                         seoTitle: isShula ? 'Shula Studio - Pestañas & Cejas' : `${organizationId.toUpperCase()} - Reservas`,
+                        images: [
+                            { url: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=2070&auto=format&fit=crop', caption: 'Resultados Naturales' },
+                            { url: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop', caption: 'Estudio Premium' },
+                            { url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?q=80&w=1935&auto=format&fit=crop', caption: 'Atención Personalizada' }
+                        ],
+                        services: [
+                            { title: 'Extensiones de Pestañas', description: 'Técnica clásica uno a uno.', price: '$550' },
+                            { title: 'Diseño de Cejas', description: 'Depilación y sombreado premium.', price: '$350' }
+                        ],
                         features: { ai: true, inventory: true, marketing: true }
                     }
                 });
@@ -2938,12 +2963,12 @@ app.get('/api/settings/landing', async (req, res) => {
         });
 
         const normalized = {
-            businessName: data.businessName || 'CitaPlanner Elite',
+            businessName: organizationId === 'demo' ? 'CitaPlanner' : (data.businessName || organizationId.toUpperCase()),
             primaryColor: data.primaryColor || '#630E14',
             secondaryColor: data.secondaryColor || '#C5A028',
             templateId: data.templateId || 'citaplanner',
             slogan: data.slogan || 'Gestión de Lujo Simplificada',
-            aboutText: data.aboutText || 'Plataforma líder.',
+            aboutText: data.aboutText || 'Plataforma líder en gestión de citas.',
             address: data.address || 'Ubicación Central',
             contactPhone: data.contactPhone || '+52 55 0000 0000',
             heroImageUrl: data.heroImageUrl || '',
