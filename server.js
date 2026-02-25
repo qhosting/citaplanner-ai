@@ -882,7 +882,13 @@ const initDB = async () => {
 
 
             CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_org ON users(phone, organization_id);
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_phone_org') THEN
+                    CREATE UNIQUE INDEX idx_users_phone_org ON users(phone, organization_id);
+                END IF;
+            END $$;
         `);
 
         // 2. Seeding Master Tenant
@@ -947,95 +953,62 @@ const initDB = async () => {
         }
 
         // Default Admin (Demo Tenant)
-        const adminPhone = process.env.SEED_ADMIN_PHONE || 'admin';
-        const adminExists = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [adminPhone]);
-        if (adminExists.rows.length === 0) {
-            console.log(`🛠️ Seeding Default Admin(${adminPhone})...`);
+        const adminPhone = (process.env.SEED_ADMIN_PHONE || 'admin').trim();
+        await client.query(`
+            INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+            VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+            ON CONFLICT (phone, organization_id) DO UPDATE SET
+                name = EXCLUDED.name,
+                email = EXCLUDED.email,
+                password = EXCLUDED.password
+        `, [
+            process.env.SEED_ADMIN_NAME || 'Admin Master',
+            adminPhone,
+            process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
+            bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
+            defaultBranchId,
+            masterId
+        ]);
+
+        // QHOSTING ADMIN (ON CONFLICT LOGIC)
+        if (process.env.QHOSTING_ADMIN_PHONE) {
+            const qPhone = process.env.QHOSTING_ADMIN_PHONE.trim();
             await client.query(`
                 INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-        VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
+                ON CONFLICT (phone, organization_id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    email = EXCLUDED.email,
+                    password = CASE WHEN EXCLUDED.password IS NOT NULL THEN EXCLUDED.password ELSE users.password END
             `, [
-                process.env.SEED_ADMIN_NAME || 'Admin Master',
-                adminPhone,
-                process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
-                bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
+                process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
+                qPhone,
+                process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
+                process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD.trim(), 10) : null,
                 defaultBranchId,
                 masterId
             ]);
         }
 
-        // QHOSTING ADMIN (UPSERT LOGIC)
-        if (process.env.QHOSTING_ADMIN_PHONE) {
-            const existingQAdmin = await client.query("SELECT id FROM users WHERE phone = $1 AND organization_id = 'demo'", [process.env.QHOSTING_ADMIN_PHONE]);
-
-            if (existingQAdmin.rows.length === 0) {
-                console.log("🛠️ Seeding QHosting Admin...");
-                await client.query(`
-                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-        VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-            `, [
-                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
-                    process.env.QHOSTING_ADMIN_PHONE,
-                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                    bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD || 'x0420EZS*', 10),
-                    defaultBranchId,
-                    masterId
-                ]);
-            } else {
-                await client.query(`
-                    UPDATE users SET
-        name = COALESCE($1, name),
-            email = COALESCE($2, email),
-            password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END
-                    WHERE phone = $5 AND organization_id = 'demo'
-            `, [
-                    process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
-                    process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                    process.env.QHOSTING_ADMIN_PASSWORD || null,
-                    process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD, 10) : null,
-                    process.env.QHOSTING_ADMIN_PHONE
-                ]);
-            }
-        }
-
-        // GOD_MODE CONFIGURABLE ADMIN (UPSERT LOGIC)
+        // GOD_MODE CONFIGURABLE ADMIN (ON CONFLICT LOGIC)
         if (process.env.GOD_MODE_PHONE) {
-            const godPhone = process.env.GOD_MODE_PHONE;
-            const existingGod = await client.query("SELECT id FROM users WHERE phone = $1", [godPhone]);
-
-            if (existingGod.rows.length === 0) {
-                console.log(`🛠️ Seeding GOD_MODE Admin(${godPhone})...`);
-                await client.query(`
-                    INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                    VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'master', '{"whatsapp":true,"email":true}')
-                `, [
-                    process.env.GOD_MODE_NAME || 'Super Admin Nexus',
-                    godPhone,
-                    process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
-                    bcrypt.hashSync(process.env.GOD_MODE_PASSWORD || 'G0d@dmin2026!', 10),
-                    defaultBranchId,
-                    masterId
-                ]);
-                console.log(`✅ GOD_MODE Admin created(phone: ${godPhone})`);
-            } else {
-                // Update credentials if env vars changed
-                await client.query(`
-                    UPDATE users SET
-                        name = COALESCE($1, name),
-                        email = COALESCE($2, email),
-                        password = CASE WHEN $3::text IS NOT NULL THEN $4 ELSE password END,
-                        role = 'GOD_MODE',
-                        organization_id = 'master'
-                    WHERE phone = $5
-                `, [
-                    process.env.GOD_MODE_NAME || 'Super Admin Nexus',
-                    process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
-                    process.env.GOD_MODE_PASSWORD || null,
-                    process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD, 10) : null,
-                    godPhone
-                ]);
-                console.log(`ℹ️ GOD_MODE Admin updated(phone: ${godPhone})`);
-            }
+            const godPhone = process.env.GOD_MODE_PHONE.trim();
+            await client.query(`
+                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
+                VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'master', '{"whatsapp":true,"email":true}')
+                ON CONFLICT (phone, organization_id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    email = EXCLUDED.email,
+                    password = CASE WHEN EXCLUDED.password IS NOT NULL THEN EXCLUDED.password ELSE users.password END,
+                    role = 'GOD_MODE'
+            `, [
+                process.env.GOD_MODE_NAME || 'Super Admin Nexus',
+                godPhone,
+                process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
+                process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD.trim(), 10) : null,
+                defaultBranchId,
+                masterId
+            ]);
         }
 
 
