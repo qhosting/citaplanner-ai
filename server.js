@@ -1487,6 +1487,7 @@ app.post('/api/saas/tenants/:id/admins', authenticateToken, checkGodMode, async 
                 password: hashedPassword,
                 role: role || 'STUDIO_OWNER',
                 branchId: branch.id,
+                tenantId: tenant.id,
                 organizationId: tenant.subdomain
             }
         });
