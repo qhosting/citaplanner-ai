@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
    Calendar, Clock, User, ShieldAlert, Plus, Trash2,
    Save, Check, Coffee, CalendarDays, Settings, X, Loader2, Sparkles, Mail, Briefcase, Fingerprint, ChevronLeft, ChevronRight,
-   Activity
+   Activity, Copy, ExternalLink, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Professional, ScheduleException, ExceptionType, Appointment } from '../types';
@@ -29,6 +29,7 @@ export const SchedulesPage: React.FC = () => {
    const [professionals, setProfessionals] = useState<Professional[]>([]);
    const [loading, setLoading] = useState(true);
    const [saving, setSaving] = useState(false);
+   const [generatingToken, setGeneratingToken] = useState(false);
    const [selectedDate, setSelectedDate] = useState(new Date());
 
    const [selectedProId, setSelectedProId] = useState<string>('');
@@ -93,6 +94,30 @@ export const SchedulesPage: React.FC = () => {
          toast.success("Especialista eliminado.");
          loadProfessionals();
       }
+   };
+
+   const handleSyncICal = async () => {
+      if (!selectedProId) return;
+      setGeneratingToken(true);
+      try {
+         const res = await api.getCalendarLink(selectedProId);
+         if (res.icalToken) {
+            // Update local state to show the token if needed, or just toast
+            await loadProfessionals();
+            toast.success("Sincronización iCal Activa");
+         }
+      } catch (e) {
+         toast.error("Falla al activar iCal");
+      } finally {
+         setGeneratingToken(false);
+      }
+   };
+
+   const copyICalUrl = () => {
+      if (!selectedPro?.icalToken) return;
+      const url = `${window.location.origin}/api/calendar/feed/${selectedPro.icalToken}.ics`;
+      navigator.clipboard.writeText(url);
+      toast.success("Enlace iCal copiado al portapapeles");
    };
 
    const changeDate = (days: number) => {
@@ -228,6 +253,49 @@ export const SchedulesPage: React.FC = () => {
                      </div>
 
                      <div className="space-y-4">
+                        {/* iCal Integration Premium Section */}
+                        <div className="bg-gradient-to-br from-black/40 to-black/60 p-8 rounded-[2.5rem] border border-[#D4AF37]/10 mb-8 overflow-hidden relative group">
+                           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
+                              <Globe size={80} className="text-[#D4AF37]" />
+                           </div>
+                           <div className="relative z-10">
+                              <div className="flex items-center gap-3 mb-4">
+                                 <div className="p-2 bg-[#D4AF37]/10 rounded-lg text-[#D4AF37]">
+                                    <CalendarDays size={18} />
+                                 </div>
+                                 <h4 className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Sincronización Externa (Apple / Outlook)</h4>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xl mb-6">
+                                 Integra tu agenda operativa directamente en tu iPhone o Mac. El feed iCal mantiene tus citas actualizadas en tiempo real sin abrir el dashboard.
+                              </p>
+
+                              {selectedPro?.icalToken ? (
+                                 <div className="flex flex-col sm:flex-row gap-4 items-center">
+                                    <div className="flex-1 w-full bg-black/60 border border-white/5 p-4 rounded-xl flex items-center justify-between group/link">
+                                       <code className="text-[10px] text-[#D4AF37] font-mono truncate mr-4">
+                                          {window.location.origin}/api/calendar/feed/{selectedPro.icalToken}.ics
+                                       </code>
+                                       <button onClick={copyICalUrl} className="p-2 text-slate-500 hover:text-white transition-colors">
+                                          <Copy size={14} />
+                                       </button>
+                                    </div>
+                                    <button onClick={copyICalUrl} className="whitespace-nowrap bg-white/5 border border-white/10 px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all flex items-center gap-2">
+                                       <ExternalLink size={14} /> Copiar URL de Feed
+                                    </button>
+                                 </div>
+                              ) : (
+                                 <button
+                                    onClick={handleSyncICal}
+                                    disabled={generatingToken}
+                                    className="bg-[#D4AF37] text-black px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-[#D4AF37]/10 flex items-center gap-2 hover:scale-105 transition-all"
+                                 >
+                                    {generatingToken ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                    Activar Sincronización iCal
+                                 </button>
+                              )}
+                           </div>
+                        </div>
+
                         {DAYS_OF_WEEK.map(day => {
                            const schedule = (selectedPro?.weeklySchedule as any)?.find((s: any) => s.dayOfWeek === day.id) || { dayOfWeek: day.id, isEnabled: false, slots: [] };
 
