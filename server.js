@@ -1,4 +1,4 @@
-
+import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import crypto from 'crypto';
@@ -2263,7 +2263,11 @@ app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, a
 });
 
 app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, res) => {
-    const { phone, password } = req.body;
+    let { phone, password } = req.body;
+
+    // Auto-trim to avoid copy-paste whitespace issues
+    phone = phone?.trim();
+    password = password?.trim();
 
     // --- DEVELOPMENT MODE BYPASS ---
     // If not in production, verify static dev credentials to avoid DB dependency for login
