@@ -174,13 +174,13 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
                     <Link to="/schedules" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Clock size={14} /> Personal</Link>
                     <Link to="/services" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Scissors size={14} /> Servicios</Link>
                     <Link to="/inventory" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#D4AF37] hover:bg-white/10 rounded-2xl transition-all"><Package size={14} /> Inventario</Link>
+                    <Link to="/marketing" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-300 hover:text-[#CE4676] hover:bg-white/10 rounded-2xl transition-all"><Megaphone size={14} /> Marketing</Link>
                     <Link to="/web-builder" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 rounded-2xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.1)]"><Globe size={14} /> Builder Web</Link>
                     <div className="h-px bg-white/5 my-2 mx-4" />
                     <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#D4AF37]/20 hover:bg-[#D4AF37]/40 rounded-2xl transition-all"><Settings size={14} /> Configuración</Link>
                   </div>
                 </div>
               </div>
-              <NavLink to="/marketing">Growth</NavLink>
             </div>
           )}
         </div>
