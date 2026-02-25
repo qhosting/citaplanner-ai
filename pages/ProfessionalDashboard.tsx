@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, Clock, User, CheckCircle2,
-  Loader2, AlertCircle, StickyNote, History, Zap, Sparkles, Bell
+  Loader2, AlertCircle, StickyNote, History, Zap, Sparkles, Bell,
+  ShieldCheck, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Appointment, AppointmentStatus } from '../types';
@@ -46,6 +47,31 @@ export const ProfessionalDashboard: React.FC = () => {
     queryKey: ['pro-appointments', user?.relatedId],
     queryFn: () => api.getProfessionalAppointments(user?.relatedId || ''),
     enabled: !!user?.relatedId
+  });
+
+  const { data: assignments = [], refetch: refetchAssignments } = useQuery({
+    queryKey: ['maintenance-assignments', user?.relatedId],
+    queryFn: async () => {
+      const resp = await fetch(`/api/maintenance/assignments?date=${new Date().toISOString().split('T')[0]}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      return resp.json();
+    },
+    enabled: !!user?.relatedId
+  });
+
+  const completeTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const resp = await fetch(`/api/maintenance/assignments/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      return resp.json();
+    },
+    onSuccess: () => {
+      refetchAssignments();
+      toast.success("Tarea de mantenimiento completada y notificada al admin.");
+    }
   });
 
   useEffect(() => {
@@ -210,6 +236,52 @@ export const ProfessionalDashboard: React.FC = () => {
               ))}
             </div>
           </section>
+
+          {/* Maintenance Tasks Section */}
+          {assignments.length > 0 && (
+            <section className="mt-16">
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-4 text-emerald-500">
+                  <ShieldCheck size={28} /> Mis Tareas de Mantenimiento
+                </h2>
+                <div className="px-5 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest leading-none">
+                    Protocolo Activo
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {assignments.map((as: any) => (
+                  <div key={as.id} className={`glass-card p-8 rounded-[3rem] border transition-all ${as.status === 'COMPLETED' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/5'}`}>
+                    <div className="flex justify-between items-start gap-4">
+                      <div>
+                        <h4 className={`font-black uppercase tracking-tight ${as.status === 'COMPLETED' ? 'text-emerald-500 line-through opacity-70' : 'text-main'}`}>
+                          {as.task.taskName}
+                        </h4>
+                        <p className="text-[9px] font-black text-muted uppercase tracking-widest mt-2">
+                          {as.status === 'COMPLETED' ? `Finalizada ${new Date(as.completedAt).toLocaleTimeString()}` : 'Pendiente de ejecución'}
+                        </p>
+                      </div>
+                      {as.status === 'PENDING' ? (
+                        <button
+                          onClick={() => completeTaskMutation.mutate(as.id)}
+                          disabled={completeTaskMutation.isPending}
+                          className="p-3 bg-emerald-500 text-black rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg"
+                        >
+                          <CheckCircle size={20} />
+                        </button>
+                      ) : (
+                        <div className="p-3 text-emerald-500">
+                          <CheckCircle2 size={24} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Sidebar Info */}

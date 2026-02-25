@@ -208,6 +208,7 @@ model Professional {
   calendarSyncEnabled  Boolean? @default(false) @map("calendar_sync_enabled")
   icalToken             String? @map("ical_token")
   tenants               Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  taskAssignments       TaskAssignment[]
 
   @@map("professionals")
 }
@@ -304,6 +305,8 @@ marketingCampaigns  MarketingCampaign[]
   settings            Setting[]
   subscriptions       Subscription[]
   users               User[]
+  maintenanceTasks    MaintenanceTask[]
+  taskAssignments     TaskAssignment[]
 
   @@map("tenants")
 }
@@ -348,4 +351,31 @@ model User {
   @@unique([phone, organizationId], map: "idx_users_phone_org")
   @@unique([phone, organizationId])
   @@map("users")
+}
+
+model MaintenanceTask {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dayOfWeek       Int      @map("day_of_week") // 0-6 (Sunday-Saturday)
+  taskName        String   @db.VarChar(255) @map("task_name")
+  priority        Int      @default(1)
+  tenantId        String   @db.Uuid @map("tenant_id")
+  tenants         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignments     TaskAssignment[]
+
+  @@map("maintenance_tasks")
+}
+
+model TaskAssignment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date            DateTime @db.Date
+  taskId          String   @db.Uuid @map("task_id")
+  task            MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignedTo      String   @db.Uuid @map("assigned_to")
+  professional    Professional @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
+  status          String   @default("PENDING") @db.VarChar(20)
+  completedAt     DateTime? @db.Timestamp(6) @map("completed_at")
+  tenantId        String   @db.Uuid @map("tenant_id")
+  tenants         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("task_assignments")
 }

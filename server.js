@@ -601,6 +601,27 @@ const initDB = async () => {
                         ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
                     END IF;
 
+                -- Maintenance Tasks
+                CREATE TABLE IF NOT EXISTS maintenance_tasks (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    day_of_week INTEGER NOT NULL,
+                    task_name VARCHAR(255) NOT NULL,
+                    priority INTEGER DEFAULT 1,
+                    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT now()
+                );
+
+                -- Task Assignments
+                CREATE TABLE IF NOT EXISTS task_assignments (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    date DATE NOT NULL,
+                    task_id UUID REFERENCES maintenance_tasks(id) ON DELETE CASCADE,
+                    assigned_to UUID REFERENCES professionals(id) ON DELETE CASCADE,
+                    status VARCHAR(20) DEFAULT 'PENDING',
+                    completed_at TIMESTAMP,
+                    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT now()
+                );
                     -- Lifecycle & Dates (Fixed P2022: suspended_at)
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='suspended_at') THEN
                         ALTER TABLE tenants ADD COLUMN suspended_at TIMESTAMP;
@@ -3433,6 +3454,80 @@ app.post('/api/ai/concierge', async (req, res) => {
     }
 });
 
+// --- MAINTENANCE MANAGEMENT SYSTEM API ---
+
+// 1. Get/Set Master Plan (Maintenance Tasks)
+app.get('/api/maintenance/tasks', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const tasks = await prisma.maintenanceTask.findMany({
+            where: { tenantId: req.tenantId },
+            orderBy: [{ dayOfWeek: 'asc' }, { priority: 'asc' }]
+        });
+        res.json(tasks);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/maintenance/tasks', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { dayOfWeek, taskName, priority } = req.body;
+        const task = await prisma.maintenanceTask.create({
+            data: {
+                dayOfWeek: parseInt(dayOfWeek),
+                taskName,
+                priority: parseInt(priority) || 1,
+                tenantId: req.tenantId
+            }
+        });
+        res.json(task);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/maintenance/tasks/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        await prisma.maintenanceTask.delete({
+            where: { id: req.params.id, tenantId: req.tenantId }
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 2. Daily Assignments
+app.get('/api/maintenance/assignments', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { date } = req.query; // YYYY-MM-DD
+        const assignments = await prisma.taskAssignment.findMany({
+            where: {
+                tenantId: req.tenantId,
+                date: date ? new Date(date) : undefined
+            },
+            include: { task: true, professional: true },
+            orderBy: { task: { priority: 'asc' } }
+        });
+        res.json(assignments);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 3. Mark Task as Complete (Professional)
+app.post('/api/maintenance/assignments/:id/complete', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const assignment = await prisma.taskAssignment.update({
+            where: { id: req.params.id, tenantId: req.tenantId },
+            data: {
+                status: 'COMPLETED',
+                completedAt: new Date()
+            },
+            include: { task: true, tenants: true }
+        });
+
+        // Notify Admin via WhatsApp
+        const adminPhone = assignment.tenants?.verificationRecord?.adminPhone || '52155...'; // Use tenant config
+        const message = `✅ Tarea Completada: "${assignment.task.taskName}" ha sido finalizada por ${req.user.name} a las ${new Date().toLocaleTimeString('es-MX')}.`;
+        await sendWhatsAppMessage(adminPhone, message, null);
+
+        res.json(assignment);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/notifications/vapid-public-key', (req, res) => {
     res.json({ publicKey: vapidKeys.publicKey });
 });
@@ -3541,6 +3636,74 @@ cron.schedule('0 6 * * *', async () => {
             }
         }
     } catch (e) { console.error("❌ Birthday Worker Error:", e); }
+});
+
+
+// 4. Maintenance Task Distributor (6 AM Daily)
+cron.schedule('0 6 * * *', async () => {
+    console.log("🕒 Running AI Maintenance Distributor...");
+    try {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0-6
+        const tenants = await prisma.tenant.findMany({ where: { status: 'ACTIVE' } });
+
+        for (const tenant of tenants) {
+            // Only if AI Automation is enabled
+            if (!tenant.features?.ai_automation) continue;
+
+            const tasks = await prisma.maintenanceTask.findMany({
+                where: { tenantId: tenant.id, dayOfWeek },
+                orderBy: { priority: 'asc' }
+            });
+
+            if (tasks.length === 0) continue;
+
+            const professionals = await prisma.professional.findMany({
+                where: { tenantId: tenant.id }
+            });
+
+            // Filter professionals working today based on weekly_schedule
+            const activeStaff = professionals.filter(p => {
+                const schedule = p.weeklySchedule; // e.g., [{day: "Lunes", label: "09:00 - 18:00"}]
+                const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+                return schedule?.some(s => s.day === dayNames[dayOfWeek]);
+            });
+
+            if (activeStaff.length === 0) continue;
+
+            // Equitable Distribution (Round-Robin)
+            const assignments = [];
+            for (let i = 0; i < tasks.length; i++) {
+                const staff = activeStaff[i % activeStaff.length];
+                assignments.push({
+                    date: today,
+                    taskId: tasks[i].id,
+                    assignedTo: staff.id,
+                    tenantId: tenant.id
+                });
+            }
+
+            // Save Assignments
+            await prisma.taskAssignment.createMany({ data: assignments });
+
+            // Notify each active staff member via WhatsApp
+            for (const staff of activeStaff) {
+                const staffTasks = assignments.filter(a => a.assignedTo === staff.id);
+                const taskList = staffTasks.map((a, idx) => {
+                    const t = tasks.find(t => t.id === a.taskId);
+                    return `${idx + 1}. ${t.taskName}`;
+                }).join('\n');
+
+                const message = `🧹 ¡Buen día ${staff.name}! Hoy en ${tenant.name} tus tareas de mantenimiento asignadas son:\n\n${taskList}\n\nPor favor, marca como "Completada" cada una en tu dashboard al finalizar. ¡Buen turno! ✨`;
+
+                // Assuming phone is stored in professional's email or we need to find the user
+                const user = await prisma.user.findFirst({ where: { relatedId: staff.id } });
+                if (user?.phone) {
+                    await sendWhatsAppMessage(user.phone, message, staff.branchId);
+                }
+            }
+        }
+    } catch (e) { console.error("❌ Maintenance Worker Error:", e); }
 });
 
 
