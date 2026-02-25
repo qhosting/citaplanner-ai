@@ -549,19 +549,20 @@ export const WebBuilderPage: React.FC = () => {
                                         <div className="h-px flex-1 bg-zinc-200" />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        {(settings.services?.length ? settings.services : [
-                                            { title: 'Microblading 3D', price: '$3,500', description: 'Técnica pelo a pelo' },
-                                            { title: 'Lip Blush', price: '$2,800', description: 'Coloración natural de labios' },
-                                            { title: 'Lamination', price: '$900', description: 'Brows perfectas' }
-                                        ]).map((s, i) => (
+                                        {(settings.services || []).map((s, i) => (
                                             <div key={i} className={`p-8 rounded-2xl border ${settings.templateId === 'shula_dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-100'}`}>
                                                 <div className="flex justify-between items-start mb-4">
-                                                    <h4 className="font-bold text-sm">{s.title}</h4>
-                                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-200 text-zinc-800">{s.price}</span>
+                                                    <h4 className="font-bold text-sm">{s.title || 'Servicio Sin Título'}</h4>
+                                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-200 text-zinc-800">{s.price || '$0'}</span>
                                                 </div>
-                                                <p className="text-xs text-zinc-500">{s.description}</p>
+                                                <p className="text-xs text-zinc-500">{s.description || 'Sin descripción'}</p>
                                             </div>
                                         ))}
+                                        {(!settings.services || settings.services.length === 0) && (
+                                            <div className="col-span-1 md:col-span-3 text-center p-8 border border-dashed border-zinc-300 rounded-2xl">
+                                                <p className="text-[10px] font-black uppercase text-zinc-400">Sin Servicios Configurados</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -573,11 +574,16 @@ export const WebBuilderPage: React.FC = () => {
                                         <div className="h-px flex-1 bg-zinc-200" />
                                     </div>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                        {(settings.images?.length ? settings.images : Array(4).fill({ url: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&q=80' })).map((img, i) => (
+                                        {(settings.images || []).map((img, i) => (
                                             <div key={i} className="aspect-square bg-zinc-100 overflow-hidden relative group">
                                                 <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
                                             </div>
                                         ))}
+                                        {(!settings.images || settings.images.length === 0) && (
+                                            <div className="col-span-2 md:col-span-4 aspect-square flex items-center justify-center border border-dashed border-zinc-300 rounded-2xl bg-zinc-50">
+                                                <p className="text-[10px] font-black uppercase text-zinc-400">Galería Vacía</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </section>
