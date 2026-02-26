@@ -142,6 +142,7 @@ model LandingSetting {
   seoKeywords      String? @map("seo_keywords")
   latitude         Float?
   longitude        Float?
+  maintenanceMode  Boolean @default(false) @map("maintenance_mode")
   whatsappPhone    String? @db.VarChar(20) @map("whatsapp_phone")
   footerText       String? @map("footer_text")
   socialInstagram  String? @db.VarChar(255) @map("social_instagram")
@@ -379,4 +380,22 @@ model TaskAssignment {
   tenants         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("task_assignments")
+}
+
+model Lead {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String   @db.VarChar(255)
+  phone            String   @db.VarChar(20)
+  email            String?  @db.VarChar(100)
+  source           String   @default("MANUAL") @db.VarChar(50)
+  status           String   @default("NEW") @db.VarChar(20)
+  notes            String?
+  estimatedValue   Float?   @map("estimated_value")
+  interestLevel    String?  @default("MEDIUM") @map("interest_level") @db.VarChar(20)
+  preferredContact String?  @default("WHATSAPP") @map("preferred_contact") @db.VarChar(50)
+  organizationId   String?  @default("demo") @db.VarChar(50) @map("organization_id")
+  createdAt        DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
+  updatedAt        DateTime? @default(now()) @db.Timestamp(6) @map("updated_at")
+
+  @@map("leads")
 }

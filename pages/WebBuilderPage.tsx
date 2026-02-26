@@ -5,7 +5,7 @@ import {
     Type, Palette, MousePointer2, Loader2, Check,
     Eye, Monitor, Smartphone, Tablet, RefreshCw,
     MessageSquare, Phone, MapPin, Share2, Layers, Search, Compass, Cloud, Instagram, Facebook, Twitter, CheckCircle2,
-    ArrowRight, Star, Plus, Trash2, GripVertical
+    ArrowRight, Star, Plus, Trash2, GripVertical, ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -50,10 +50,15 @@ export const WebBuilderPage: React.FC = () => {
             const data = await api.getLandingSettings();
             setSettings({
                 ...data,
+                businessName: data.businessName || '',
+                primaryColor: data.primaryColor || '#630E14',
+                secondaryColor: data.secondaryColor || '#C5A028',
+                templateId: data.templateId || 'citaplanner',
                 seoTitle: data.seoTitle || '',
                 seoDescription: data.seoDescription || '',
                 seoKeywords: data.seoKeywords || '',
-                whatsappPhone: data.whatsappPhone || data.contactPhone || '',
+                whatsappPhone: data.whatsappPhone || '',
+                contactPhone: data.contactPhone || '',
                 footerText: data.footerText || '',
                 socialInstagram: data.socialInstagram || '',
                 socialFacebook: data.socialFacebook || '',
@@ -63,6 +68,28 @@ export const WebBuilderPage: React.FC = () => {
             toast.error("Error al cargar configuración web.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTemplateChange = (tid: string) => {
+        const presets: Record<string, { primary: string; secondary: string }> = {
+            citaplanner: { primary: '#630E14', secondary: '#C5A028' },
+            aurum_minimal: { primary: '#09090b', secondary: '#3f3f46' },
+            luxury_white: { primary: '#C5A028', secondary: '#ffffff' },
+            shula_dark: { primary: '#D4AF37', secondary: '#09090b' }
+        };
+
+        const theme = presets[tid];
+        if (theme) {
+            setSettings(prev => ({
+                ...prev,
+                templateId: tid as any,
+                primaryColor: theme.primary,
+                secondaryColor: theme.secondary
+            }));
+            toast.info(`Estilos de ${tid} aplicados.`);
+        } else {
+            setSettings(prev => ({ ...prev, templateId: tid as any }));
         }
     };
 
@@ -144,6 +171,27 @@ export const WebBuilderPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                     {activePanel === 'CONTENT' && (
                         <div className="space-y-8 animate-entrance">
+                            {/* Maintenance Toggle */}
+                            <section className="bg-rose-500/5 border border-rose-500/10 p-5 rounded-[2.5rem] space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500">
+                                            <ShieldAlert size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Modo Mantenimiento</h4>
+                                            <p className="text-[8px] text-muted font-bold uppercase tracking-widest">Bloquear acceso público</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setSettings({ ...settings, maintenanceMode: !settings.maintenanceMode })}
+                                        className={`w-12 h-6 rounded-full transition-all relative ${settings.maintenanceMode ? 'bg-rose-500' : 'bg-zinc-800'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${settings.maintenanceMode ? (settings.maintenanceMode ? 'right-1' : 'left-1') : 'left-1'}`} />
+                                    </button>
+                                </div>
+                            </section>
+
                             {/* Hero Section */}
                             <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
@@ -397,7 +445,7 @@ export const WebBuilderPage: React.FC = () => {
                                     ].map(template => (
                                         <button
                                             key={template.id}
-                                            onClick={() => setSettings({ ...settings, templateId: template.id as any })}
+                                            onClick={() => handleTemplateChange(template.id)}
                                             className={`w-full p-4 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template.id ? 'border-[#CE4676] shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main'}`}
                                             style={settings.templateId === template.id ? { backgroundColor: `${accent}15`, borderColor: accent } : {}}
                                         >

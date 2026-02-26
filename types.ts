@@ -307,6 +307,9 @@ export interface Lead {
   source: LeadSource;
   status: LeadStatus;
   notes?: string;
+  interestLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  estimatedValue?: number;
+  preferredContact?: 'WHATSAPP' | 'EMAIL' | 'PHONE';
   tenantId: string;
   createdAt: string;
   updatedAt: string;

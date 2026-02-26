@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Phone, Mail, FileText, Tag, BarChart3 } from 'lucide-react';
+import { X, Save, User, Phone, Mail, FileText, Tag, BarChart3, TrendingUp, Zap, MessageSquare, Star } from 'lucide-react';
 import { Lead, LeadSource, LeadStatus } from '../types';
 
 interface LeadModalProps {
@@ -17,12 +17,20 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
         email: '',
         source: 'MANUAL',
         status: 'NEW',
-        notes: ''
+        notes: '',
+        estimatedValue: 0,
+        interestLevel: 'MEDIUM',
+        preferredContact: 'WHATSAPP'
     });
 
     useEffect(() => {
         if (initialData) {
-            setFormData(initialData);
+            setFormData({
+                ...initialData,
+                estimatedValue: (initialData as any).estimatedValue || 0,
+                interestLevel: (initialData as any).interestLevel || 'MEDIUM',
+                preferredContact: (initialData as any).preferredContact || 'WHATSAPP'
+            });
         } else {
             setFormData({
                 name: '',
@@ -30,7 +38,10 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                 email: '',
                 source: 'MANUAL',
                 status: 'NEW',
-                notes: ''
+                notes: '',
+                estimatedValue: 0,
+                interestLevel: 'MEDIUM',
+                preferredContact: 'WHATSAPP'
             });
         }
     }, [initialData, isOpen]);
@@ -43,126 +54,162 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-12">
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-12 overflow-y-auto">
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl" onClick={onClose} />
 
-            <div className="relative w-full max-w-2xl bg-zinc-950 border border-white/10 rounded-[3.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-entrance">
-                <div className="flex justify-between items-center p-10 border-b border-white/5">
+            <div className="relative w-full max-w-3xl bg-zinc-950 border border-white/10 rounded-[4rem] overflow-hidden shadow-[0_0_150px_rgba(206,70,118,0.2)] animate-entrance my-auto">
+                {/* Header Decoration */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#CE4676] to-transparent opacity-50" />
+
+                <div className="flex justify-between items-center p-12 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
                     <div>
-                        <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
-                            {initialData ? 'Edit Lead' : 'New Prospect'} <span className="gold-text-gradient italic">Nexus</span>
-                        </h2>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-2 px-1">Lead Intelligence Profile</p>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-[#CE4676]/10 rounded-xl">
+                                <Zap size={18} className="text-[#CE4676]" />
+                            </div>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
+                                {initialData ? 'Sincronizar Lead' : 'Inyectar Prospecto'} <span className="gold-text-gradient italic font-light">Nexus</span>
+                            </h2>
+                        </div>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.4em] ml-1">Protocolo de Prospección • Alta Prioridad</p>
                     </div>
-                    <button onClick={onClose} className="p-4 hover:bg-white/5 rounded-2xl text-zinc-500 hover:text-white transition-all">
-                        <X size={24} />
+                    <button onClick={onClose} className="group p-4 bg-white/5 hover:bg-rose-500/10 rounded-3xl text-zinc-500 hover:text-rose-500 transition-all border border-white/5">
+                        <X size={24} className="group-hover:rotate-90 transition-transform duration-500" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-12 space-y-10 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                    {/* Basic Info Group */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Nombre Completo</label>
-                            <div className="relative">
-                                <User className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#CE4676] transition-all"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                />
-                            </div>
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-3 flex items-center gap-2">
+                                <User size={12} /> Identidad del Prospecto
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="Nombre completo... "
+                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#CE4676]/40 focus:ring-4 ring-[#CE4676]/5 transition-all shadow-inner"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            />
                         </div>
 
-                        <div className="space-y-3">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Teléfono Móvil</label>
-                            <div className="relative">
-                                <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="521... "
-                                    className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#CE4676] transition-all"
-                                    value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                />
-                            </div>
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-3 flex items-center gap-2">
+                                <Phone size={12} /> Contacto Directo (Global)
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="+52... "
+                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#CE4676]/40 transition-all font-mono shadow-inner"
+                                value={formData.phone}
+                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            />
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Email (Opcional)</label>
-                        <div className="relative">
-                            <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
+                    {/* Secondary Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-3 flex items-center gap-2">
+                                <Mail size={12} /> Email de Respaldo
+                            </label>
                             <input
                                 type="email"
-                                className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#CE4676] transition-all"
+                                placeholder="nexus@client.com"
+                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-bold text-xs outline-none focus:border-white/20 transition-all"
                                 value={formData.email}
                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Fuente de Origen</label>
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-3 flex items-center gap-2">
+                                <TrendingUp size={12} /> Valor Estimado (MXN)
+                            </label>
                             <div className="relative">
-                                <Tag className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-                                <select
-                                    className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#CE4676] appearance-none"
-                                    value={formData.source}
-                                    onChange={e => setFormData({ ...formData, source: e.target.value as LeadSource })}
-                                >
-                                    <option value="MANUAL">Manual</option>
-                                    <option value="FACEBOOK">Facebook Ads</option>
-                                    <option value="WHATSAPP">WhatsApp</option>
-                                    <option value="INSTAGRAM">Instagram</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Estatus del Funnel</label>
-                            <div className="relative">
-                                <BarChart3 className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-                                <select
-                                    className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-sm outline-none focus:border-[#CE4676] appearance-none"
-                                    value={formData.status}
-                                    onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}
-                                >
-                                    <option value="NEW">Nuevo Lead</option>
-                                    <option value="CONTACTED">Contactado</option>
-                                    <option value="INTERESTED">Interesado</option>
-                                    <option value="CONVERTED">Convertido</option>
-                                    <option value="LOST">Perdido</option>
-                                </select>
+                                <span className="absolute left-8 top-1/2 -translate-y-1/2 font-black text-emerald-500">$</span>
+                                <input
+                                    type="number"
+                                    className="w-full pl-12 pr-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-emerald-500/30 transition-all"
+                                    value={formData.estimatedValue}
+                                    onChange={e => setFormData({ ...formData, estimatedValue: parseFloat(e.target.value) })}
+                                />
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest ml-2">Notas de Seguimiento</label>
-                        <div className="relative">
-                            <FileText className="absolute left-5 top-8 text-zinc-600" size={18} />
-                            <textarea
-                                rows={4}
-                                className="w-full pl-14 pr-6 py-5 bg-black border border-white/5 rounded-2xl text-white font-medium text-sm outline-none focus:border-[#CE4676] transition-all resize-none"
-                                value={formData.notes}
-                                onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                            />
+                    {/* Funnel Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-4 bg-white/2 p-6 rounded-[2.5rem] border border-white/5">
+                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] block text-center mb-2">Canal de Origen</label>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                {['MANUAL', 'FACEBOOK', 'WHATSAPP', 'INSTAGRAM'].map(s => (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, source: s })}
+                                        className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${formData.source === s ? 'bg-white text-black border-white' : 'bg-transparent text-zinc-500 border-white/10 hover:border-white/30'}`}
+                                    >
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 bg-white/2 p-6 rounded-[2.5rem] border border-white/5">
+                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] block text-center mb-2">Nivel de Interés</label>
+                            <div className="flex gap-2 justify-center">
+                                {['LOW', 'MEDIUM', 'HIGH'].map(l => (
+                                    <button
+                                        key={l}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, interestLevel: l })}
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${formData.interestLevel === l ? 'bg-[#D4AF37] border-[#D4AF37] text-black scale-110 shadow-lg shadow-[#D4AF37]/20' : 'bg-transparent border-white/10 text-zinc-600'}`}
+                                    >
+                                        <Star size={14} fill={formData.interestLevel === l ? 'black' : 'none'} />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 bg-white/2 p-6 rounded-[2.5rem] border border-white/5">
+                            <label className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] block text-center mb-2">Fase del Embudo</label>
+                            <select
+                                className="w-full bg-black border border-white/5 rounded-2xl py-3 px-4 text-[9px] font-black text-white uppercase tracking-widest outline-none focus:border-[#CE4676]"
+                                value={formData.status}
+                                onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}
+                            >
+                                <option value="NEW">Nuevo</option>
+                                <option value="CONTACTED">Contactado</option>
+                                <option value="INTERESTED">Interesado</option>
+                                <option value="CONVERTED">Convertido</option>
+                                <option value="LOST">Perdido</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div className="pt-6">
+                    <div className="space-y-4">
+                        <label className="text-[9px] font-black text-zinc-600 uppercase tracking-widest ml-3 flex items-center gap-2">
+                            <FileText size={12} /> Diagnóstico y Notas de Seguimiento
+                        </label>
+                        <textarea
+                            rows={4}
+                            placeholder="Antecedentes, necesidades y próximos pasos... "
+                            className="w-full px-8 py-6 bg-black border border-white/5 rounded-[3rem] text-white font-medium text-xs outline-none focus:border-[#CE4676]/30 transition-all resize-none shadow-inner"
+                            value={formData.notes}
+                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="pt-8">
                         <button
                             type="submit"
-                            className="w-full bg-[#CE4676] hover:bg-[#A3345A] text-white py-6 rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] transition-all shadow-[0_10px_40px_rgba(206,70,118,0.3)] active:scale-[0.98]"
+                            className="w-full gold-btn text-black py-8 rounded-[3rem] font-black text-[11px] uppercase tracking-[0.5em] transition-all shadow-[0_20px_50px_rgba(212,175,55,0.2)] active:scale-[0.98] flex items-center justify-center gap-4 group"
                         >
-                            <div className="flex items-center justify-center gap-3">
-                                <Save size={18} />
-                                {initialData ? 'Actualizar Inteligencia' : 'Inyectar Prospecto'}
-                            </div>
+                            <Save size={20} className="group-hover:scale-110 transition-transform" />
+                            {initialData ? 'Actualizar Base de Datos' : 'Consolidar Prospecto'}
                         </button>
                     </div>
                 </form>
@@ -170,3 +217,4 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
         </div>
     );
 };
+

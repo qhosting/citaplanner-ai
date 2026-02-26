@@ -2916,15 +2916,16 @@ app.get('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
 
 app.post('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
-        const { name, phone, email, source, notes } = req.body;
+        const { name, phone, email, source, notes, estimatedValue, interestLevel, preferredContact } = req.body;
         const newLead = await prisma.lead.create({
             data: {
-                name,
-                phone,
-                email,
+                name, phone, email,
                 source: source || 'MANUAL',
                 status: 'NEW',
                 notes,
+                estimatedValue: estimatedValue ? parseFloat(estimatedValue) : 0,
+                interestLevel: interestLevel || 'MEDIUM',
+                preferredContact: preferredContact || 'WHATSAPP',
                 organizationId: req.tenantId
             }
         });
@@ -2967,10 +2968,16 @@ app.post('/api/leads/webhook', async (req, res) => {
 app.put('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, notes, name, phone, email } = req.body;
+        const { status, notes, name, phone, email, estimatedValue, interestLevel, preferredContact } = req.body;
         const updated = await prisma.lead.update({
             where: { id },
-            data: { status, notes, name, phone, email, updatedAt: new Date() }
+            data: {
+                status, notes, name, phone, email,
+                estimatedValue: estimatedValue ? parseFloat(estimatedValue) : undefined,
+                interestLevel,
+                preferredContact,
+                updatedAt: new Date()
+            }
         });
         res.json({ success: true, lead: updated });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -3124,7 +3131,7 @@ app.post('/api/payments/create_preference', async (req, res) => {
 
 // --- SAAS PLANS CONFIGURATION ---
 
-app.get('/api/settings/landing', async (req, res) => {
+app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
     try {
         const organizationId = req.tenantId || 'demo';
         let data = await prisma.landingSetting.findUnique({
@@ -3204,6 +3211,7 @@ app.get('/api/settings/landing', async (req, res) => {
             seoKeywords: data.seoKeywords || '',
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            maintenanceMode: !!data.maintenanceMode,
             whatsappPhone: data.whatsappPhone || '',
             footerText: data.footerText || '',
             socialInstagram: data.socialInstagram || '',
@@ -3255,6 +3263,7 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
             seoKeywords: s.seoKeywords || null,
             latitude: s.latitude ? parseFloat(s.latitude) : null,
             longitude: s.longitude ? parseFloat(s.longitude) : null,
+            maintenanceMode: !!s.maintenanceMode,
             whatsappPhone: safeStr(s.whatsappPhone, 20),
             footerText: s.footerText || null,
             socialInstagram: safeStr(s.socialInstagram, 255),
