@@ -89,6 +89,7 @@ export interface Professional {
   tenantId?: string;
   calendarSyncEnabled?: boolean;
   icalToken?: string;
+  avatarUrl?: string;
 }
 
 export interface Product {

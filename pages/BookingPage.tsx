@@ -9,6 +9,7 @@ import { Professional, Service, Appointment, AppointmentStatus, LandingSettings 
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { LogoCitaplanner } from '../components/LogoCitaplanner';
 
 // --- HELPERS ---
 const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number, appointments: Appointment[]): string[] => {
@@ -223,9 +224,9 @@ export const BookingPage: React.FC = () => {
     return (
       <div className="animate-fade-in-up">
         <div className="text-center mb-16">
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-4 block">Paso 1 de 4</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 block" style={{ color: primaryColor }}>Paso 1 de 4</span>
           <h2 className="text-5xl font-playfair font-black text-slate-900 mb-4 tracking-tighter">Selecciona tu Experiencia</h2>
-          <p className="text-slate-500 text-lg">Tratamientos de alta tecnología diseñados para resaltar tu belleza natural.</p>
+          <p className="text-slate-500 text-lg">{settings.slogan || "Servicios de alta tecnología diseñados para resaltar tu esencia."}</p>
         </div>
         <div className="space-y-16 max-w-4xl mx-auto">
           {categories.map(cat => (
@@ -264,26 +265,29 @@ export const BookingPage: React.FC = () => {
   const renderStep2 = () => (
     <div className="animate-fade-in-up">
       <div className="text-center mb-16">
-        <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-4 block">Paso 2 de 4</span>
-        <h2 className="text-5xl font-playfair font-black text-slate-900 mb-4 tracking-tighter">Tu Especialista Aurum</h2>
-        <p className="text-slate-500 text-lg">Nuestras artistas master transformarán tu visión en una realidad eterna.</p>
+        <span className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 block" style={{ color: primaryColor }}>Paso 2 de 4</span>
+        <h2 className="text-5xl font-playfair font-black text-slate-900 mb-4 tracking-tighter">Tu Especialista</h2>
+        <p className="text-slate-500 text-lg">Nuestros especialistas master transformarán tu visión en una realidad.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
         {availablePros.map(pro => (
           <button
             key={pro.id}
             onClick={() => { setSelectedPro(pro); setStep(3); }}
-            className="p-10 bg-white border border-slate-100 rounded-[3.5rem] hover:border-[#D4AF37]/30 hover:shadow-2xl transition-all text-center group"
+            className="p-10 bg-white border border-slate-100 rounded-[3.5rem] hover:border-slate-200 hover:shadow-2xl transition-all text-center group"
+            style={{borderColor: selectedPro?.id === pro.id ? primaryColor : undefined}}
           >
             <div className="w-32 h-32 rounded-full bg-slate-50 mx-auto mb-8 flex items-center justify-center text-4xl font-black text-slate-200 group-hover:scale-105 transition-transform overflow-hidden border-4 border-white shadow-xl">
-              {pro.name.charAt(0)}
+              {pro.avatarUrl ? (
+                <img src={pro.avatarUrl} className="w-full h-full object-cover" alt={pro.name} />
+              ) : pro.name.charAt(0)}
             </div>
             <h4 className="font-black text-2xl text-slate-900 mb-1 tracking-tight">{pro.name}</h4>
             <p style={{ color: primaryColor }} className="text-[11px] font-black uppercase tracking-[0.3em] mb-6">{pro.role}</p>
             <div className="flex justify-center text-[#D4AF37] mb-8 gap-1">
               <Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" />
             </div>
-            <div style={{ backgroundColor: primaryColor }} className="py-4 rounded-full text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20 group-hover:translate-y-[-2px] transition-all">
+            <div style={{ backgroundColor: primaryColor }} className="py-4 rounded-full text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-black/10 group-hover:translate-y-[-2px] transition-all">
               Reservar con {pro.name.split(' ')[0]}
             </div>
           </button>
@@ -295,16 +299,16 @@ export const BookingPage: React.FC = () => {
   const renderStep3 = () => (
     <div className="animate-fade-in-up">
       <div className="text-center mb-16">
-        <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-4 block">Paso 3 de 4</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 block" style={{ color: primaryColor }}>Paso 3 de 4</span>
         <h2 className="text-5xl font-playfair font-black text-slate-900 mb-4 tracking-tighter">Momento de tu Cita</h2>
-        <p className="text-slate-500 text-lg">El tiempo es el lujo más preciado. Selecciona tu espacio exclusivo.</p>
+        <p className="text-slate-500 text-lg">Selecciona el horario que mejor se adapte a tu agenda.</p>
       </div>
 
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-12 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <button onClick={() => handleDateChange(-1)} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors"><ChevronLeft size={24} /></button>
           <div className="text-center">
-            <p className="text-[11px] font-black text-[#D4AF37] uppercase tracking-[0.4em] mb-1">{selectedDate.toLocaleString('es-ES', { weekday: 'long' })}</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.4em] mb-1" style={{ color: primaryColor }}>{selectedDate.toLocaleString('es-ES', { weekday: 'long' })}</p>
             <p className="text-2xl font-black text-slate-900 tracking-tight">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</p>
           </div>
           <button onClick={() => handleDateChange(1)} className="p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors"><ChevronRight size={24} /></button>
@@ -317,9 +321,10 @@ export const BookingPage: React.FC = () => {
                 key={time}
                 onClick={() => setSelectedTime(time)}
                 className={`py-5 rounded-3xl font-black text-sm transition-all border-2 ${selectedTime === time
-                  ? 'border-[#D4AF37] bg-[#D4AF37] text-white shadow-2xl shadow-[#D4AF37]/20 scale-105'
-                  : 'border-slate-50 bg-white text-slate-400 hover:border-[#D4AF37]/20'
+                  ? 'text-white shadow-2xl scale-105'
+                  : 'border-slate-50 bg-white text-slate-400 hover:border-slate-200'
                   }`}
+                style={selectedTime === time ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}
               >
                 {time}
               </button>
@@ -327,7 +332,7 @@ export const BookingPage: React.FC = () => {
           ) : (
             <div className="col-span-full py-20 text-center text-slate-300">
               <Clock className="mx-auto mb-6 opacity-10" size={64} />
-              <p className="italic font-medium uppercase tracking-widest text-[10px]">Sin disponibilidad neuronal para esta fecha</p>
+              <p className="italic font-medium uppercase tracking-widest text-[10px]">Sin disponibilidad para esta fecha</p>
             </div>
           )}
         </div>
@@ -348,9 +353,9 @@ export const BookingPage: React.FC = () => {
   const renderStep4 = () => (
     <div className="animate-fade-in-up">
       <div className="text-center mb-16">
-        <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#D4AF37] mb-4 block">Paso 4 de 4</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.5em] mb-4 block" style={{ color: primaryColor }}>Paso 4 de 4</span>
         <h2 className="text-5xl font-playfair font-black text-slate-900 mb-4 tracking-tighter">Últimos Detalles</h2>
-        <p className="text-slate-500 text-lg">Confirma tu identidad para asegurar tu acceso exclusivo.</p>
+        <p className="text-slate-500 text-lg">Confirma tus datos para asegurar tu cita.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 max-w-5xl mx-auto">
@@ -402,15 +407,16 @@ export const BookingPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Especificaciones de Lujo (Opcional)</label>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Especificaciones (Opcional)</label>
                 <div className="relative">
                   <FileText className="absolute left-5 top-6 text-slate-300" size={20} />
                   <textarea
                     rows={4}
                     value={clientDetails.notes}
                     onChange={e => setClientDetails({ ...clientDetails, notes: e.target.value })}
-                    placeholder="Cuéntanos sobre tus preferencias, alergias o solicitudes especiales..."
-                    className="w-full pl-14 pr-6 py-6 bg-slate-50 border border-slate-50 rounded-3xl focus:ring-2 focus:ring-[#D4AF37] outline-none font-bold text-slate-800 resize-none transition-all"
+                    placeholder="Cuéntanos sobre tus preferencias o solicitudes especiales..."
+                    className="w-full pl-14 pr-6 py-6 bg-slate-50 border border-slate-50 rounded-3xl focus:ring-2 outline-none font-bold text-slate-800 resize-none transition-all"
+                    style={{'--tw-ring-color': primaryColor} as any}
                   />
                 </div>
               </div>
@@ -432,7 +438,7 @@ export const BookingPage: React.FC = () => {
             <div className="absolute top-0 right-0 p-10 opacity-5">
               <Sparkles size={120} />
             </div>
-            <h3 className="font-black text-[10px] uppercase tracking-[0.4em] text-[#D4AF37] mb-10 border-b border-white/5 pb-6">Protocolo de Cita</h3>
+            <h3 className="font-black text-[10px] uppercase tracking-[0.4em] mb-10 border-b border-white/5 pb-6" style={{color: primaryColor}}>Protocolo de Cita</h3>
             <div className="space-y-10 relative z-10">
               <div className="flex gap-6">
                 <div style={{ backgroundColor: secondaryColor, color: primaryColor }} className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -468,7 +474,7 @@ export const BookingPage: React.FC = () => {
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/10">
                 <Heart size={20} fill="currentColor" />
               </div>
-              <p className="text-[9px] text-slate-500 font-bold leading-relaxed uppercase tracking-widest">Sincronización segura con infraestructura Aurum.</p>
+              <p className="text-[9px] text-zinc-500 font-bold leading-relaxed uppercase tracking-widest">Sincronización segura con {settings.businessName}.</p>
             </div>
           </div>
         </div>
@@ -478,19 +484,29 @@ export const BookingPage: React.FC = () => {
 
   const renderStep5 = () => (
     <div className="animate-fade-in-up text-center py-24 max-w-2xl mx-auto">
-      <div className="w-32 h-32 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-10 animate-bounce border-2 border-emerald-100 shadow-2xl">
+      <div className="mb-12 flex justify-center">
+         <LogoCitaplanner size={40} color={primaryColor} businessName={settings.businessName} />
+      </div>
+      <div className="w-32 h-32 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-10 border-2 border-emerald-100 shadow-2xl relative">
         <CheckCircle2 size={64} />
+        <div className="absolute -top-2 -right-2 animate-pulse text-emerald-500">
+           <ShieldCheck size={32} fill="currentColor" className="text-white" />
+        </div>
       </div>
       <h2 className="text-5xl font-playfair font-black text-slate-900 mb-6 tracking-tighter">Reserva Confirmada</h2>
       <p className="text-slate-500 text-xl leading-relaxed mb-14 max-w-lg mx-auto">
-        Gracias <strong>{clientDetails.name}</strong>, tu cita ha sido cifrada y guardada en nuestra red. Recibirás un mensaje de nuestro concierge en breve.
+        Gracias <strong>{clientDetails.name}</strong>, tu cita en <strong>{settings.businessName}</strong> ha sido agendada. Recibirás una notificación con los detalles de tu visita.
       </p>
       <div className="space-y-6">
-        <Link to="/" className="block w-full py-6 bg-slate-900 text-white rounded-full font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4">
-          <Home size={20} /> Volver al Studio
+        <Link 
+          to="/" 
+          className="block w-full py-6 text-white rounded-full font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4"
+          style={{ backgroundColor: primaryColor }}
+        >
+          <Home size={20} /> Finalizar y Salir
         </Link>
         <button onClick={() => window.print()} className="block w-full py-6 bg-white border border-slate-100 text-slate-600 rounded-full font-black text-[12px] uppercase tracking-[0.4em] hover:bg-slate-50 transition-all">
-          Descargar Certificado de Cita
+          Imprimir Comprobante
         </button>
       </div>
     </div>
@@ -510,16 +526,7 @@ export const BookingPage: React.FC = () => {
               </button>
             )}
             <Link to="/" className="flex items-center gap-3">
-              {settings?.logoUrl ? (
-                <img src={settings.logoUrl} alt="Logo" className="h-10 w-auto rounded-lg shadow-sm" />
-              ) : (
-                <div style={{ backgroundColor: primaryColor }} className="p-2 rounded-xl text-white shadow-lg">
-                  <Sparkles size={24} />
-                </div>
-              )}
-              <span className="font-black text-2xl tracking-tighter text-slate-900 uppercase">
-                {settings?.businessName || (<>Cita<span style={{ color: primaryColor }}>Planner</span></>)}
-              </span>
+              <LogoCitaplanner color={primaryColor} customUrl={settings.logoUrl} businessName={settings.businessName} />
             </Link>
           </div>
 
@@ -542,7 +549,7 @@ export const BookingPage: React.FC = () => {
 
           <div className="text-[10px] font-black text-slate-400 flex items-center gap-3 uppercase tracking-widest">
             <MapPin size={18} style={{ color: primaryColor }} />
-            <span className="hidden sm:inline">{settings?.address || 'Node CDMX Polanco'}</span>
+            <span className="hidden sm:inline">{settings?.address || settings.businessName}</span>
           </div>
         </div>
       </nav>
