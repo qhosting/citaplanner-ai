@@ -41,7 +41,7 @@ export interface LandingSettings {
   businessName: string;
   primaryColor: string;
   secondaryColor?: string;
-  templateId?: 'beauty' | 'medical' | 'spa' | 'citaplanner' | 'aurum_minimal' | 'luxury_white' | 'shula_dark';
+  templateId?: 'beauty' | 'medical' | 'spa' | 'citaplanner' | 'aurum_minimal' | 'luxury_white' | 'shula_dark' | 'master' | 'shulastudio';
   slogan?: string;
   aboutText?: string;
   address?: string;

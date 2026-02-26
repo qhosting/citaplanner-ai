@@ -14,7 +14,7 @@ import { Role } from './types';
 import { api } from './services/api';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
-import { LogoCitaplanner } from './pages/LandingPage';
+import { LogoCitaplanner } from './components/LogoCitaplanner';
 
 // --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: (m as any).Dashboard || (m as any).default })));
