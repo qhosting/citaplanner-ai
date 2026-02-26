@@ -10,9 +10,9 @@ import {
 import { api } from '../services/api';
 import { LandingSettings, Service } from '../types';
 import { AIConciergeWidget } from '../components/AIConciergeWidget';
-import { 
-  TemplateCitaPlanner, 
-  TemplateMaster, 
+import {
+  TemplateCitaPlanner,
+  TemplateMaster,
   TemplateShulaStudio,
   TemplateMinimal,
   TemplateLuxury,
@@ -298,25 +298,24 @@ export const LandingPage: React.FC = () => {
 
   // Routing to templates (Logic separated in components/LandingTemplates.tsx)
   const renderTemplate = () => {
-    const props = { settings, services: landingServices, accent };
-    
+    const props = { settings, services: landingServices, accent, currentSlide };
+
     switch (settings.templateId) {
       case 'citaplanner': return <TemplateCitaPlanner {...props} />;
       case 'master': return <TemplateMaster {...props} />;
       case 'shulastudio': return <TemplateShulaStudio {...props} />;
-      case 'aurum_minimal': return <TemplateMinimal {...props} />; 
+      case 'aurum_minimal': return <TemplateMinimal {...props} />;
       case 'luxury_white': return <TemplateLuxury {...props} />;
-      case 'shula_dark': return <TemplateShulaStudio {...props} />; 
+      case 'shula_dark': return <TemplateShulaStudio {...props} />;
       default: return (
-        <TemplateClassic 
-            {...props} 
-            scrolled={scrolled}
-            currentSlide={currentSlide}
-            slides={slides}
-            waTarget={waTarget}
-            whatsappLink={whatsappLink}
-            mobileMenuOpen={mobileMenuOpen}
-            setMobileMenuOpen={setMobileMenuOpen}
+        <TemplateClassic
+          {...props}
+          scrolled={scrolled}
+          slides={slides}
+          waTarget={waTarget}
+          whatsappLink={whatsappLink}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
         />
       );
     }
