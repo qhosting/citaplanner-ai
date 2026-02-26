@@ -13,9 +13,14 @@ RUN npm config set fetch-retries 10 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-timeout 300000
 
-# Dependency Caching - Using ci for stability
+# Dependency Caching - Using ci with forced retries loop for unstable environment
 COPY package*.json ./
-RUN npm ci
+RUN n=0; until [ "$n" -ge 5 ]; do \
+    npm ci && break; \
+    n=$((n+1)); \
+    echo "Falla detectada en transferencia Prisma/NPM. Reintentando ($n/5)..."; \
+    sleep 20; \
+    done || exit 1
 
 # Copy Source Code
 COPY . .
