@@ -601,27 +601,6 @@ const initDB = async () => {
                         ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
                     END IF;
 
-                -- Maintenance Tasks
-                CREATE TABLE IF NOT EXISTS maintenance_tasks (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    day_of_week INTEGER NOT NULL,
-                    task_name VARCHAR(255) NOT NULL,
-                    priority INTEGER DEFAULT 1,
-                    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP DEFAULT now()
-                );
-
-                -- Task Assignments
-                CREATE TABLE IF NOT EXISTS task_assignments (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    date DATE NOT NULL,
-                    task_id UUID REFERENCES maintenance_tasks(id) ON DELETE CASCADE,
-                    assigned_to UUID REFERENCES professionals(id) ON DELETE CASCADE,
-                    status VARCHAR(20) DEFAULT 'PENDING',
-                    completed_at TIMESTAMP,
-                    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-                    created_at TIMESTAMP DEFAULT now()
-                );
                     -- Lifecycle & Dates (Fixed P2022: suspended_at)
                     IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='suspended_at') THEN
                         ALTER TABLE tenants ADD COLUMN suspended_at TIMESTAMP;
@@ -928,6 +907,27 @@ const initDB = async () => {
             branch_id UUID REFERENCES branches(id),
             organization_id VARCHAR(50) DEFAULT 'demo',
             created_at TIMESTAMP DEFAULT NOW()
+        );
+
+        -- Maintenance & MMS Infrastructure (Created after Professionals to avoid FK issues)
+        CREATE TABLE IF NOT EXISTS maintenance_tasks (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            day_of_week INTEGER NOT NULL,
+            task_name VARCHAR(255) NOT NULL,
+            priority INTEGER DEFAULT 1,
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS task_assignments (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            date DATE NOT NULL,
+            task_id UUID REFERENCES maintenance_tasks(id) ON DELETE CASCADE,
+            assigned_to UUID REFERENCES professionals(id) ON DELETE CASCADE,
+            status VARCHAR(20) DEFAULT 'PENDING',
+            completed_at TIMESTAMP,
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT now()
         );
 
 
