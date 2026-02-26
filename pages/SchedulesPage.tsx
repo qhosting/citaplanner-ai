@@ -21,6 +21,13 @@ const DAYS_OF_WEEK = [
    { id: 0, name: 'Domingo' },
 ];
 
+const EXCEPTION_TYPES = [
+   { label: 'Vacaciones/Descanso', value: ExceptionType.VACATION, color: 'bg-indigo-500', icon: Coffee },
+   { label: 'Enfermedad', value: ExceptionType.SICKNESS, color: 'bg-red-500', icon: ShieldAlert },
+   { label: 'Personal/Trámite', value: ExceptionType.PERSONAL, color: 'bg-amber-500', icon: User },
+   { label: 'Otro Bloqueo', value: ExceptionType.OTHER, color: 'bg-slate-500', icon: Clock },
+];
+
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 8); // 8:00 to 22:00
 
 export const SchedulesPage: React.FC = () => {
@@ -38,6 +45,13 @@ export const SchedulesPage: React.FC = () => {
    const [isEditProModalOpen, setIsEditProModalOpen] = useState(false);
    const [isCreateProModalOpen, setIsCreateProModalOpen] = useState(false);
    const [proFormData, setProFormData] = useState<Partial<Professional>>({});
+
+   const [exceptionFormData, setExceptionFormData] = useState<Partial<ScheduleException>>({
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      type: ExceptionType.VACATION,
+      note: ''
+   });
 
    const { data: appointments = [] } = useQuery({
       queryKey: ['appointments'],
@@ -120,6 +134,59 @@ export const SchedulesPage: React.FC = () => {
       toast.success("Enlace iCal copiado al portapapeles");
    };
 
+   const handleAddException = async () => {
+      if (!selectedProId) return;
+      setSaving(true);
+      try {
+         const currentExceptions = [...(selectedPro?.exceptions || [])];
+         const newEx = { ...exceptionFormData, id: Math.random().toString(36).substring(7) };
+         const updatedPro = { ...selectedPro, exceptions: [...currentExceptions, newEx] };
+
+         const success = await api.updateProfessional(updatedPro);
+         if (success) {
+            setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
+            toast.success("Bloqueo de agenda programado");
+            setExceptionFormData({
+               startDate: new Date().toISOString().split('T')[0],
+               endDate: new Date().toISOString().split('T')[0],
+               type: ExceptionType.VACATION,
+               note: ''
+            });
+         }
+      } catch (e) {
+         toast.error("Error al guardar excepción");
+      } finally {
+         setSaving(false);
+      }
+   };
+
+   const removeException = async (exId: string) => {
+      if (!selectedProId) return;
+      setSaving(true);
+      const updatedExceptions = selectedPro.exceptions.filter((ex: any) => ex.id !== exId);
+      const updatedPro = { ...selectedPro, exceptions: updatedExceptions };
+
+      const success = await api.updateProfessional(updatedPro);
+      if (success) {
+         setProfessionals(prev => prev.map(p => p.id === selectedProId ? updatedPro : p));
+         toast.success("Bloqueo eliminado");
+      }
+      setSaving(false);
+   };
+
+   const isDateBlocked = (date: Date, pro: Professional) => {
+      return pro.exceptions?.some(ex => {
+         const start = new Date(ex.startDate);
+         const end = new Date(ex.endDate);
+         // Canonicalize dates to midnight for comparison
+         const d = new Date(date);
+         d.setHours(0, 0, 0, 0);
+         start.setHours(0, 0, 0, 0);
+         end.setHours(0, 0, 0, 0);
+         return d >= start && d <= end;
+      });
+   };
+
    const changeDate = (days: number) => {
       const d = new Date(selectedDate);
       d.setDate(d.getDate() + days);
@@ -139,6 +206,7 @@ export const SchedulesPage: React.FC = () => {
                <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
                   <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Matriz Hoy</button>
                   <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Horarios Base</button>
+                  <button onClick={() => setActiveTab('EXCEPTIONS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'EXCEPTIONS' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Excepciones</button>
                </div>
                <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-10 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl">Integrar Especialista</button>
             </div>
@@ -193,33 +261,65 @@ export const SchedulesPage: React.FC = () => {
                         <div className="min-w-[800px]">
                            <div className="grid grid-cols-[100px_1fr] border-b border-theme">
                               <div className="p-6 border-r border-theme" />
-                              <div className="p-6 font-black text-[10px] text-muted uppercase tracking-[0.4em]">Matrix Operativa • {selectedPro?.name}</div>
+                              <div className="p-6 font-black text-[10px] text-muted uppercase tracking-[0.4em] flex items-center justify-between">
+                                 <span>Matrix Operativa • {selectedPro?.name}</span>
+                                 {isDateBlocked(selectedDate, selectedPro) && (
+                                    <span className="bg-red-500/10 text-red-500 px-4 py-1 rounded-full border border-red-500/20 text-[9px] tracking-widest">FECHA BLOQUEADA (EXCEPCIÓN)</span>
+                                 )}
+                              </div>
                            </div>
 
                            <div className="divide-y border-theme">
                               {HOURS.map(hour => {
                                  const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                                 const apt = appointments.find(a =>
-                                    a.professionalId === selectedProId &&
-                                    new Date(a.startDateTime).toDateString() === selectedDate.toDateString() &&
-                                    new Date(a.startDateTime).getHours() === hour
-                                 );
+                                 const dayId = selectedDate.getDay();
+                                 const schedule = selectedPro?.weeklySchedule?.find((s: any) => s.dayOfWeek === dayId);
+
+                                 const isWorking = schedule?.isEnabled && schedule.slots?.some((slot: any) => {
+                                    const startH = parseInt(slot.start.split(':')[0]);
+                                    const endH = parseInt(slot.end.split(':')[0]);
+                                    return hour >= startH && hour < endH;
+                                 });
+
+                                 const blocked = isDateBlocked(selectedDate, selectedPro);
+                                 const isAvailable = isWorking && !blocked;
+
+                                 const apt = appointments.find(a => {
+                                    if (a.professionalId !== selectedProId || a.status === 'CANCELLED') return false;
+                                    const start = new Date(a.startDateTime);
+                                    const end = new Date(a.endDateTime);
+                                    const currentHourStart = new Date(selectedDate);
+                                    currentHourStart.setHours(hour, 0, 0, 0);
+                                    const currentHourEnd = new Date(selectedDate);
+                                    currentHourEnd.setHours(hour + 1, 0, 0, 0);
+                                    return start < currentHourEnd && end > currentHourStart;
+                                 });
 
                                  return (
-                                    <div key={hour} className="grid grid-cols-[100px_1fr] group">
+                                    <div key={hour} className={`grid grid-cols-[100px_1fr] group ${!isAvailable && !apt ? 'opacity-30' : ''}`}>
                                        <div className="p-6 border-r border-theme flex items-center justify-center">
                                           <span className="text-xs font-black text-muted group-hover:text-[#CE4676] transition-colors">{timeStr}</span>
                                        </div>
-                                       <div className="p-2 relative min-h-[80px] bg-input-theme group-hover:bg-[#CE4676]/5 transition-all">
+                                       <div className={`p-2 relative min-h-[80px] transition-all ${apt ? 'bg-input-theme' : isAvailable ? 'bg-transparent hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/20'}`}>
                                           {apt ? (
-                                             <div className="absolute inset-2 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20">
+                                             <div className="absolute inset-2 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20 z-10">
                                                 <p className="text-[9px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Cita Confirmada</p>
                                                 <h4 className="text-sm font-black text-white uppercase truncate">{apt.title}</h4>
                                                 <p className="text-[10px] font-bold text-white/80 truncate">Cli: {apt.clientName}</p>
                                              </div>
-                                          ) : (
+                                          ) : blocked ? (
+                                             <div className="h-full w-full flex items-center justify-center gap-2 text-red-500/50">
+                                                <ShieldAlert size={14} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Bloqueado</span>
+                                             </div>
+                                          ) : isWorking ? (
                                              <div className="h-full w-full rounded-2xl border border-dashed border-theme flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Plus size={20} className="text-muted" />
+                                             </div>
+                                          ) : (
+                                             <div className="h-full w-full flex items-center justify-center gap-2 text-muted/30">
+                                                <Coffee size={14} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Fuera de Horario</span>
                                              </div>
                                           )}
                                        </div>
@@ -230,7 +330,7 @@ export const SchedulesPage: React.FC = () => {
                         </div>
                      </div>
                   </div>
-               ) : (
+               ) : activeTab === 'WEEKLY' ? (
                   <div className="glass-card rounded-[3.5rem] border-theme p-10 animate-entrance">
                      <div className="flex justify-between items-center mb-10">
                         <div>
@@ -370,6 +470,110 @@ export const SchedulesPage: React.FC = () => {
                               </div>
                            );
                         })}
+                     </div>
+                  </div>
+               ) : (
+                  <div className="glass-card rounded-[3.5rem] border-theme p-10 animate-entrance">
+                     <div className="mb-12">
+                        <h3 className="text-2xl font-black text-main uppercase tracking-tighter">Excepciones y Bloqueos</h3>
+                        <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-1">Gestión de Vacaciones, Permisos y Días Inactivos para {selectedPro?.name}</p>
+                     </div>
+
+                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                        <div className="lg:col-span-12">
+                           <div className="bg-input-theme p-8 rounded-[2.5rem] border border-theme">
+                              <h4 className="text-[10px] font-black text-muted uppercase tracking-widest mb-6">Programar Nueva Excepción</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                                 <div className="md:col-span-1">
+                                    <label className="text-[8px] font-black text-muted uppercase mb-3 block">Desde</label>
+                                    <input
+                                       type="date"
+                                       value={exceptionFormData.startDate}
+                                       onChange={e => setExceptionFormData({ ...exceptionFormData, startDate: e.target.value })}
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                    />
+                                 </div>
+                                 <div className="md:col-span-1">
+                                    <label className="text-[8px] font-black text-muted uppercase mb-3 block">Hasta</label>
+                                    <input
+                                       type="date"
+                                       value={exceptionFormData.endDate}
+                                       onChange={e => setExceptionFormData({ ...exceptionFormData, endDate: e.target.value })}
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                    />
+                                 </div>
+                                 <div className="md:col-span-1">
+                                    <label className="text-[8px] font-black text-muted uppercase mb-3 block">Tipo de Bloqueo</label>
+                                    <select
+                                       value={exceptionFormData.type}
+                                       onChange={e => setExceptionFormData({ ...exceptionFormData, type: e.target.value as ExceptionType })}
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                    >
+                                       {EXCEPTION_TYPES.map(t => (
+                                          <option key={t.value} value={t.value}>{t.label}</option>
+                                       ))}
+                                    </select>
+                                 </div>
+                                 <div className="md:col-span-1">
+                                    <button
+                                       onClick={handleAddException}
+                                       disabled={saving}
+                                       className="w-full bugambilia-btn text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                    >
+                                       {saving ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
+                                       Programar Bloqueo
+                                    </button>
+                                 </div>
+                                 <div className="md:col-span-4">
+                                    <label className="text-[8px] font-black text-muted uppercase mb-3 block">Nota / Motivo (Opcional)</label>
+                                    <input
+                                       type="text"
+                                       placeholder="Ej: Congreso de Microblading"
+                                       value={exceptionFormData.note}
+                                       onChange={e => setExceptionFormData({ ...exceptionFormData, note: e.target.value })}
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="lg:col-span-12 space-y-4">
+                           <h4 className="text-[10px] font-black text-muted uppercase tracking-[0.3em] ml-2">Agenda de Inactividad</h4>
+                           {selectedPro?.exceptions?.length === 0 ? (
+                              <div className="p-12 border border-dashed border-theme rounded-[2.5rem] flex flex-col items-center justify-center text-muted opacity-40">
+                                 <Calendar size={40} strokeWidth={1} className="mb-4" />
+                                 <p className="text-[9px] font-black uppercase tracking-widest">Sin bloqueos programados</p>
+                              </div>
+                           ) : (
+                              selectedPro?.exceptions?.sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()).map((ex: any) => {
+                                 const typeInfo = EXCEPTION_TYPES.find(t => t.value === ex.type) || EXCEPTION_TYPES[3];
+                                 const Icon = typeInfo.icon;
+
+                                 return (
+                                    <div key={ex.id} className="glass-card p-6 border-theme rounded-3xl flex items-center justify-between group hover:border-[#CE4676]/30 transition-all">
+                                       <div className="flex items-center gap-6">
+                                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white ${typeInfo.color} shadow-lg shadow-black/20`}>
+                                             <Icon size={20} />
+                                          </div>
+                                          <div>
+                                             <p className="text-xs font-black text-main uppercase">{ex.note || typeInfo.label}</p>
+                                             <p className="text-[9px] text-muted font-bold uppercase tracking-widest mt-1">
+                                                {new Date(ex.startDate).toLocaleDateString()} - {new Date(ex.endDate).toLocaleDateString()}
+                                             </p>
+                                          </div>
+                                       </div>
+                                       <button
+                                          onClick={() => removeException(ex.id)}
+                                          className="p-4 bg-red-500/5 text-red-500/20 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+                                       >
+                                          <Trash2 size={16} />
+                                       </button>
+                                    </div>
+                                 );
+                              })
+                           )}
+                        </div>
                      </div>
                   </div>
                )}
