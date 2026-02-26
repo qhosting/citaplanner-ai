@@ -3234,69 +3234,50 @@ app.get('/api/settings/landing', async (req, res) => {
 app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req, res) => {
     try {
         const organizationId = req.tenantId;
-        const settings = req.body;
+        const s = req.body;
+
+        // Sanitize: only pass known DB columns and respect varchar limits
+        const safeStr = (val, max) => val ? String(val).substring(0, max) : null;
+
+        const data = {
+            businessName: safeStr(s.businessName, 100),
+            primaryColor: safeStr(s.primaryColor, 20),
+            secondaryColor: safeStr(s.secondaryColor, 20),
+            templateId: safeStr(s.templateId, 20),
+            logoUrl: s.logoUrl || null,
+            slogan: s.slogan || null,
+            aboutText: s.aboutText || null,
+            address: s.address || null,
+            contactPhone: safeStr(s.contactPhone, 20),
+            heroImageUrl: s.heroImageUrl || null,
+            seoTitle: safeStr(s.seoTitle, 100),
+            seoDescription: s.seoDescription || null,
+            seoKeywords: s.seoKeywords || null,
+            latitude: s.latitude ? parseFloat(s.latitude) : null,
+            longitude: s.longitude ? parseFloat(s.longitude) : null,
+            whatsappPhone: safeStr(s.whatsappPhone, 20),
+            footerText: s.footerText || null,
+            socialInstagram: safeStr(s.socialInstagram, 255),
+            socialFacebook: safeStr(s.socialFacebook, 255),
+            socialTwitter: safeStr(s.socialTwitter, 255),
+            images: Array.isArray(s.images) ? s.images : [],
+            services: Array.isArray(s.services) ? s.services : [],
+            heroSlides: Array.isArray(s.heroSlides) ? s.heroSlides : [],
+            stats: Array.isArray(s.stats) ? s.stats : [],
+            testimonials: Array.isArray(s.testimonials) ? s.testimonials : []
+        };
 
         const updated = await prisma.landingSetting.upsert({
             where: { organizationId },
-            update: {
-                businessName: settings.businessName,
-                primaryColor: settings.primaryColor,
-                secondaryColor: settings.secondaryColor,
-                templateId: settings.templateId,
-                logoUrl: settings.logoUrl,
-                slogan: settings.slogan,
-                aboutText: settings.aboutText,
-                address: settings.address,
-                contactPhone: settings.contactPhone,
-                heroImageUrl: settings.heroImageUrl,
-                seoTitle: settings.seoTitle,
-                seoDescription: settings.seoDescription,
-                seoKeywords: settings.seoKeywords,
-                latitude: settings.latitude ? parseFloat(settings.latitude) : null,
-                longitude: settings.longitude ? parseFloat(settings.longitude) : null,
-                whatsappPhone: settings.whatsappPhone,
-                footerText: settings.footerText,
-                socialInstagram: settings.socialInstagram,
-                socialFacebook: settings.socialFacebook,
-                socialTwitter: settings.socialTwitter,
-                images: settings.images,
-                services: settings.services,
-                heroSlides: settings.heroSlides,
-                stats: settings.stats,
-                testimonials: settings.testimonials
-            },
-            create: {
-                organizationId,
-                businessName: settings.businessName,
-                primaryColor: settings.primaryColor,
-                secondaryColor: settings.secondaryColor,
-                templateId: settings.templateId,
-                logoUrl: settings.logoUrl,
-                slogan: settings.slogan,
-                aboutText: settings.aboutText,
-                address: settings.address,
-                contactPhone: settings.contactPhone,
-                heroImageUrl: settings.heroImageUrl,
-                seoTitle: settings.seoTitle,
-                seoDescription: settings.seoDescription,
-                seoKeywords: settings.seoKeywords,
-                latitude: settings.latitude ? parseFloat(settings.latitude) : null,
-                longitude: settings.longitude ? parseFloat(settings.longitude) : null,
-                whatsappPhone: settings.whatsappPhone,
-                footerText: settings.footerText,
-                socialInstagram: settings.socialInstagram,
-                socialFacebook: settings.socialFacebook,
-                socialTwitter: settings.socialTwitter,
-                images: settings.images,
-                services: settings.services,
-                heroSlides: settings.heroSlides,
-                stats: settings.stats,
-                testimonials: settings.testimonials
-            }
+            update: data,
+            create: { organizationId, ...data }
         });
 
         res.json({ success: true, settings: updated });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error('[LANDING PUT ERROR]', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // --- BRIDGE SETTINGS & INTERCONNECTIVITY ---
