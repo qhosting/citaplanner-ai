@@ -1,16 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');
 
-:root {
+@theme {
+    --color-gold: #D4AF37;
+    --color-gold-dark: #8C6F1B;
+    --color-luxury-black: #050505;
+    --color-luxury-card: rgba(255, 255, 255, 0.03);
+    --font-sans: "Inter", "sans-serif";
+    --font-playfair: "Playfair Display", "serif";
+
     --primary-gold: #D4AF37;
     --primary-gold-rgb: 212, 175, 55;
     --primary-bugambilia: #CE4676;
     --transition-fluid: 1200ms cubic-bezier(0.16, 1, 0.3, 1);
     --font-inter: 'Inter', sans-serif;
-    --font-playfair: 'Playfair Display', serif;
 }
 
 /* Base Themes */
