@@ -4,7 +4,8 @@ import {
     Globe, Layout, Sparkles, Save, Image as ImageIcon,
     Type, Palette, MousePointer2, Loader2, Check,
     Eye, Monitor, Smartphone, Tablet, RefreshCw,
-    MessageSquare, Phone, MapPin, Share2, Layers, Search, Compass, Cloud, Instagram, Facebook, Twitter, CheckCircle2
+    MessageSquare, Phone, MapPin, Share2, Layers, Search, Compass, Cloud, Instagram, Facebook, Twitter, CheckCircle2,
+    ArrowRight, Star, Plus, Trash2, GripVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -95,16 +96,21 @@ export const WebBuilderPage: React.FC = () => {
         }
     };
 
+    // Derive accent colors from settings for the preview
+    const accent = settings.primaryColor || '#630E14';
+    const accentSecondary = settings.secondaryColor || '#C5A028';
+    const isDarkTemplate = settings.templateId === 'shula_dark';
+
     if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
 
     return (
         <div className="h-[calc(100vh-80px)] flex bg-main overflow-hidden font-inter">
             {/* Sidebar Control Panel */}
             <div className="w-[480px] border-r border-theme flex flex-col bg-card-theme">
-                <div className="p-10 border-b border-theme flex justify-between items-center bg-input-theme">
+                <div className="p-6 border-b border-theme flex justify-between items-center bg-input-theme">
                     <div>
                         <h1 className="text-2xl font-black text-main tracking-tighter uppercase leading-none mb-1">Web <span className="bugambilia-text-gradient">Architect</span></h1>
-                        <p className="text-[9px] text-muted font-bold uppercase tracking-[0.4em]">Aurum Builder v1.2 • Pro Edition</p>
+                        <p className="text-[9px] text-muted font-bold uppercase tracking-[0.4em]">Aurum Builder v2.0 • Pro Edition</p>
                     </div>
                     <button
                         onClick={handleSave}
@@ -117,7 +123,7 @@ export const WebBuilderPage: React.FC = () => {
                 </div>
 
                 {/* Tab Selection */}
-                <div className="grid grid-cols-4 p-4 gap-2 bg-input-theme">
+                <div className="grid grid-cols-4 p-3 gap-2 bg-input-theme">
                     {[
                         { id: 'CONTENT', label: 'Estructura', icon: Layers },
                         { id: 'DESIGN', label: 'Estética', icon: Palette },
@@ -135,147 +141,156 @@ export const WebBuilderPage: React.FC = () => {
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                     {activePanel === 'CONTENT' && (
-                        <div className="space-y-10 animate-entrance">
-                            <section className="space-y-6">
+                        <div className="space-y-8 animate-entrance">
+                            {/* Hero Section */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Layout size={16} /> Identidad Hero
                                 </h3>
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Título de Bienvenida</label>
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Nombre del Negocio</label>
                                         <input
                                             type="text"
                                             value={settings.businessName}
                                             onChange={e => setSettings({ ...settings, businessName: e.target.value })}
-                                            className="w-full p-5 bg-input-theme text-main font-black text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
+                                            placeholder="Ej: Shula Studio"
+                                            className="w-full p-4 bg-input-theme text-main font-black text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Slogan Maestro</label>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Slogan</label>
                                         <input
                                             type="text"
                                             value={settings.slogan || ''}
                                             onChange={e => setSettings({ ...settings, slogan: e.target.value })}
-                                            className="w-full p-5 bg-input-theme text-main font-bold text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
+                                            placeholder="Ej: Elegancia en cada detalle"
+                                            className="w-full p-4 bg-input-theme text-main font-bold text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
                                         />
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="space-y-6">
+                            {/* Logo Upload */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Sparkles size={16} /> Identidad Gráfica (Logo)
+                                    <Sparkles size={16} /> Logo
                                 </h3>
                                 <div
-                                    className="group relative w-32 h-32 rounded-full bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all mx-auto"
+                                    className="group relative w-28 h-28 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all mx-auto"
                                     onClick={() => document.getElementById('logo-upload')?.click()}
                                 >
                                     {settings.logoUrl ? (
                                         <>
-                                            <img src={settings.logoUrl} className="w-full h-full object-contain p-4 group-hover:scale-110 transition-all duration-300" />
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <img src={settings.logoUrl} className="w-full h-full object-contain p-3 group-hover:scale-110 transition-all duration-300" />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
                                                 <RefreshCw className="text-white" size={16} />
                                             </div>
                                         </>
                                     ) : (
                                         <div className="text-center">
                                             <Sparkles className="text-muted mx-auto" size={20} />
+                                            <p className="text-[8px] text-muted mt-1 font-bold">Subir Logo</p>
                                         </div>
                                     )}
                                     <input type="file" id="logo-upload" className="hidden" accept="image/*" onChange={(e) => handleMediaUpload(e, 'logoUrl')} />
                                 </div>
                             </section>
 
-                            <section className="space-y-6">
+                            {/* Hero Image */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <ImageIcon size={16} /> Imagen Editorial
+                                    <ImageIcon size={16} /> Imagen Hero Principal
                                 </h3>
                                 <div
-                                    className="group relative w-full h-48 rounded-[2.5rem] bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all"
+                                    className="group relative w-full h-40 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all"
                                     onClick={() => document.getElementById('hero-upload')?.click()}
                                 >
                                     {settings.heroImageUrl ? (
                                         <>
-                                            <img src={settings.heroImageUrl} className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-all duration-1000" />
+                                            <img src={settings.heroImageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" />
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-6 py-2 rounded-full border border-white/20">Sustituir Activo</span>
+                                                <span className="text-[9px] font-black text-white uppercase tracking-widest bg-black/60 px-6 py-2 rounded-full border border-white/20">Cambiar Imagen</span>
                                             </div>
                                         </>
                                     ) : (
                                         <div className="text-center">
-                                            <ImageIcon className="text-muted mx-auto mb-3" size={32} />
-                                            <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Multimedia</p>
+                                            <ImageIcon className="text-muted mx-auto mb-2" size={28} />
+                                            <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Hero</p>
                                         </div>
                                     )}
                                     <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={(e) => handleMediaUpload(e, 'heroImageUrl')} />
                                 </div>
                             </section>
 
-                            <section className="space-y-6">
+                            {/* About */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Type size={16} /> Narrativa 'About'
+                                    <Type size={16} /> Acerca de Nosotros
                                 </h3>
                                 <textarea
-                                    rows={5}
+                                    rows={4}
                                     value={settings.aboutText || ''}
                                     onChange={e => setSettings({ ...settings, aboutText: e.target.value })}
-                                    className="w-full p-6 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-[2rem] resize-none"
+                                    placeholder="Describe tu negocio para los clientes..."
+                                    className="w-full p-4 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl resize-none"
                                 />
                             </section>
 
-                            <section className="space-y-6">
+                            {/* Services */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Sparkles size={16} /> Servicios Destacados
+                                    <Sparkles size={16} /> Servicios en Landing
                                 </h3>
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     {(settings.services || []).map((service, index) => (
-                                        <div key={index} className="p-4 bg-input-theme border border-theme rounded-2xl relative group">
+                                        <div key={index} className="p-3 bg-input-theme border border-theme rounded-2xl relative group">
                                             <button
                                                 onClick={() => {
                                                     const newServices = [...(settings.services || [])];
                                                     newServices.splice(index, 1);
                                                     setSettings({ ...settings, services: newServices });
                                                 }}
-                                                className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
                                             >
-                                                ✕
+                                                <Trash2 size={14} />
                                             </button>
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 <input
                                                     type="text"
                                                     placeholder="Nombre del Servicio"
                                                     value={service.title}
                                                     onChange={e => {
                                                         const newServices = [...(settings.services || [])];
-                                                        newServices[index].title = e.target.value;
+                                                        newServices[index] = { ...newServices[index], title: e.target.value };
                                                         setSettings({ ...settings, services: newServices });
                                                     }}
-                                                    className="w-full bg-transparent border-b border-theme pb-2 text-xs font-bold text-main outline-none"
+                                                    className="w-full bg-transparent border-b border-theme pb-1 text-xs font-bold text-main outline-none"
                                                 />
-                                                <div className="flex gap-4">
+                                                <div className="flex gap-3">
                                                     <input
                                                         type="text"
-                                                        placeholder="Precio"
-                                                        value={service.price}
+                                                        placeholder="$Precio"
+                                                        value={service.price || ''}
                                                         onChange={e => {
                                                             const newServices = [...(settings.services || [])];
-                                                            newServices[index].price = e.target.value;
+                                                            newServices[index] = { ...newServices[index], price: e.target.value };
                                                             setSettings({ ...settings, services: newServices });
                                                         }}
-                                                        className="w-1/3 bg-transparent border-b border-theme pb-2 text-[10px] text-muted outline-none"
+                                                        className="w-1/3 bg-transparent border-b border-theme pb-1 text-[10px] text-muted outline-none"
                                                     />
                                                     <input
                                                         type="text"
-                                                        placeholder="Descripción Corta"
-                                                        value={service.description}
+                                                        placeholder="Descripción corta"
+                                                        value={service.description || ''}
                                                         onChange={e => {
                                                             const newServices = [...(settings.services || [])];
-                                                            newServices[index].description = e.target.value;
+                                                            newServices[index] = { ...newServices[index], description: e.target.value };
                                                             setSettings({ ...settings, services: newServices });
                                                         }}
-                                                        className="flex-1 bg-transparent border-b border-theme pb-2 text-[10px] text-muted outline-none"
+                                                        className="flex-1 bg-transparent border-b border-theme pb-1 text-[10px] text-muted outline-none"
                                                     />
                                                 </div>
                                             </div>
@@ -283,18 +298,19 @@ export const WebBuilderPage: React.FC = () => {
                                     ))}
                                     <button
                                         onClick={() => setSettings({ ...settings, services: [...(settings.services || []), { title: '', price: '', description: '' }] })}
-                                        className="w-full py-3 border border-dashed border-theme rounded-2xl text-[10px] font-black text-muted uppercase tracking-widest hover:border-[#CE4676] hover:text-[#CE4676] transition-all"
+                                        className="w-full py-3 border border-dashed border-theme rounded-2xl text-[10px] font-black text-muted uppercase tracking-widest hover:border-[#CE4676] hover:text-[#CE4676] transition-all flex items-center justify-center gap-2"
                                     >
-                                        + Agregar Servicio
+                                        <Plus size={12} /> Agregar Servicio
                                     </button>
                                 </div>
                             </section>
 
-                            <section className="space-y-6">
+                            {/* Gallery */}
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <ImageIcon size={16} /> Galería Visual
                                 </h3>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-2">
                                     {(settings.images || []).map((img, index) => (
                                         <div key={index} className="aspect-square bg-input-theme border border-theme rounded-xl overflow-hidden relative group">
                                             <img src={img.url} className="w-full h-full object-cover" />
@@ -314,7 +330,7 @@ export const WebBuilderPage: React.FC = () => {
                                         onClick={() => document.getElementById('gallery-upload')?.click()}
                                         className="aspect-square bg-input-theme border border-dashed border-theme rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#CE4676] hover:text-[#CE4676] transition-all"
                                     >
-                                        <Cloud size={20} className="mb-2 text-muted" />
+                                        <Cloud size={18} className="mb-1 text-muted" />
                                         <span className="text-[8px] font-black text-muted uppercase tracking-widest">Subir</span>
                                     </div>
                                     <input
@@ -327,14 +343,11 @@ export const WebBuilderPage: React.FC = () => {
                                             const files = e.target.files;
                                             if (!files) return;
                                             toast.info(`Subiendo ${files.length} imágenes...`);
-
-                                            // Process uploads sequentially to avoid flooding
                                             const newImages = [...(settings.images || [])];
                                             for (let i = 0; i < files.length; i++) {
                                                 const url = await api.uploadImage(files[i]);
                                                 if (url) newImages.push({ url });
                                             }
-
                                             setSettings({ ...settings, images: newImages });
                                             toast.success("Galería actualizada.");
                                         }}
@@ -345,38 +358,54 @@ export const WebBuilderPage: React.FC = () => {
                     )}
 
                     {activePanel === 'DESIGN' && (
-                        <div className="space-y-12 animate-entrance">
-                            <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Branding Visual</h3>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-3">
-                                        <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Maestro</label>
-                                        <div className="flex gap-3">
-                                            <input type="color" value={settings.primaryColor} onChange={e => setSettings({ ...settings, primaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-4 font-mono text-[10px] text-muted uppercase">{settings.primaryColor}</div>
+                        <div className="space-y-8 animate-entrance">
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Paleta de Colores</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Principal</label>
+                                        <div className="flex gap-2 items-center">
+                                            <input type="color" value={settings.primaryColor} onChange={e => setSettings({ ...settings, primaryColor: e.target.value })} className="w-10 h-10 rounded-xl bg-transparent border-none cursor-pointer" />
+                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-3 h-10 font-mono text-[10px] text-muted uppercase">{settings.primaryColor}</div>
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Acento</label>
-                                        <div className="flex gap-3">
-                                            <input type="color" value={settings.secondaryColor} onChange={e => setSettings({ ...settings, secondaryColor: e.target.value })} className="w-12 h-12 rounded-xl bg-transparent border-none cursor-pointer" />
-                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-4 font-mono text-[10px] text-muted uppercase">{settings.secondaryColor}</div>
+                                        <div className="flex gap-2 items-center">
+                                            <input type="color" value={settings.secondaryColor || '#C5A028'} onChange={e => setSettings({ ...settings, secondaryColor: e.target.value })} className="w-10 h-10 rounded-xl bg-transparent border-none cursor-pointer" />
+                                            <div className="flex-1 bg-input-theme rounded-xl border border-theme flex items-center px-3 h-10 font-mono text-[10px] text-muted uppercase">{settings.secondaryColor}</div>
                                         </div>
                                     </div>
                                 </div>
+                                {/* Color Preview */}
+                                <div className="flex gap-2 p-3 bg-input-theme rounded-2xl border border-theme">
+                                    <div className="flex-1 h-8 rounded-lg" style={{ backgroundColor: accent }} />
+                                    <div className="flex-1 h-8 rounded-lg" style={{ backgroundColor: accentSecondary }} />
+                                    <div className="flex-1 h-8 rounded-lg bg-black" />
+                                    <div className="flex-1 h-8 rounded-lg bg-white border border-zinc-200" />
+                                </div>
                             </section>
 
-                            <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Layout de Red</h3>
-                                <div className="space-y-3">
-                                    {['citaplanner', 'aurum_minimal', 'luxury_white', 'shula_dark'].map(template => (
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Plantilla Visual</h3>
+                                <div className="space-y-2">
+                                    {[
+                                        { id: 'citaplanner', label: 'CitaPlanner Clásico', desc: 'Elegante y profesional' },
+                                        { id: 'aurum_minimal', label: 'Aurum Minimal', desc: 'Limpio y moderno' },
+                                        { id: 'luxury_white', label: 'Luxury White', desc: 'Premium y brillante' },
+                                        { id: 'shula_dark', label: 'Shula Dark', desc: 'Oscuro y lujoso' }
+                                    ].map(template => (
                                         <button
-                                            key={template}
-                                            onClick={() => setSettings({ ...settings, templateId: template as any })}
-                                            className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template ? 'bg-[#CE4676] border-[#CE4676] text-white shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main'}`}
+                                            key={template.id}
+                                            onClick={() => setSettings({ ...settings, templateId: template.id as any })}
+                                            className={`w-full p-4 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template.id ? 'border-[#CE4676] shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main'}`}
+                                            style={settings.templateId === template.id ? { backgroundColor: `${accent}15`, borderColor: accent } : {}}
                                         >
-                                            <span className="text-[10px] font-black uppercase tracking-widest">{template.replace('_', ' ')}</span>
-                                            {settings.templateId === template && <CheckCircle2 size={16} />}
+                                            <div className="text-left">
+                                                <span className="text-[10px] font-black uppercase tracking-widest block" style={settings.templateId === template.id ? { color: accent } : {}}>{template.label}</span>
+                                                <span className="text-[8px] text-muted">{template.desc}</span>
+                                            </div>
+                                            {settings.templateId === template.id && <CheckCircle2 size={16} style={{ color: accent }} />}
                                         </button>
                                     ))}
                                 </div>
@@ -385,53 +414,60 @@ export const WebBuilderPage: React.FC = () => {
                     )}
 
                     {activePanel === 'PAGES' && (
-                        <div className="space-y-10 animate-entrance">
-                            <section className="space-y-6">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Punto de Acceso (URL)</h3>
-                                <div className="bg-emerald-500/5 border border-emerald-500/20 p-6 rounded-[2rem]">
-                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                        <Check size={12} /> Certificado SSL/TLS Operativo
+                        <div className="space-y-8 animate-entrance">
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">URL Activa</h3>
+                                <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl">
+                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                        <Check size={12} /> Certificado SSL Activo
                                     </p>
                                     <p className="text-xs font-bold text-main font-mono break-all">{settings.subdomain || 'demo'}.citaplanner.com</p>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-theme">
+                            <section className="space-y-4 pt-6 border-t border-theme">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Phone size={16} /> Contact Hub
+                                    <Phone size={16} /> Contacto
                                 </h3>
-                                <div className="space-y-5">
+                                <div className="space-y-3">
                                     <div>
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-2 block">WhatsApp Flotante</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-1 block">Teléfono de Contacto</label>
                                         <div className="relative">
-                                            <MessageSquare className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={16} />
-                                            <input type="tel" placeholder="+52..." value={settings.whatsappPhone || ''} onChange={e => setSettings({ ...settings, whatsappPhone: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-emerald-500/30" />
+                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input type="tel" placeholder="+52 55 1234 5678" value={settings.contactPhone || ''} onChange={e => setSettings({ ...settings, contactPhone: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-[#CE4676]/30" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-2 block">Dirección Matriz</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-1 block">WhatsApp Flotante</label>
                                         <div className="relative">
-                                            <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={16} />
-                                            <input type="text" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full pl-14 pr-5 py-5 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs" />
+                                            <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input type="tel" placeholder="+52 55..." value={settings.whatsappPhone || ''} onChange={e => setSettings({ ...settings, whatsappPhone: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-emerald-500/30" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-1 block">Dirección</label>
+                                        <div className="relative">
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input type="text" placeholder="Av. Principal #123, Ciudad" value={settings.address || ''} onChange={e => setSettings({ ...settings, address: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs" />
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-theme">
+                            <section className="space-y-4 pt-6 border-t border-theme">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Share2 size={16} /> Footer & Redes
                                 </h3>
-                                <div className="space-y-4">
-                                    <textarea placeholder="Texto legal o créditos del footer..." rows={3} value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <textarea placeholder="Texto legal o créditos del footer..." rows={2} value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
+                                    <div className="grid grid-cols-2 gap-3">
                                         <div className="relative">
-                                            <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
-                                            <input placeholder="Instagram" type="text" value={settings.socialInstagram || ''} onChange={e => setSettings({ ...settings, socialInstagram: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
+                                            <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input placeholder="@instagram" type="text" value={settings.socialInstagram || ''} onChange={e => setSettings({ ...settings, socialInstagram: e.target.value })} className="w-full pl-10 pr-3 py-3 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
                                         </div>
                                         <div className="relative">
-                                            <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
-                                            <input placeholder="Facebook" type="text" value={settings.socialFacebook || ''} onChange={e => setSettings({ ...settings, socialFacebook: e.target.value })} className="w-full pl-11 pr-4 py-4 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
+                                            <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                                            <input placeholder="Facebook" type="text" value={settings.socialFacebook || ''} onChange={e => setSettings({ ...settings, socialFacebook: e.target.value })} className="w-full pl-10 pr-3 py-3 bg-input-theme border border-theme rounded-xl text-main text-[10px]" />
                                         </div>
                                     </div>
                                 </div>
@@ -440,188 +476,199 @@ export const WebBuilderPage: React.FC = () => {
                     )}
 
                     {activePanel === 'SEO' && (
-                        <div className="space-y-10 animate-entrance">
-                            <section className="space-y-6">
+                        <div className="space-y-8 animate-entrance">
+                            <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Search size={16} /> Meta-Inteligencia (SEO)
+                                    <Search size={16} /> SEO & Meta Tags
                                 </h3>
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta-Título (Navegador)</label>
-                                        <input type="text" placeholder="Ej: Beauty Studio • El Mejor Servicio en México" value={settings.seoTitle || ''} onChange={e => setSettings({ ...settings, seoTitle: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main font-black text-xs" />
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta Título</label>
+                                        <input type="text" placeholder="Ej: Shula Studio - Pestañas & Cejas Premium" value={settings.seoTitle || ''} onChange={e => setSettings({ ...settings, seoTitle: e.target.value })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main font-black text-xs" />
+                                        <p className="text-[8px] text-muted ml-1">{(settings.seoTitle || '').length}/60 caracteres recomendados</p>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta-Descripción (Google)</label>
-                                        <textarea rows={4} placeholder="Descripción que aparece en resultados de búsqueda..." value={settings.seoDescription || ''} onChange={e => setSettings({ ...settings, seoDescription: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Meta Descripción</label>
+                                        <textarea rows={3} placeholder="Descripción para resultados de Google..." value={settings.seoDescription || ''} onChange={e => setSettings({ ...settings, seoDescription: e.target.value })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main text-xs font-medium resize-none" />
+                                        <p className="text-[8px] text-muted ml-1">{(settings.seoDescription || '').length}/160 caracteres recomendados</p>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Keywords (SEO Keywords)</label>
-                                        <input type="text" placeholder="belleza, studio, citas, polanco, lujo..." value={settings.seoKeywords || ''} onChange={e => setSettings({ ...settings, seoKeywords: e.target.value })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs" />
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Keywords</label>
+                                        <input type="text" placeholder="belleza, pestañas, cejas, studio..." value={settings.seoKeywords || ''} onChange={e => setSettings({ ...settings, seoKeywords: e.target.value })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main text-xs" />
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="space-y-6 pt-10 border-t border-theme">
+                            {/* Google Preview */}
+                            <section className="space-y-3">
+                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Vista Previa en Google</h3>
+                                <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+                                    <p className="text-[10px] text-emerald-700 font-medium mb-0.5">{settings.subdomain || 'demo'}.citaplanner.com</p>
+                                    <p className="text-blue-800 text-sm font-medium mb-1 hover:underline cursor-pointer">{settings.seoTitle || settings.businessName || 'Sin Título'}</p>
+                                    <p className="text-zinc-600 text-[11px] leading-relaxed">{settings.seoDescription || 'Sin descripción configurada.'}</p>
+                                </div>
+                            </section>
+
+                            <section className="space-y-4 pt-6 border-t border-theme">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Compass size={16} /> Geolocalización (Mapas)
+                                    <Compass size={16} /> Geolocalización
                                 </h3>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Latitud</label>
-                                        <input type="number" step="any" placeholder="19.4326" value={settings.latitude || ''} onChange={e => setSettings({ ...settings, latitude: parseFloat(e.target.value) })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
+                                        <input type="number" step="any" placeholder="19.4326" value={settings.latitude || ''} onChange={e => setSettings({ ...settings, latitude: parseFloat(e.target.value) })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1">Longitud</label>
-                                        <input type="number" step="any" placeholder="-99.1332" value={settings.longitude || ''} onChange={e => setSettings({ ...settings, longitude: parseFloat(e.target.value) })} className="w-full p-5 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
+                                        <input type="number" step="any" placeholder="-99.1332" value={settings.longitude || ''} onChange={e => setSettings({ ...settings, longitude: parseFloat(e.target.value) })} className="w-full p-4 bg-input-theme border border-theme rounded-2xl text-main text-xs font-mono" />
                                     </div>
                                 </div>
-                                <p className="text-[8px] text-muted font-bold uppercase tracking-widest">Utilizado para posicionamiento en Google Maps y SEO local.</p>
+                                <p className="text-[8px] text-muted font-bold uppercase tracking-widest">Para Google Maps y SEO local.</p>
                             </section>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Preview Area */}
+            {/* ========== LIVE PREVIEW AREA ========== */}
             <div className="flex-1 flex flex-col bg-main overflow-hidden">
                 {/* Preview Header */}
-                <div className="h-20 bg-card-theme border-b border-theme flex items-center justify-between px-10">
-                    <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme">
-                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'DESKTOP' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Monitor size={16} /></button>
-                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'TABLET' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Tablet size={16} /></button>
-                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2.5 rounded-xl transition-all ${previewMode === 'MOBILE' ? 'bg-card text-main' : 'text-muted hover:text-main'}`}><Smartphone size={16} /></button>
+                <div className="h-14 bg-card-theme border-b border-theme flex items-center justify-between px-6">
+                    <div className="flex bg-input-theme p-1 rounded-xl border border-theme">
+                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2 rounded-lg transition-all ${previewMode === 'DESKTOP' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Monitor size={14} /></button>
+                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2 rounded-lg transition-all ${previewMode === 'TABLET' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Tablet size={14} /></button>
+                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2 rounded-lg transition-all ${previewMode === 'MOBILE' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Smartphone size={14} /></button>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa Proyectada</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa</span>
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
                 </div>
 
                 {/* Device Frame */}
-                <div className="flex-1 overflow-hidden p-12 flex justify-center bg-[radial-gradient(circle_at_center,_#111_0%,_#000_100%)]">
-                    <div className={`shadow-2xl transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full' :
-                        previewMode === 'TABLET' ? 'w-[768px] rounded-[3rem] border-[12px] border-zinc-950' :
-                            'w-[375px] rounded-[4rem] border-[16px] border-zinc-950'
+                <div className="flex-1 overflow-hidden p-8 flex justify-center bg-[radial-gradient(circle_at_center,_#111_0%,_#000_100%)]">
+                    <div className={`shadow-2xl transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full rounded-xl' :
+                        previewMode === 'TABLET' ? 'w-[768px] rounded-[2.5rem] border-[10px] border-zinc-950' :
+                            'w-[375px] rounded-[3rem] border-[14px] border-zinc-950'
                         }`}>
 
-                        {/* Mock Website Content */}
-                        <div className={`flex flex-col min-h-full ${settings.templateId === 'shula_dark' ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900'}`}>
-                            <nav className={`p-8 flex justify-between items-center backdrop-blur-md sticky top-0 z-10 border-b ${settings.templateId === 'shula_dark' ? 'bg-zinc-950/80 border-white/10' : 'bg-white/80 border-zinc-100'}`}>
+                        {/* ===== PREVIEW WEBSITE ===== */}
+                        <div className={`flex flex-col min-h-full ${isDarkTemplate ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900'}`}>
+
+                            {/* NAV */}
+                            <nav className={`p-5 flex justify-between items-center backdrop-blur-md sticky top-0 z-10 border-b ${isDarkTemplate ? 'bg-zinc-950/80 border-white/10' : 'bg-white/80 border-zinc-100'}`}>
                                 {settings.logoUrl ? (
-                                    <img src={settings.logoUrl} className="h-10 object-contain" alt="Logo" />
+                                    <img src={settings.logoUrl} className="h-8 object-contain" alt="Logo" />
                                 ) : (
-                                    <span className="font-black text-2xl tracking-tighter uppercase" style={{ color: settings.primaryColor }}>{settings.businessName || 'BRAND'}</span>
+                                    <span className="font-black text-lg tracking-tighter uppercase" style={{ color: accent }}>{settings.businessName || 'BRAND'}</span>
                                 )}
-                                <div className={`hidden md:flex gap-8 text-[10px] font-black uppercase tracking-widest ${settings.templateId === 'shula_dark' ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                <div className={`hidden md:flex gap-6 text-[9px] font-black uppercase tracking-widest ${isDarkTemplate ? 'text-zinc-500' : 'text-zinc-400'}`}>
                                     <span>Home</span>
                                     <span>Servicios</span>
                                     <span>Nosotros</span>
                                 </div>
-                                <button className="px-8 py-3 font-black text-[9px] uppercase tracking-widest text-white rounded-full shadow-lg" style={{ backgroundColor: settings.primaryColor }}>Reservar</button>
+                                <button className="px-5 py-2 font-black text-[8px] uppercase tracking-widest text-white rounded-full shadow-lg" style={{ backgroundColor: accent }}>Reservar</button>
                             </nav>
 
-                            <section className="h-[550px] relative flex items-center justify-center text-center px-10 overflow-hidden bg-black">
-                                {settings.heroImageUrl && <img src={settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-60" />}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                                <div className="relative z-10 space-y-6 max-w-3xl">
-                                    <p className="text-[#D4AF37] font-black text-[10px] uppercase tracking-[0.5em]">{settings.slogan || 'TU EXPERIENCIA DE LUJO'}</p>
-                                    <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-[0.9]">{settings.businessName || 'Elite Beauty'}</h2>
-                                    <div className="pt-8 flex gap-5 justify-center">
-                                        <button className="px-10 py-4 bg-[#D4AF37] text-black font-black text-[10px] uppercase tracking-widest rounded-full shadow-xl">Agendar Cita</button>
-                                        <button className="px-10 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black text-[10px] uppercase tracking-widest rounded-full">Contactar</button>
+                            {/* HERO */}
+                            <section className="h-[400px] relative flex items-center justify-center text-center px-6 overflow-hidden bg-black">
+                                {settings.heroImageUrl && <img src={settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" />}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                                <div className="relative z-10 space-y-4 max-w-2xl">
+                                    <p className="font-black text-[9px] uppercase tracking-[0.5em]" style={{ color: accentSecondary }}>{settings.slogan || 'Tu experiencia premium'}</p>
+                                    <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-[0.9]">{settings.businessName || 'Tu Negocio'}</h2>
+                                    <div className="pt-4 flex gap-3 justify-center">
+                                        <button className="px-6 py-3 text-black font-black text-[9px] uppercase tracking-widest rounded-full shadow-xl" style={{ backgroundColor: accentSecondary }}>Agendar Cita</button>
+                                        <button className="px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black text-[9px] uppercase tracking-widest rounded-full">Contactar</button>
                                     </div>
                                 </div>
                             </section>
 
-                            <section className="p-20 space-y-20">
-                                <div className="flex flex-col items-center text-center space-y-6">
-                                    <div className="w-12 h-1" style={{ backgroundColor: settings.secondaryColor || '#D4AF37' }} />
-                                    <h3 className="text-3xl font-black uppercase tracking-tighter">Nuestra Esencia</h3>
-                                    <p className="text-zinc-500 text-sm leading-relaxed max-w-2xl">{settings.aboutText || 'Expertos en realzar tu belleza natural con técnicas de vanguardia y atención personalizada.'}</p>
-                                </div>
+                            {/* ABOUT */}
+                            {settings.aboutText && (
+                                <section className="p-12 text-center">
+                                    <div className="w-10 h-0.5 mx-auto mb-4" style={{ backgroundColor: accentSecondary }} />
+                                    <h3 className={`text-xl font-black uppercase tracking-tighter mb-3 ${isDarkTemplate ? 'text-white' : 'text-zinc-900'}`}>Nuestra Esencia</h3>
+                                    <p className="text-zinc-500 text-xs leading-relaxed max-w-xl mx-auto">{settings.aboutText}</p>
+                                </section>
+                            )}
 
-                                {/* Dynamic Services Preview */}
-                                <div className="space-y-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-px flex-1 bg-zinc-200" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Servicios Destacados</span>
-                                        <div className="h-px flex-1 bg-zinc-200" />
+                            {/* SERVICES */}
+                            {(settings.services || []).length > 0 && (
+                                <section className="px-8 pb-12">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Servicios</span>
+                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         {(settings.services || []).map((s, i) => (
-                                            <div key={i} className={`p-8 rounded-2xl border ${settings.templateId === 'shula_dark' ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-100'}`}>
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <h4 className="font-bold text-sm">{s.title || 'Servicio Sin Título'}</h4>
-                                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-zinc-200 text-zinc-800">{s.price || '$0'}</span>
+                                            <div key={i} className={`p-5 rounded-xl border ${isDarkTemplate ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-100'}`}>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h4 className="font-bold text-xs">{s.title || 'Sin Título'}</h4>
+                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: `${accent}15`, color: accent }}>{s.price || '$0'}</span>
                                                 </div>
-                                                <p className="text-xs text-zinc-500">{s.description || 'Sin descripción'}</p>
+                                                <p className="text-[10px] text-zinc-500">{s.description || 'Sin descripción'}</p>
                                             </div>
                                         ))}
-                                        {(!settings.services || settings.services.length === 0) && (
-                                            <div className="col-span-1 md:col-span-3 text-center p-8 border border-dashed border-zinc-300 rounded-2xl">
-                                                <p className="text-[10px] font-black uppercase text-zinc-400">Sin Servicios Configurados</p>
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
+                                </section>
+                            )}
 
-                                {/* Dynamic Gallery Preview */}
-                                <div className="space-y-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-px flex-1 bg-zinc-200" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Nuestro Trabajo</span>
-                                        <div className="h-px flex-1 bg-zinc-200" />
+                            {/* GALLERY */}
+                            {(settings.images || []).length > 0 && (
+                                <section className="px-8 pb-12">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Galería</span>
+                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
                                         {(settings.images || []).map((img, i) => (
-                                            <div key={i} className="aspect-square bg-zinc-100 overflow-hidden relative group">
+                                            <div key={i} className="aspect-square bg-zinc-100 overflow-hidden relative group rounded-lg">
                                                 <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
                                             </div>
                                         ))}
-                                        {(!settings.images || settings.images.length === 0) && (
-                                            <div className="col-span-2 md:col-span-4 aspect-square flex items-center justify-center border border-dashed border-zinc-300 rounded-2xl bg-zinc-50">
-                                                <p className="text-[10px] font-black uppercase text-zinc-400">Galería Vacía</p>
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
-                            </section>
+                                </section>
+                            )}
 
-                            <footer className={`mt-auto p-16 ${settings.templateId === 'shula_dark' ? 'bg-black border-t border-white/10' : 'bg-zinc-950 text-white'}`}>
-                                <div className={`grid grid-cols-1 md:grid-cols-3 gap-12 border-b pb-16 ${settings.templateId === 'shula_dark' ? 'border-white/10' : 'border-white/5'}`}>
-                                    <div className="space-y-6">
-                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">{settings.businessName}</h4>
-                                        <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || 'Experimenta el estándar de oro en gestión de servicios y belleza.'}</p>
+                            {/* FOOTER */}
+                            <footer className={`mt-auto p-10 ${isDarkTemplate ? 'bg-black border-t border-white/10' : 'bg-zinc-950 text-white'}`}>
+                                <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 border-b pb-8 ${isDarkTemplate ? 'border-white/10' : 'border-white/5'}`}>
+                                    <div className="space-y-3">
+                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>{settings.businessName || 'BRAND'}</h4>
+                                        <p className="text-zinc-500 text-[10px] leading-relaxed">{settings.footerText || 'Tu plataforma de reservas premium.'}</p>
                                     </div>
-                                    <div className="space-y-6">
-                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">Ubicación</h4>
-                                        <p className="text-zinc-400 text-xs flex gap-3 items-start"><MapPin size={14} className="mt-1" /> {settings.address || 'Ubicación Central'}</p>
-                                        <p className="text-zinc-400 text-xs flex gap-3 items-center"><Phone size={14} /> {settings.contactPhone || '+52...'}</p>
+                                    <div className="space-y-3">
+                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>Ubicación</h4>
+                                        <p className="text-zinc-400 text-[10px] flex gap-2 items-start"><MapPin size={12} className="mt-0.5" /> {settings.address || 'Ubicación'}</p>
+                                        <p className="text-zinc-400 text-[10px] flex gap-2 items-center"><Phone size={12} /> {settings.contactPhone || '+52 55...'}</p>
                                     </div>
-                                    <div className="space-y-6">
-                                        <h4 className="font-black text-xs uppercase tracking-widest text-[#D4AF37]">Redes</h4>
-                                        <div className="flex gap-4">
-                                            {settings.socialInstagram && <Instagram size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
-                                            {settings.socialFacebook && <Facebook size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
-                                            {settings.socialTwitter && <Twitter size={18} className="text-zinc-500 hover:text-[#D4AF37] cursor-pointer" />}
+                                    <div className="space-y-3">
+                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>Redes</h4>
+                                        <div className="flex gap-3">
+                                            {settings.socialInstagram && <Instagram size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
+                                            {settings.socialFacebook && <Facebook size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
+                                            {settings.socialTwitter && <Twitter size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
+                                            {!settings.socialInstagram && !settings.socialFacebook && !settings.socialTwitter && (
+                                                <span className="text-[9px] text-zinc-600">Sin redes configuradas</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="pt-8 flex justify-between items-center">
-                                    <p className="text-[9px] font-bold text-zinc-700 uppercase tracking-widest">© 2026 {settings.businessName} • Powered by Aurum</p>
-                                    <div className="flex gap-4 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
-                                        <span>Privacidad</span>
-                                        <span>Términos</span>
-                                    </div>
+                                <div className="pt-6 flex justify-between items-center">
+                                    <p className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">© 2026 {settings.businessName} • Powered by CitaPlanner</p>
                                 </div>
                             </footer>
 
-                            {/* Floating WhatsApp Button Mockup */}
-                            <div className="fixed bottom-10 right-10 w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20 cursor-pointer hover:scale-110 transition-all z-50">
-                                <MessageSquare size={24} />
-                                <div className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white" />
-                            </div>
+                            {/* WhatsApp Mockup Bubble */}
+                            {settings.whatsappPhone && (
+                                <div className="sticky bottom-4 ml-auto mr-4 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-emerald-500/30 z-50">
+                                    <MessageSquare size={20} />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
