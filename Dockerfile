@@ -26,6 +26,9 @@ RUN npx prisma generate
 # Build Frontend (Vite -> /dist)
 RUN npm run build
 
+# Prune devDependencies to keep only production modules for the runner
+RUN npm prune --production
+
 # --- STAGE 2: RUNNER ---
 FROM node:20-bookworm-slim AS runner
 
@@ -39,11 +42,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=true
 
-# Install Only Production Dependencies
+# Copy Production Dependencies from Builder
+# This avoids re-downloading engines and handles network instability
+COPY --from=builder /app/node_modules ./node_modules
 COPY package*.json ./
-RUN npm config set fetch-retries 10 && \
-    npm config set fetch-timeout 300000 && \
-    npm ci --only=production
 
 # Copy Backend Core
 COPY server.js ./
@@ -52,7 +54,9 @@ COPY middleware ./middleware
 COPY schemas ./schemas
 COPY prisma ./prisma
 
-# Generate Prisma Client for Production
+# No need to generate again if we copied node_modules including .prisma/client
+# but we run it just in case the path was absolute or needs refresh, 
+# though with the copy it should be fine.
 RUN npx prisma generate
 
 # Copy Frontend Build from Builder

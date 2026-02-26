@@ -16,6 +16,7 @@ export const WebBuilderPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [previewMode, setPreviewMode] = useState<'DESKTOP' | 'TABLET' | 'MOBILE'>('DESKTOP');
     const [activePanel, setActivePanel] = useState<'CONTENT' | 'DESIGN' | 'PAGES' | 'SEO'>('CONTENT');
+    const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
     const [settings, setSettings] = useState<LandingSettings>({
         businessName: '',
@@ -36,9 +37,18 @@ export const WebBuilderPage: React.FC = () => {
         latitude: undefined,
         longitude: undefined,
         socialInstagram: '',
-        socialFacebook: '',
         socialTwitter: ''
     });
+
+    // Sync preview with settings in real-time
+    useEffect(() => {
+        if (iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.postMessage({
+                type: 'LANDING_PREVIEW_UPDATE',
+                settings: settings
+            }, '*');
+        }
+    }, [settings]);
 
     useEffect(() => {
         loadSettings();
@@ -596,128 +606,20 @@ export const WebBuilderPage: React.FC = () => {
 
                 {/* Device Frame */}
                 <div className="flex-1 overflow-hidden p-8 flex justify-center bg-[radial-gradient(circle_at_center,_#111_0%,_#000_100%)]">
-                    <div className={`shadow-2xl transition-all duration-700 bg-white overflow-y-auto custom-scrollbar relative ${previewMode === 'DESKTOP' ? 'w-full rounded-xl' :
-                        previewMode === 'TABLET' ? 'w-[768px] rounded-[2.5rem] border-[10px] border-zinc-950' :
-                            'w-[375px] rounded-[3rem] border-[14px] border-zinc-950'
+                    <div className={`shadow-2xl transition-all duration-700 bg-black overflow-hidden relative ${previewMode === 'DESKTOP' ? 'w-full rounded-xl' :
+                        previewMode === 'TABLET' ? 'w-[768px] h-full rounded-[2.5rem] border-[10px] border-zinc-950' :
+                            'w-[375px] h-[667px] self-center rounded-[3rem] border-[14px] border-zinc-950'
                         }`}>
 
-                        {/* ===== PREVIEW WEBSITE ===== */}
-                        <div className={`flex flex-col min-h-full ${isDarkTemplate ? 'bg-zinc-950 text-white' : 'bg-white text-zinc-900'}`}>
+                        <iframe
+                            ref={iframeRef}
+                            src="/"
+                            className="w-full h-full border-none"
+                            title="Live Preview"
+                        />
 
-                            {/* NAV */}
-                            <nav className={`p-5 flex justify-between items-center backdrop-blur-md sticky top-0 z-10 border-b ${isDarkTemplate ? 'bg-zinc-950/80 border-white/10' : 'bg-white/80 border-zinc-100'}`}>
-                                {settings.logoUrl ? (
-                                    <img src={settings.logoUrl} className="h-8 object-contain" alt="Logo" />
-                                ) : (
-                                    <span className="font-black text-lg tracking-tighter uppercase" style={{ color: accent }}>{settings.businessName || 'BRAND'}</span>
-                                )}
-                                <div className={`hidden md:flex gap-6 text-[9px] font-black uppercase tracking-widest ${isDarkTemplate ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                                    <span>Home</span>
-                                    <span>Servicios</span>
-                                    <span>Nosotros</span>
-                                </div>
-                                <button className="px-5 py-2 font-black text-[8px] uppercase tracking-widest text-white rounded-full shadow-lg" style={{ backgroundColor: accent }}>Reservar</button>
-                            </nav>
-
-                            {/* HERO */}
-                            <section className="h-[400px] relative flex items-center justify-center text-center px-6 overflow-hidden bg-black">
-                                {settings.heroImageUrl && <img src={settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover opacity-50" />}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                <div className="relative z-10 space-y-4 max-w-2xl">
-                                    <p className="font-black text-[9px] uppercase tracking-[0.5em]" style={{ color: accentSecondary }}>{settings.slogan || 'Tu experiencia premium'}</p>
-                                    <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-[0.9]">{settings.businessName || 'Tu Negocio'}</h2>
-                                    <div className="pt-4 flex gap-3 justify-center">
-                                        <button className="px-6 py-3 text-black font-black text-[9px] uppercase tracking-widest rounded-full shadow-xl" style={{ backgroundColor: accentSecondary }}>Agendar Cita</button>
-                                        <button className="px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 font-black text-[9px] uppercase tracking-widest rounded-full">Contactar</button>
-                                    </div>
-                                </div>
-                            </section>
-
-                            {/* ABOUT */}
-                            {settings.aboutText && (
-                                <section className="p-12 text-center">
-                                    <div className="w-10 h-0.5 mx-auto mb-4" style={{ backgroundColor: accentSecondary }} />
-                                    <h3 className={`text-xl font-black uppercase tracking-tighter mb-3 ${isDarkTemplate ? 'text-white' : 'text-zinc-900'}`}>Nuestra Esencia</h3>
-                                    <p className="text-zinc-500 text-xs leading-relaxed max-w-xl mx-auto">{settings.aboutText}</p>
-                                </section>
-                            )}
-
-                            {/* SERVICES */}
-                            {(settings.services || []).length > 0 && (
-                                <section className="px-8 pb-12">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Servicios</span>
-                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {(settings.services || []).map((s, i) => (
-                                            <div key={i} className={`p-5 rounded-xl border ${isDarkTemplate ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-100'}`}>
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-xs">{s.title || 'Sin Título'}</h4>
-                                                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: `${accent}15`, color: accent }}>{s.price || '$0'}</span>
-                                                </div>
-                                                <p className="text-[10px] text-zinc-500">{s.description || 'Sin descripción'}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {/* GALLERY */}
-                            {(settings.images || []).length > 0 && (
-                                <section className="px-8 pb-12">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Galería</span>
-                                        <div className={`h-px flex-1 ${isDarkTemplate ? 'bg-zinc-800' : 'bg-zinc-200'}`} />
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                                        {(settings.images || []).map((img, i) => (
-                                            <div key={i} className="aspect-square bg-zinc-100 overflow-hidden relative group rounded-lg">
-                                                <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {/* FOOTER */}
-                            <footer className={`mt-auto p-10 ${isDarkTemplate ? 'bg-black border-t border-white/10' : 'bg-zinc-950 text-white'}`}>
-                                <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 border-b pb-8 ${isDarkTemplate ? 'border-white/10' : 'border-white/5'}`}>
-                                    <div className="space-y-3">
-                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>{settings.businessName || 'BRAND'}</h4>
-                                        <p className="text-zinc-500 text-[10px] leading-relaxed">{settings.footerText || 'Tu plataforma de reservas premium.'}</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>Ubicación</h4>
-                                        <p className="text-zinc-400 text-[10px] flex gap-2 items-start"><MapPin size={12} className="mt-0.5" /> {settings.address || 'Ubicación'}</p>
-                                        <p className="text-zinc-400 text-[10px] flex gap-2 items-center"><Phone size={12} /> {settings.contactPhone || '+52 55...'}</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h4 className="font-black text-[10px] uppercase tracking-widest" style={{ color: accentSecondary }}>Redes</h4>
-                                        <div className="flex gap-3">
-                                            {settings.socialInstagram && <Instagram size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
-                                            {settings.socialFacebook && <Facebook size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
-                                            {settings.socialTwitter && <Twitter size={16} className="text-zinc-500 hover:text-white cursor-pointer" />}
-                                            {!settings.socialInstagram && !settings.socialFacebook && !settings.socialTwitter && (
-                                                <span className="text-[9px] text-zinc-600">Sin redes configuradas</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="pt-6 flex justify-between items-center">
-                                    <p className="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">© 2026 {settings.businessName} • Powered by CitaPlanner</p>
-                                </div>
-                            </footer>
-
-                            {/* WhatsApp Mockup Bubble */}
-                            {settings.whatsappPhone && (
-                                <div className="sticky bottom-4 ml-auto mr-4 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-emerald-500/30 z-50">
-                                    <MessageSquare size={20} />
-                                </div>
-                            )}
-                        </div>
+                        {/* Protection Overlay to allow dragging/scrolling from device frame edges if needed */}
+                        <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-lg" />
                     </div>
                 </div>
             </div>

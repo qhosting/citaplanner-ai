@@ -197,7 +197,9 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
               if (original) {
                 localStorage.setItem('citaPlannerUser', original);
                 localStorage.removeItem('citaPlannerOriginalAuth');
-                window.location.href = '/nexus';
+                // Force a full reload to reset all contexts and states
+                window.location.assign('/nexus');
+                setTimeout(() => window.location.reload(), 100);
               }
             }} className="flex items-center gap-2 text-rose-500 bg-rose-500/10 px-4 py-2 rounded-xl border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">
               <ArrowLeft size={14} /> <span className="text-[9px] font-black uppercase tracking-widest">Salir de Soporte</span>

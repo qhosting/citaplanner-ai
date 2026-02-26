@@ -228,6 +228,12 @@ export const SuperAdminDashboard: React.FC = () => {
     },
     onSuccess: (data) => {
       if (data.success) {
+        // BACKUP ORIGINAL AUTH BEFORE INJECTING NEW ONE
+        const originalAuth = localStorage.getItem('citaPlannerUser');
+        if (originalAuth) {
+          localStorage.setItem('citaPlannerOriginalAuth', originalAuth);
+        }
+
         localStorage.setItem('citaPlannerUser', JSON.stringify({ ...data.user, token: data.token, isImpersonated: true }));
         window.location.href = '/admin';
         toast.success("Identidad inyectada. Entrando en modo soporte...");
