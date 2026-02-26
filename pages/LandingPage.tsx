@@ -68,6 +68,9 @@ export const LandingPage: React.FC = () => {
   const accent = settings.primaryColor || '#C5A028';
   const isShulaDark = settings.templateId === 'shula_dark';
 
+  // SEO: Derive canonical URL from current window location
+  const canonicalUrl = typeof window !== 'undefined' ? window.location.origin : 'https://citaplanner.com';
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
@@ -108,27 +111,148 @@ export const LandingPage: React.FC = () => {
     init();
   }, []);
 
+  // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
-    if (settings.seoTitle || settings.businessName) {
-      document.title = settings.seoTitle || `${settings.businessName} — Reservas en Línea`;
-    }
+    const pageTitle = settings.seoTitle || `${settings.businessName} — Reservas en Línea`;
+    const pageDescription = settings.seoDescription || `${settings.businessName} — ${settings.slogan || 'Reserva tu cita en línea'}. ${settings.address || ''}`;
+    const heroImage = settings.heroImageUrl || settings.logoUrl || '';
 
-    const updateMeta = (name: string, content: string) => {
-      let meta = document.querySelector(`meta[name="${name}"]`);
-      if (!meta) {
-        meta = document.createElement('meta');
-        meta.setAttribute('name', name);
-        document.head.appendChild(meta);
+    // 1. Title Tag
+    document.title = pageTitle;
+
+    // Helper to set/create meta tags by name or property
+    const setMeta = (attr: 'name' | 'property', key: string, content: string) => {
+      if (!content) return;
+      let el = document.querySelector(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
       }
-      meta.setAttribute('content', content);
+      el.setAttribute('content', content);
     };
 
-    if (settings.seoDescription) updateMeta('description', settings.seoDescription);
-    if (settings.seoKeywords) updateMeta('keywords', settings.seoKeywords);
+    // Helper for <link> tags
+    const setLink = (rel: string, href: string) => {
+      if (!href) return;
+      let el = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement;
+      if (!el) {
+        el = document.createElement('link');
+        el.setAttribute('rel', rel);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('href', href);
+    };
 
-    // Inject dynamic accent color as CSS variable
+    // 2. Standard Meta Tags
+    setMeta('name', 'description', pageDescription);
+    if (settings.seoKeywords) setMeta('name', 'keywords', settings.seoKeywords);
+    setMeta('name', 'robots', 'index, follow');
+    setMeta('name', 'author', settings.businessName || 'CitaPlanner');
+
+    // 3. Canonical URL
+    setLink('canonical', canonicalUrl);
+
+    // 4. Open Graph (Facebook, WhatsApp, LinkedIn)
+    setMeta('property', 'og:type', 'website');
+    setMeta('property', 'og:title', pageTitle);
+    setMeta('property', 'og:description', pageDescription);
+    setMeta('property', 'og:url', canonicalUrl);
+    setMeta('property', 'og:site_name', settings.businessName || 'CitaPlanner');
+    setMeta('property', 'og:locale', 'es_MX');
+    if (heroImage) setMeta('property', 'og:image', heroImage);
+    if (heroImage) setMeta('property', 'og:image:alt', `${settings.businessName} — ${settings.slogan || 'Portada'}`);
+
+    // 5. Twitter Cards
+    setMeta('name', 'twitter:card', 'summary_large_image');
+    setMeta('name', 'twitter:title', pageTitle);
+    setMeta('name', 'twitter:description', pageDescription);
+    if (heroImage) setMeta('name', 'twitter:image', heroImage);
+
+    // 6. GEO Meta Tags
+    if (settings.latitude && settings.longitude) {
+      setMeta('name', 'geo.position', `${settings.latitude};${settings.longitude}`);
+      setMeta('name', 'ICBM', `${settings.latitude}, ${settings.longitude}`);
+    }
+    if (settings.address) setMeta('name', 'geo.placename', settings.address);
+    setMeta('name', 'geo.region', 'MX');
+
+    // 7. Schema.org JSON-LD (LocalBusiness)
+    const existingJsonLd = document.querySelector('script[data-seo="landing-jsonld"]');
+    if (existingJsonLd) existingJsonLd.remove();
+
+    const jsonLdData: any = {
+      '@context': 'https://schema.org',
+      '@type': 'LocalBusiness',
+      name: settings.businessName || 'CitaPlanner',
+      description: pageDescription,
+      url: canonicalUrl,
+      telephone: settings.contactPhone || undefined,
+      address: settings.address ? {
+        '@type': 'PostalAddress',
+        streetAddress: settings.address,
+        addressCountry: 'MX'
+      } : undefined,
+      image: heroImage || undefined,
+      priceRange: '$$',
+      openingHoursSpecification: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        opens: '09:00',
+        closes: '19:00'
+      }
+    };
+
+    if (settings.latitude && settings.longitude) {
+      jsonLdData.geo = {
+        '@type': 'GeoCoordinates',
+        latitude: settings.latitude,
+        longitude: settings.longitude
+      };
+    }
+
+    if (settings.socialInstagram || settings.socialFacebook) {
+      jsonLdData.sameAs = [
+        settings.socialInstagram,
+        settings.socialFacebook,
+        settings.socialTwitter
+      ].filter(Boolean);
+    }
+
+    // Add services as offers
+    const allServices = services.length > 0 ? services : (settings.services || []);
+    if (allServices.length > 0) {
+      jsonLdData.hasOfferCatalog = {
+        '@type': 'OfferCatalog',
+        name: 'Servicios',
+        itemListElement: allServices.map((s: any) => ({
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: s.name || s.title || 'Servicio',
+            description: s.description || ''
+          },
+          price: typeof s.price === 'number' ? s.price : (s.price || '').replace(/[^0-9.]/g, '') || '0',
+          priceCurrency: 'MXN'
+        }))
+      };
+    }
+
+    const scriptEl = document.createElement('script');
+    scriptEl.type = 'application/ld+json';
+    scriptEl.setAttribute('data-seo', 'landing-jsonld');
+    scriptEl.textContent = JSON.stringify(jsonLdData);
+    document.head.appendChild(scriptEl);
+
+    // 8. Inject dynamic accent color as CSS variable
     document.documentElement.style.setProperty('--accent', accent);
-  }, [settings.seoTitle, settings.seoDescription, settings.seoKeywords, accent, settings.businessName]);
+
+    // Cleanup JSON-LD on unmount
+    return () => {
+      const el = document.querySelector('script[data-seo="landing-jsonld"]');
+      if (el) el.remove();
+    };
+  }, [settings, accent, canonicalUrl, services]);
 
   const slides = useMemo(() => {
     if (settings.heroSlides && settings.heroSlides.length > 0) return settings.heroSlides;
@@ -206,6 +330,7 @@ export const LandingPage: React.FC = () => {
             <a href="#services" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80" style={{ ['--hover-color' as any]: accent }}>Servicios</a>
             <a href="#about" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Nosotros</a>
             {gallery.length > 0 && <a href="#gallery" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Galería</a>}
+            {settings.latitude && settings.longitude && <a href="#location" className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Ubicación</a>}
             <div className="w-px h-4 bg-white/10 mx-2" />
             <Link to="/login" className="font-black text-[10px] uppercase tracking-[0.3em] transition-all text-white/60 hover:opacity-80 px-4 py-2 rounded-xl hover:bg-white/5">Staff</Link>
             <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 text-white" style={{ backgroundColor: accent }}>
@@ -242,14 +367,14 @@ export const LandingPage: React.FC = () => {
       )}
 
       {/* Hero Section */}
-      <section className="relative h-screen min-h-[750px] w-full bg-black overflow-hidden">
+      <section className="relative h-screen min-h-[750px] w-full bg-black overflow-hidden" aria-label="Sección principal">
         {isShulaDark && (
           <div className="absolute inset-4 md:inset-8 border border-white/20 z-30 pointer-events-none rounded-[2rem] md:rounded-[4rem]" style={{ borderColor: `${accent}40` }} />
         )}
         {slides.map((slide, index) => (
           <div key={index} className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
             <div className="absolute inset-0 bg-black/60 z-10" />
-            <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
+            <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={`${settings.businessName} — ${slide.title || 'Imagen principal'}`} loading="eager" />
             <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
               <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
                 {isShulaDark && (
@@ -263,7 +388,7 @@ export const LandingPage: React.FC = () => {
                   {slide.title} {slide.subtitle && <span className="italic font-light" style={{ color: accent, WebkitTextFillColor: accent }}>{slide.subtitle}</span>}
                 </h1>
                 <p className="text-xl md:text-2xl text-white/70 font-light max-w-2xl mx-auto leading-relaxed mb-14">{slide.text}</p>
-                <Link to="/book" className={`px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block text-black ${isShulaDark ? 'shadow-[0_0_40px_rgba(212,175,55,0.3)]' : ''}`} style={{ backgroundColor: accent }}>
+                <Link to="/book" className={`px-20 py-7 rounded-full text-[12px] uppercase tracking-[0.5em] font-black inline-block text-black ${isShulaDark ? 'shadow-[0_0_40px_rgba(212,175,55,0.3)]' : ''}`} style={{ backgroundColor: accent }} aria-label={`Reservar cita en ${settings.businessName}`}>
                   Reservar Experiencia
                 </Link>
               </div>
@@ -274,7 +399,7 @@ export const LandingPage: React.FC = () => {
 
       {/* About Section */}
       {settings.aboutText && (
-        <section id="about" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden">
+        <section id="about" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden" aria-label="Sobre nosotros">
           <div className="max-w-5xl mx-auto px-8 text-center">
             <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Sobre Nosotros</span>
             <h2 className="text-4xl md:text-6xl font-playfair font-black text-white leading-tight tracking-tighter mb-12">
@@ -287,7 +412,7 @@ export const LandingPage: React.FC = () => {
 
       {/* Services Section */}
       {landingServices.length > 0 && (
-        <section id="services" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden">
+        <section id="services" className="py-32 md:py-48 bg-[#050505] relative overflow-hidden" aria-label="Servicios">
           <div className="max-w-7xl mx-auto px-8">
             <div className="mb-20 md:mb-32">
               <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Nuestros Servicios</span>
@@ -297,10 +422,10 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-16">
               {landingServices.map((s: any, i: number) => (
-                <div key={s.id || i} className="group bg-[#0a0a0a] rounded-[3rem] md:rounded-[4.5rem] border border-white/5 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl" style={{ ['--card-hover-border' as any]: `${accent}66` }}>
+                <article key={s.id || i} className="group bg-[#0a0a0a] rounded-[3rem] md:rounded-[4.5rem] border border-white/5 transition-all duration-700 relative overflow-hidden hover:-translate-y-5 shadow-2xl" style={{ ['--card-hover-border' as any]: `${accent}66` }}>
                   {s.imageUrl && (
                     <div className="h-[250px] md:h-[300px] overflow-hidden relative">
-                      <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={s.name} />
+                      <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt={`${s.name} — Servicio de ${settings.businessName}`} loading="lazy" />
                     </div>
                   )}
                   <div className="p-8 md:p-12">
@@ -310,13 +435,13 @@ export const LandingPage: React.FC = () => {
                     {s.price && (
                       <div className="flex items-center justify-between pt-6 md:pt-8 border-t border-white/5">
                         <span className="text-2xl font-black" style={{ color: accent }}>${typeof s.price === 'number' ? s.price.toLocaleString() : s.price}</span>
-                        <Link to="/book" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-white hover:opacity-80 transition-all">
+                        <Link to="/book" className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-white hover:opacity-80 transition-all" aria-label={`Reservar ${s.name}`}>
                           RESERVAR <ArrowRight size={16} style={{ color: accent }} />
                         </Link>
                       </div>
                     )}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </div>
@@ -325,7 +450,7 @@ export const LandingPage: React.FC = () => {
 
       {/* Gallery Section */}
       {gallery.length > 0 && (
-        <section id="gallery" className="py-32 md:py-48 bg-[#050505]">
+        <section id="gallery" className="py-32 md:py-48 bg-[#050505]" aria-label="Galería de trabajos">
           <div className="max-w-7xl mx-auto px-8">
             <div className="mb-20">
               <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Galería</span>
@@ -335,15 +460,66 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {gallery.map((img: any, i: number) => (
-                <div key={i} className="group relative rounded-3xl overflow-hidden aspect-[4/3]">
-                  <img src={img.url || img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={img.caption || `Imagen ${i + 1}`} />
+                <figure key={i} className="group relative rounded-3xl overflow-hidden aspect-[4/3]">
+                  <img src={img.url || img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={img.caption || `${settings.businessName} — Trabajo ${i + 1}`} loading="lazy" />
                   {img.caption && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <figcaption className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                       <p className="text-white text-sm font-bold">{img.caption}</p>
-                    </div>
+                    </figcaption>
                   )}
-                </div>
+                </figure>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Google Maps Embed — GEO Optimization */}
+      {settings.latitude && settings.longitude && (
+        <section id="location" className="bg-[#050505] py-24" aria-label="Ubicación del negocio">
+          <div className="max-w-7xl mx-auto px-8">
+            <div className="mb-16">
+              <span className="text-[11px] font-black uppercase tracking-[0.6em] mb-8 block" style={{ color: accent }}>Ubicación</span>
+              <h2 className="text-5xl md:text-[80px] font-playfair font-black text-white leading-[0.85] tracking-tighter">
+                Encuéntranos <span className="italic font-light" style={{ color: accent }}>aquí.</span>
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl h-[400px]">
+                <iframe
+                  title={`Ubicación de ${settings.businessName}`}
+                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${settings.latitude},${settings.longitude}&zoom=16&language=es`}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <div className="flex flex-col justify-center space-y-8">
+                {settings.address && (
+                  <div className="flex gap-4">
+                    <MapPin size={24} className="shrink-0" style={{ color: accent }} />
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Dirección</p>
+                      <p className="text-white font-bold text-sm leading-relaxed">{settings.address}</p>
+                    </div>
+                  </div>
+                )}
+                {settings.contactPhone && (
+                  <div className="flex gap-4">
+                    <Phone size={24} className="shrink-0" style={{ color: accent }} />
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Teléfono</p>
+                      <a href={`tel:${settings.contactPhone}`} className="text-white font-bold text-sm hover:underline">{settings.contactPhone}</a>
+                    </div>
+                  </div>
+                )}
+                <Link to="/book" className="mt-4 px-10 py-5 rounded-full text-[10px] uppercase tracking-[0.4em] font-black text-black text-center shadow-2xl" style={{ backgroundColor: accent }}>
+                  Agendar Visita
+                </Link>
+              </div>
             </div>
           </div>
         </section>
