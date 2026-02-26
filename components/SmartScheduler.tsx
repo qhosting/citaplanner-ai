@@ -2,15 +2,17 @@
 import React, { useState } from 'react';
 import { Sparkles, ArrowRight, Loader2, CalendarPlus, Wand2, AlertTriangle } from 'lucide-react';
 import { parseAppointmentRequest } from '../services/geminiService';
-import { AIParsedAppointment, Appointment, AppointmentStatus } from '../types';
+import { AIParsedAppointment, Appointment, AppointmentStatus, Professional, Service } from '../types';
 import { SOLUTION_TIMEOUT } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface SmartSchedulerProps {
   onAddAppointment: (apt: Appointment) => void;
+  services: Service[];
+  professionals: Professional[];
 }
 
-export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment }) => {
+export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment, services, professionals }) => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +27,12 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
 
     try {
       const [parsed] = await Promise.all([
-        parseAppointmentRequest(input),
+        parseAppointmentRequest(input, services, professionals),
         new Promise(resolve => setTimeout(resolve, SOLUTION_TIMEOUT))
       ]);
 
       if (parsed) {
-        // Fixed: Included tenantId in newAppointment
+        // AI returns matched serviceId and professionalId
         const newAppointment: Appointment = {
           id: Date.now().toString(36) + Math.random().toString(36).substring(2),
           title: parsed.title,
@@ -41,6 +43,8 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
           description: parsed.description || 'Experiencia solicitada vía Shula AI',
           status: AppointmentStatus.SCHEDULED,
           tenantId: user?.tenantId || '',
+          professionalId: parsed.professionalId || '',
+          serviceId: parsed.serviceId || ''
         };
 
         try {

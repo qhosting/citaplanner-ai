@@ -1,13 +1,20 @@
 
 import { Type } from "@google/genai";
-import { AIParsedAppointment, Service } from "../types";
+import { AIParsedAppointment, Service, Professional } from "../types";
 import { api } from "./api";
 
 // NO IMPORTAMOS GoogleGenAI aquí. Usamos api.generateAIContent.
 
-export const parseAppointmentRequest = async (input: string): Promise<AIParsedAppointment | null> => {
+export const parseAppointmentRequest = async (
+  input: string,
+  services: Service[],
+  professionals: Professional[]
+): Promise<AIParsedAppointment | null> => {
   const now = new Date().toISOString();
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const servicesContext = services.map(s => `- ID: ${s.id}, Name: ${s.name}, Duration: ${s.duration}min`).join('\n');
+  const prosContext = professionals.map(p => `- ID: ${p.id}, Name: ${p.name}, Role: ${p.role}`).join('\n');
 
   const systemInstruction = `
     Eres "Citaplanner AI", el asistente inteligente de una plataforma SaaS líder para la gestión de negocios de belleza elite.
@@ -16,11 +23,18 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
     Hora de Referencia Actual: ${now}
     Zona Horaria: ${timeZone}
     
+    CATÁLOGO DE SERVICIOS:
+    ${servicesContext}
+
+    EQUIPO DE ESPECIALISTAS:
+    ${prosContext}
+
     Reglas de Oro:
     1. Interpreta fechas relativas (mañana, próximo martes, etc.) con precisión.
-    2. El tono es profesional, eficiente y sofisticado.
-    3. Si el usuario no especifica servicio, asume "Tratamiento General Citaplanner".
-    4. Formato de salida: JSON estricto.
+    2. Identifica el servicio y el profesional basándote en los nombres proporcionados. Devuelve sus IDs exactos.
+    3. Si no hay una coincidencia clara, usa los IDs más probables o deja en blanco si es imposible.
+    4. El tono es profesional, eficiente y sofisticado.
+    5. Formato de salida: JSON estricto acorde al esquema.
   `;
 
   try {
@@ -33,14 +47,16 @@ export const parseAppointmentRequest = async (input: string): Promise<AIParsedAp
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            title: { type: Type.STRING, description: "Servicio Citaplanner" },
+            title: { type: Type.STRING, description: "Nombre del servicio detectado" },
             startDateTime: { type: Type.STRING, description: "ISO 8601" },
             endDateTime: { type: Type.STRING, description: "ISO 8601" },
             clientName: { type: Type.STRING },
             clientPhone: { type: Type.STRING },
             description: { type: Type.STRING },
+            professionalId: { type: Type.STRING, description: "ID del especialista del catálogo" },
+            serviceId: { type: Type.STRING, description: "ID del servicio del catálogo" },
           },
-          required: ["title", "startDateTime", "endDateTime"],
+          required: ["title", "startDateTime", "endDateTime", "professionalId", "serviceId"],
         },
       },
     });

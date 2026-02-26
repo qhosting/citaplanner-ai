@@ -176,6 +176,8 @@ export interface AIParsedAppointment {
   clientName?: string;
   clientPhone?: string;
   description?: string;
+  professionalId?: string;
+  serviceId?: string;
 }
 
 export interface TreatmentRecord {

@@ -7,14 +7,15 @@ import {
     Calendar as CalendarIcon,
     Activity
 } from 'lucide-react';
-import { Appointment, Client } from '../../types';
+import { Appointment, Client, Service } from '../../types';
 
 interface StatGridProps {
     appointments: Appointment[];
     clients: Client[];
+    services: Service[];
 }
 
-export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients }) => {
+export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients, services }) => {
     const today = new Date().toLocaleDateString();
 
     const todayAppointments = appointments.filter(a =>
@@ -23,8 +24,11 @@ export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients }) => 
 
     const activeClients = clients.length;
 
-    // Dummy revenue calculation for demo (e.g. $50 per appointment)
-    const revenue = appointments.length * 50;
+    // Calculate actual revenue from completed appointments or all if simplified
+    const revenue = appointments.reduce((acc, apt) => {
+        const service = services.find(s => s.id === apt.serviceId);
+        return acc + (service?.price || 0);
+    }, 0);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">

@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { Professional, ScheduleException, ExceptionType, Appointment } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AppointmentModal } from '../components/AppointmentModal';
 
 const DAYS_OF_WEEK = [
    { id: 1, name: 'Lunes' },
@@ -53,9 +54,23 @@ export const SchedulesPage: React.FC = () => {
       note: ''
    });
 
+   const [isAptModalOpen, setIsAptModalOpen] = useState(false);
+
    const { data: appointments = [] } = useQuery({
       queryKey: ['appointments'],
       queryFn: api.getAppointments
+   });
+
+   const createMutation = useMutation({
+      mutationFn: api.createAppointment,
+      onSuccess: () => {
+         queryClient.invalidateQueries({ queryKey: ['appointments'] });
+         toast.success("Cita agendada y sincronizada.");
+         setIsAptModalOpen(false);
+      },
+      onError: () => {
+         toast.error("Error al sincronizar cita.");
+      }
    });
 
    useEffect(() => { loadProfessionals(); }, []);
@@ -300,7 +315,10 @@ export const SchedulesPage: React.FC = () => {
                                        <div className="p-6 border-r border-theme flex items-center justify-center">
                                           <span className="text-xs font-black text-muted group-hover:text-[#CE4676] transition-colors">{timeStr}</span>
                                        </div>
-                                       <div className={`p-2 relative min-h-[80px] transition-all ${apt ? 'bg-input-theme' : isAvailable ? 'bg-transparent hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/20'}`}>
+                                       <div
+                                          onClick={() => isAvailable && !apt && setIsAptModalOpen(true)}
+                                          className={`p-2 relative min-h-[80px] transition-all ${apt ? 'bg-input-theme' : isAvailable ? 'bg-transparent hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/20'}`}
+                                       >
                                           {apt ? (
                                              <div className="absolute inset-2 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20 z-10">
                                                 <p className="text-[9px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Cita Confirmada</p>
@@ -615,6 +633,12 @@ export const SchedulesPage: React.FC = () => {
                </div>
             </div>
          )}
-      </div>
+
+         <AppointmentModal
+            isOpen={isAptModalOpen}
+            onClose={() => setIsAptModalOpen(false)}
+            onSave={(apt) => createMutation.mutate(apt)}
+         />
+      </div >
    );
 };

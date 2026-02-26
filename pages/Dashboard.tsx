@@ -31,6 +31,16 @@ export const Dashboard: React.FC = () => {
     queryFn: api.getAppointments,
   });
 
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: api.getServices,
+  });
+
+  const { data: professionals = [] } = useQuery({
+    queryKey: ['professionals'],
+    queryFn: api.getProfessionals,
+  });
+
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['clients'],
     queryFn: api.getClients,
@@ -96,7 +106,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="mb-16">
-        <StatGrid appointments={appointments} clients={clients} />
+        <StatGrid appointments={appointments} clients={clients} services={services} />
       </div>
 
       <div className="mb-16">
@@ -106,7 +116,11 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
         <div className="lg:col-span-2 space-y-16">
           <div className="glass-card p-1.5 rounded-[3.5rem] border-[#CE4676]/5">
-            <SmartScheduler onAddAppointment={(apt) => createMutation.mutate(apt)} />
+            <SmartScheduler
+              onAddAppointment={(apt) => createMutation.mutate(apt)}
+              services={services}
+              professionals={professionals}
+            />
           </div>
 
           {isLoading ? (
