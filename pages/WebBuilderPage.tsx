@@ -662,6 +662,13 @@ export const WebBuilderPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }}
+                            className="p-1.5 text-muted hover:text-[#CE4676] transition-colors rounded-lg hover:bg-input-theme"
+                            title="Recargar vista previa"
+                        >
+                            <RefreshCw size={13} />
+                        </button>
                         <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa</span>
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>

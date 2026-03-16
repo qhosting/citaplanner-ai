@@ -133,6 +133,51 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                 </div>
             </section>
 
+            {/* Gallery — shown only when tenant has images */}
+            {settings.images && settings.images.length > 0 && (
+                <section className="py-24 px-6 bg-slate-950/60">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="text-center mb-16">
+                            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500">Showcase</span>
+                            <h2 className="text-4xl font-black text-white uppercase tracking-tighter mt-2">Galería Visual</h2>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {settings.images.map((img, i) => (
+                                <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border border-white/5 group bg-slate-900">
+                                    <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={`Galería ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Testimonials — shown only when tenant has testimonials */}
+            {settings.testimonials && settings.testimonials.length > 0 && (
+                <section className="py-24 px-6 bg-[#020617]">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="text-center mb-16">
+                            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500">Social Proof</span>
+                            <h2 className="text-4xl font-black text-white uppercase tracking-tighter mt-2">Casos de Éxito</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {settings.testimonials.map((t, i) => (
+                                <div key={i} className="p-10 rounded-[2.5rem] bg-white/[0.03] border border-white/8 hover:bg-white/[0.06] transition-all">
+                                    <div className="flex gap-1 mb-6">
+                                        {[...Array(5)].map((_, s) => <Star key={s} size={14} className="text-indigo-400 fill-indigo-400" />)}
+                                    </div>
+                                    <p className="text-slate-300 italic mb-10 leading-relaxed text-sm">"{t.text}"</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-sm">{t.name.charAt(0)}</div>
+                                        <span className="font-bold text-white text-xs uppercase tracking-widest">{t.name}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
             <footer className="py-16 border-t border-white/5 bg-[#020617] px-6">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
                     <LogoCitaplanner size={24} color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />

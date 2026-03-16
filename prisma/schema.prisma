@@ -11,8 +11,8 @@ datasource db {
 model Appointment {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title           String?   @db.VarChar(150)
-  startDatetime   DateTime? @db.Timestamp(6) @map("start_datetime")
-  endDatetime     DateTime? @db.Timestamp(6) @map("end_datetime")
+  startDateTime   DateTime? @db.Timestamp(6) @map("start_datetime")
+  endDateTime     DateTime? @db.Timestamp(6) @map("end_datetime")
   clientName      String?   @db.VarChar(100) @map("client_name")
   clientPhone     String?   @db.VarChar(20) @map("client_phone")
   status          String?   @db.VarChar(20)
@@ -25,7 +25,11 @@ model Appointment {
   reminderSent    Boolean?  @default(false) @map("reminder_sent")
   careSent        Boolean?  @default(false) @map("care_sent")
   updatedAt       DateTime? @default(now()) @updatedAt @db.Timestamp(6) @map("updated_at")
-  tenants         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  professionalId  String?   @db.Uuid @map("professional_id")
+  serviceId       String?   @db.Uuid @map("service_id")
+  professional    Professional? @relation(fields: [professionalId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service         Service?      @relation(fields: [serviceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant          Tenant?       @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("appointments")
 }
@@ -39,7 +43,7 @@ model AutomationRule {
   channel          String?  @db.VarChar(50)
   templateMessage  String? @map("template_message")
   tenantId         String?  @db.Uuid @map("tenant_id")
-  tenants          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("automation_rules")
 }
@@ -54,7 +58,7 @@ model BillingLog {
   description String?
   invoiceUrl  String? @map("invoice_url")
   createdAt   DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
-  tenants     Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("billing_logs")
 }
@@ -69,7 +73,7 @@ model Branch {
   createdAt       DateTime?      @default(now()) @db.Timestamp(6) @map("created_at")
   tenantId        String?        @db.Uuid @map("tenant_id")
   organizationId  String?        @default("demo") @db.VarChar(50) @map("organization_id")
-  tenants         Tenant?        @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant          Tenant?        @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   transactions    Transaction[]
 
   @@map("branches")
@@ -90,7 +94,7 @@ model Client {
 treatmentHistory   Json?     @default("[]")
   tenantId           String?   @db.Uuid @map("tenant_id")
   createdAt          DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
-  tenants            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("clients")
 }
@@ -118,7 +122,7 @@ model InventoryMovement {
   reason       String?
   createdAt    DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
   tenantId     String?   @db.Uuid @map("tenant_id")
-  tenants      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("inventory_movements")
 }
@@ -168,7 +172,7 @@ model MarketingCampaign {
   sentCount      Int?      @default(0) @map("sent_count")
   tenantId       String?   @db.Uuid @map("tenant_id")
   createdAt      DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
-  tenants        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("marketing_campaigns")
 }
@@ -187,7 +191,7 @@ model Product {
   tenantId        String?  @db.Uuid @map("tenant_id")
   organizationId  String?  @default("demo") @db.VarChar(50) @map("organization_id")
   branchId        String?  @db.Uuid @map("branch_id")
-  tenants         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("products")
 }
@@ -209,8 +213,9 @@ model Professional {
   googleCalendarId     String? @map("google_calendar_id")
   calendarSyncEnabled  Boolean? @default(false) @map("calendar_sync_enabled")
   icalToken             String? @map("ical_token")
-  tenants               Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant                Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   taskAssignments       TaskAssignment[]
+  appointments          Appointment[]
 
   @@map("professionals")
 }
@@ -224,7 +229,7 @@ model Sale {
   clientName     String? @map("client_name")
   createdAt      DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
   tenantId       String?   @db.Uuid @map("tenant_id")
-  tenants        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("sales")
 }
@@ -242,7 +247,8 @@ model Service {
   organizationId  String?  @default("demo") @db.VarChar(50) @map("organization_id")
   branchId        String?  @db.Uuid @map("branch_id")
   careInstructions String? @map("care_instructions")
-  tenants         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  appointments    Appointment[]
 
   @@map("services")
 }
@@ -251,7 +257,7 @@ model Setting {
   key       String  @id @db.VarChar(50)
   value     Json?   @default("{}")
   tenantId  String? @db.Uuid @map("tenant_id")
-  tenants   Tenant? @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("settings")
 }
@@ -267,7 +273,7 @@ model Subscription {
   currentPeriodEnd    DateTime? @db.Timestamp(6) @map("current_period_end")
   createdAt            DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
   updatedAt            DateTime? @default(now()) @db.Timestamp(6) @map("updated_at")
-  tenants              Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant               Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("subscriptions")
 }
@@ -348,7 +354,7 @@ model User {
   refreshToken       String? @map("refresh_token")
   resetToken         String? @map("reset_token")
   resetTokenExpiry  DateTime? @db.Timestamp(6) @map("reset_token_expiry")
-  tenants            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([phone, organizationId], map: "idx_users_phone_org")
   @@unique([phone, organizationId])
@@ -361,7 +367,7 @@ model MaintenanceTask {
   taskName        String   @db.VarChar(255) @map("task_name")
   priority        Int      @default(1)
   tenantId        String   @db.Uuid @map("tenant_id")
-  tenants         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignments     TaskAssignment[]
 
   @@map("maintenance_tasks")
@@ -377,7 +383,7 @@ model TaskAssignment {
   status          String   @default("PENDING") @db.VarChar(20)
   completedAt     DateTime? @db.Timestamp(6) @map("completed_at")
   tenantId        String   @db.Uuid @map("tenant_id")
-  tenants         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("task_assignments")
 }
