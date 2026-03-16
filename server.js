@@ -131,9 +131,6 @@ const savePlans = () => {
 };
 
 
-// --- OPTIMIZACIÓN: CACHÉ DE TENANTS ---
-const tenantCache = new Map();
-const CACHE_TTL = 1000 * 60 * 5; // 5 minutos
 
 // --- REDIS CONFIG ---
 let redisClient = null;
@@ -1334,20 +1331,36 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
     try {
         const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
 
-        const newAppointment = await prisma.appointment.create({
-            data: {
-                title,
-                startDateTime: new Date(startDateTime),
-                endDateTime: new Date(endDateTime),
-                clientName,
-                clientPhone,
-                status: 'SCHEDULED',
-                professionalId,
-                serviceId,
-                notes,
-                branchId: req.branchId,
-                organizationId: req.tenantId
-            }
+        // ACID Transaction: Create appointment and log integration event
+        const newAppointment = await prisma.$transaction(async (tx) => {
+            const apt = await tx.appointment.create({
+                data: {
+                    title,
+                    startDateTime: new Date(startDateTime),
+                    endDateTime: new Date(endDateTime),
+                    clientName,
+                    clientPhone,
+                    status: 'SCHEDULED',
+                    professionalId,
+                    serviceId,
+                    notes,
+                    branchId: req.branchId,
+                    organizationId: req.tenantId
+                }
+            });
+
+            await tx.integrationLog.create({
+                data: {
+                    platform: 'SYSTEM',
+                    eventType: 'APPOINTMENT_CREATED',
+                    payload: { appointmentId: apt.id, clientName },
+                    status: 'SUCCESS',
+                    organizationId: req.tenantId,
+                    branchId: req.branchId
+                }
+            });
+
+            return apt;
         });
 
         const newId = newAppointment.id;
@@ -1787,20 +1800,37 @@ app.post('/api/auth/refresh', async (req, res) => {
             where: { id: payload.id, refreshToken: refreshToken }
         });
 
-        if (!user) return res.status(403).json({ error: "Refresh Token inválido o revocado" });
+        if (!user) {
+            console.warn(`[AUTH] Refresh token reuse detected or invalid for user ID: ${payload.id}`);
+            return res.status(403).json({ error: "Refresh Token inválido o revocado" });
+        }
 
         // Issue new Access Token
         const newToken = jwt.sign({
             id: user.id,
             role: user.role,
             tenantId: payload.tenantId,
-            branchId: user.branchId // Assuming branch stays same
-        }, JWT_SECRET, { expiresIn: '15m' });
+            branchId: user.branchId
+        }, JWT_SECRET, { expiresIn: '8h' }); // Standard session
 
-        res.json({ success: true, token: newToken });
+        // Issue new Refresh Token (Rotation)
+        const newRefreshToken = jwt.sign({
+            id: user.id,
+            role: user.role,
+            tenantId: payload.tenantId
+        }, JWT_SECRET, { expiresIn: '7d' });
+
+        // Update DB with the new refresh token (invalidating the old one)
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { refreshToken: newRefreshToken }
+        });
+
+        res.json({ success: true, token: newToken, refreshToken: newRefreshToken });
 
     } catch (e) {
-        return res.status(403).json({ error: "Token inválido/expirado" });
+        console.error('[AUTH] Refresh Error:', e.message);
+        return res.status(403).json({ error: "Token inválido o expirado" });
     }
 });
 
