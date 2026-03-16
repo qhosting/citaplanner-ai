@@ -47,7 +47,11 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 2, // 2 minutos de caché "fresca"
       gcTime: 1000 * 60 * 10,  // 10 minutos antes de eliminar de memoria
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // No reintentar en errores de red/timeout, solo en errores del servidor (5xx)
+        if (error?.name === 'AbortError' || error?.name === 'TypeError') return false;
+        return failureCount < 1;
+      },
       refetchOnWindowFocus: false,
     }
   }
@@ -343,7 +347,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <MainLayout />
           </BrowserRouter>
         </AuthProvider>

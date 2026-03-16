@@ -21,86 +21,127 @@ interface TemplateProps {
 // 1. TEMPLATE: CITAPLANNER (SaaS Demo)
 // ==========================================
 export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => {
+    const defaultServices = [
+        { id: 's1', name: 'Plan Starter', price: 290, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Gestión básica para estudios individuales. Calendario y clientes ilimitados.' },
+        { id: 's2', name: 'Plan Professional', price: 950, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Para equipos de hasta 5 especialistas. IA de agendamiento incluida.' },
+        { id: 's3', name: 'Enterprise Cloud', price: 2400, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Múltiples sucursales, API abierta y soporte prioritario 24/7.' },
+    ];
+    const displayServices = services.length > 0 ? services : defaultServices;
+
     return (
         <div className="bg-[#020617] text-slate-200 min-h-screen font-inter selection:bg-indigo-500/30">
-            <nav className="fixed top-0 w-full z-50 bg-slate-950/50 backdrop-blur-xl border-b border-slate-800/50">
+            <nav className="fixed top-0 w-full z-50 bg-slate-950/70 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <LogoCitaplanner color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
-                    <div className="hidden md:flex items-center gap-8">
-                        {['Características', 'Servicios', 'Nosotros'].map(item => (
-                            <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors">{item}</a>
+                    <div className="hidden md:flex items-center gap-10">
+                        {['Plataforma', 'Funciones', 'Precios'].map(item => (
+                            <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-colors">{item}</a>
                         ))}
-                        <Link to="/book" className="px-6 py-2.5 rounded-full bg-slate-100 text-slate-950 text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg shadow-white/5">Reservar Demo</Link>
+                        <Link to="/book" className="px-8 py-3 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20">Probar Demo</Link>
                     </div>
                 </div>
             </nav>
 
             <header className="relative pt-48 pb-32 px-6 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] -z-10 opacity-50" />
-                <div className="max-w-5xl mx-auto text-center space-y-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm shadow-xl">
-                        <Sparkles size={14} className="text-indigo-400" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-100">
-                            {settings.heroSlides?.[currentSlide || 0]?.subtitle || "Inteligencia Artificial aplicada a tu negocio"}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-indigo-600/10 rounded-full blur-[150px] -z-10" />
+                <div className="max-w-6xl mx-auto text-center space-y-10">
+                    <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+                        <Zap size={14} className="text-indigo-400 animate-pulse" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-200">
+                            {settings.heroSlides?.[currentSlide || 0]?.subtitle || "La era de la Inteligencia Artificial"}
                         </span>
                     </div>
-                    <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white leading-[0.9] uppercase transition-all duration-700">
+                    <h1 className="text-7xl md:text-[110px] font-black tracking-tighter text-white leading-[0.85] uppercase">
                         {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName || "CitaPlanner"} <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-200">
-                            {settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan || "Tu negocio, en piloto automático."}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+                            {settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan || "Scale your studio effortlessly."}
                         </span>
                     </h1>
-                    <p className="max-w-2xl mx-auto text-lg text-slate-400 font-medium leading-relaxed">
-                        {settings.aboutText || "La plataforma más avanzada para la gestión de citas, clientes y operaciones. Diseñada para escalar."}
+                    <p className="max-w-2xl mx-auto text-xl text-slate-400 font-medium leading-relaxed">
+                        {settings.aboutText || "Automatiza el 90% de tus tareas operativas. Desde agendamiento por IA hasta analítica predictiva de alto nivel."}
                     </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-10">
-                        <Link to="/book" className="px-12 py-5 rounded-2xl bg-indigo-600 text-white font-black text-xs uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/20 flex items-center gap-3 group">
-                            Probar Sistema <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+                        <Link to="/book" className="px-14 py-6 rounded-[2rem] bg-indigo-600 text-white font-black text-xs uppercase tracking-widest hover:bg-indigo-500 hover:scale-105 transition-all shadow-2xl shadow-indigo-600/40 flex items-center gap-4">
+                            Solicitar Acceso <ArrowRight size={18} />
                         </Link>
-                        <button className="px-12 py-5 rounded-2xl bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all">Ver Características</button>
+                        <button className="px-14 py-6 rounded-[2rem] bg-white/5 border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 transition-all">Ver Roadmap</button>
                     </div>
                 </div>
 
                 <div className="mt-24 max-w-6xl mx-auto relative group">
-                    <div className="absolute inset-x-20 -bottom-10 h-20 bg-indigo-500/50 blur-[100px] -z-10 group-hover:bg-indigo-400/60 transition-all duration-1000" />
-                    <div className="aspect-video rounded-[2.5rem] bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl relative">
+                    <div className="absolute inset-x-20 -bottom-20 h-40 bg-indigo-500/30 blur-[120px] -z-10" />
+                    <div className="aspect-video rounded-[3rem] bg-slate-900/50 border border-white/5 overflow-hidden shadow-[0_0_100px_rgba(79,70,229,0.1)] relative">
                         <img
-                            src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/saas.png"}
-                            className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all duration-1000"
-                            alt="SaaS Dashboard"
+                            src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/saas_hero.png"}
+                            className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-all duration-[2000ms]"
+                            alt="SaaS Platform"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
                     </div>
                 </div>
             </header>
 
-            <section id="servicios" className="py-32 px-6 bg-slate-950">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row justify-between items-end gap-8 mb-20 border-b border-slate-800 pb-12">
-                        <div className="space-y-4">
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">Nuestro Catálogo</span>
-                            <h2 className="text-5xl font-black text-white uppercase tracking-tighter">Servicios Premium</h2>
+            {/* Platform Features */}
+            <section className="py-32 px-6 bg-slate-950">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
+                    {[
+                        { icon: MessageSquare, title: 'IA Conversacional', desc: 'Tus clientas agendan por WhatsApp hablando naturalmente con nuestra IA.' },
+                        { icon: Shield, title: 'Seguridad Bancaria', desc: 'Tus datos y transacciones están protegidos bajo estándares militares.' },
+                        { icon: ZapIcon, title: 'Sync Ultrarrápido', desc: 'Calendario sincronizado en tiempo real en todos tus dispositivos.' },
+                    ].map((feature, i) => (
+                        <div key={i} className="p-12 rounded-[3.5rem] bg-white/[0.02] border border-white/5 space-y-6 hover:bg-white/[0.04] transition-all">
+                            <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-600/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+                                <feature.icon size={30} />
+                            </div>
+                            <h3 className="text-2xl font-black text-white uppercase tracking-tight">{feature.title}</h3>
+                            <p className="text-slate-400 leading-relaxed font-medium">{feature.desc}</p>
                         </div>
-                        <p className="max-w-sm text-slate-400 font-medium text-right italic">"Excelencia en cada detalle, respaldada por tecnología de punta."</p>
+                    ))}
+                </div>
+            </section>
+
+            {/* Pricing/Plans */}
+            <section id="funciones" className="py-32 px-6 bg-[#020617] relative">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-24 space-y-4">
+                        <span className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500">Infrastructure</span>
+                        <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter">Planes de Crecimiento</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {services.map((s, i) => (
-                            <div key={i} className="p-10 rounded-[2.5rem] bg-slate-900/50 border border-slate-800 hover:border-indigo-500/50 transition-all group hover:bg-slate-900">
-                                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-8 border border-indigo-500/20">
-                                    <Zap size={24} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {displayServices.map((s, i) => (
+                            <div key={i} className={`p-10 rounded-[3rem] border transition-all ${i === 1 ? 'bg-indigo-600 border-indigo-500 shadow-2xl scale-105 z-10' : 'bg-slate-900/50 border-white/5 hover:border-indigo-500/30'}`}>
+                                <h3 className={`text-2xl font-black mb-2 uppercase tracking-tighter ${i === 1 ? 'text-white' : 'text-slate-200'}`}>{s.name}</h3>
+                                <div className="flex items-baseline gap-1 mb-6">
+                                    <span className={`text-5xl font-black ${i === 1 ? 'text-white' : 'text-indigo-400'}`}>${s.price}</span>
+                                    <span className="text-xs font-bold uppercase text-slate-400">/mes</span>
                                 </div>
-                                <h3 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter">{s.name}</h3>
-                                <p className="text-slate-500 mb-10 text-sm font-medium leading-relaxed">{s.description}</p>
-                                <div className="flex items-center justify-between pt-8 border-t border-slate-800">
-                                    <span className="text-2xl font-black text-white">${s.price}</span>
-                                    <Link to="/book" className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 hover:text-indigo-300">Reservar Ahora</Link>
-                                </div>
+                                <p className={`mb-10 text-sm font-medium leading-relaxed ${i === 1 ? 'text-indigo-100' : 'text-slate-500'}`}>{s.description}</p>
+                                <ul className="space-y-4 mb-12">
+                                    {['Smart Calendar', 'Client CRM', 'AI Basic', 'Analytics'].map((item, idx) => (
+                                        <li key={idx} className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest opacity-70">
+                                            <CheckCircle2 size={14} className={i === 1 ? 'text-white' : 'text-indigo-400'} /> {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <Link to="/book" className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center transition-all ${i === 1 ? 'bg-white text-indigo-600 hover:bg-slate-100 shadow-xl' : 'bg-white/5 text-white hover:bg-white/10'}`}>
+                                    Empezar Ahora
+                                </Link>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
+
+            <footer className="py-16 border-t border-white/5 bg-[#020617] px-6">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+                    <LogoCitaplanner size={24} color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
+                    <div className="flex gap-8">
+                        {['Docs', 'Privacy', 'Status'].map(t => <span key={t} className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-slate-400 cursor-pointer transition-colors">{t}</span>)}
+                    </div>
+                    <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">{settings.footerText || `© ${new Date().getFullYear()} ${settings.businessName}. Build the future.`}</p>
+                </div>
+            </footer>
         </div>
     );
 };

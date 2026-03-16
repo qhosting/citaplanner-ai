@@ -8,12 +8,20 @@ export const SOLUTION_TIMEOUT = 1000;
 export const ERROR_PROTECTION_CODE = 'AUM-99';
 
 // UTILS
-const safeFetch = async (url: string, options: RequestInit = {}) => {
+const safeFetch = async (url: string, options: RequestInit = {}, timeoutMs = 8000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
     return res;
-  } catch (e) {
-    console.error(`[SAFE FETCH ERROR] ${url}:`, e);
+  } catch (e: any) {
+    clearTimeout(timer);
+    if (e?.name === 'AbortError') {
+      console.warn(`[TIMEOUT] ${url} no respondió en ${timeoutMs}ms`);
+    } else {
+      console.error(`[SAFE FETCH ERROR] ${url}:`, e);
+    }
     throw e;
   }
 };
@@ -65,26 +73,32 @@ const refreshAccessToken = async (): Promise<string | null> => {
   }
 };
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+const fetchWithAuth = async (url: string, options: RequestInit = {}, timeoutMs = 8000) => {
   let headers = getHeaders(options.body instanceof FormData);
 
+  const makeRequest = async (hdrs: any) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, headers: hdrs, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (e: any) {
+      clearTimeout(timer);
+      if (e?.name === 'AbortError') console.warn(`[TIMEOUT] ${url}`);
+      throw e;
+    }
+  };
+
   // 1. Try Original Request
-  let res = await fetch(url, { ...options, headers });
+  let res = await makeRequest(headers);
 
   // 2. Handle 401 / 403 (Token Expired)
   if (res.status === 401 || res.status === 403) {
     const newToken = await refreshAccessToken();
-
     if (newToken) {
-      // Retry with new token
       headers['Authorization'] = `Bearer ${newToken}`;
-      res = await fetch(url, { ...options, headers });
-    } else {
-      // Force Logout if refresh fails
-      if (window.location.pathname !== '/login') {
-        // Optional: Redirect to login or just let the app handle the auth state change next reload
-        // window.location.href = '/login'; 
-      }
+      res = await makeRequest(headers);
     }
   }
 
