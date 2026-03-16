@@ -179,15 +179,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                 </section>
             )}
 
-            <footer className="py-16 border-t border-white/5 bg-[#020617] px-6">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-                    <LogoCitaplanner size={24} color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
-                    <div className="flex gap-8">
-                        {['Docs', 'Privacy', 'Status'].map(t => <span key={t} className="text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-slate-400 cursor-pointer transition-colors">{t}</span>)}
-                    </div>
-                    <p className="text-slate-600 text-[10px] font-bold uppercase tracking-widest">{settings.footerText || `© ${new Date().getFullYear()} ${settings.businessName}. Build the future.`}</p>
-                </div>
-            </footer>
+            {/* Footer delegated to global layout */}
         </div>
     );
 };
@@ -322,14 +314,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="py-10 border-t border-slate-100 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <LogoCitaplanner color="#111" businessName={settings.businessName} customUrl={settings.logoUrl} />
-                    {settings.address && <p className="text-slate-400 text-xs flex items-center gap-2"><MapPin size={12} />{settings.address}</p>}
-                    <p className="text-slate-400 text-[9px] uppercase tracking-widest">{settings.footerText || `© ${new Date().getFullYear()} ${settings.businessName}. Todos los derechos reservados.`}</p>
-                </div>
-            </footer>
+            {/* Footer delegated to global layout */}
         </div>
     );
 };
@@ -464,14 +449,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </section>
             )}
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-[#D4AF37]/10 px-8">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-                    <LogoCitaplanner size={22} color="#D4AF37" businessName={settings.businessName} customUrl={settings.logoUrl} />
-                    {settings.address && <p className="text-zinc-700 text-[10px] flex items-center gap-2"><MapPin size={10} />{settings.address}</p>}
-                    <p className="text-zinc-800 text-[8px] uppercase tracking-widest">{settings.footerText || `© ${new Date().getFullYear()} ${settings.businessName}. Todos los derechos reservados.`}</p>
-                </div>
-            </footer>
+            {/* Footer delegated to global layout */}
         </div>
     );
 };
