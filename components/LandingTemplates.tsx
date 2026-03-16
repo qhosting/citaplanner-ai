@@ -1,12 +1,10 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-    ArrowRight, Sparkles, MapPin, Instagram, Facebook, Twitter,
+    ArrowRight, Sparkles, MapPin, Instagram, Facebook, Twitter, Phone,
     MessageCircle, ShieldCheck, Zap, Globe, Heart, Star, CheckCircle2,
     Calendar, Users, Clock, Menu, X, MessageSquare, Heart as HeartIcon,
     Zap as ZapIcon, Shield, CalendarDays
-} from 'lucide-react';
 import { LandingSettings, Service } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
 
@@ -333,83 +331,86 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
     const displayServices = services.length > 0 ? services : defaultServices;
 
     return (
-        <div className="bg-[#050505] text-[#D4AF37] min-h-screen font-inter selection:bg-[#D4AF37]/20">
-            <nav className="p-10 flex justify-between items-center absolute top-0 w-full z-50">
-                <LogoCitaplanner size={28} color="#D4AF37" businessName={settings.businessName} customUrl={settings.logoUrl} />
-                <Link to="/book" className="px-10 py-5 bg-[#D4AF37] text-black rounded-full font-black text-[11px] uppercase tracking-[0.3em] hover:scale-105 transition-transform shadow-[0_10px_40px_rgba(212,175,55,0.3)]">Entrar al Studio</Link>
+        <div className="bg-white text-zinc-800 font-inter selection:bg-pink-100">
+            {/* Top Bar */}
+            <div className="hidden md:flex justify-between items-center py-2 px-8 border-b border-zinc-100 text-[10px] uppercase tracking-widest font-bold text-zinc-500 bg-zinc-50">
+                <div className="flex gap-6">
+                    {settings.contactPhone && <span className="flex items-center gap-2"><Phone size={12} style={{ color: accent }} /> {settings.contactPhone}</span>}
+                    {settings.address && <span className="flex items-center gap-2"><MapPin size={12} style={{ color: accent }} /> {settings.address}</span>}
+                </div>
+                <div className="flex gap-4">
+                    {settings.socialInstagram && <a href={settings.socialInstagram} target="_blank" rel="noreferrer" className="hover:text-black transition-colors"><Instagram size={14} /></a>}
+                    {settings.socialFacebook && <a href={settings.socialFacebook} target="_blank" rel="noreferrer" className="hover:text-black transition-colors"><Facebook size={14} /></a>}
+                </div>
+            </div>
+
+            {/* Main Nav */}
+            <nav className="py-6 px-8 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-50 shadow-sm transition-all duration-300">
+                <LogoCitaplanner size={28} color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
+                <div className="hidden lg:flex items-center gap-8">
+                    {['Inicio', 'Nosotros', 'Servicios', 'Testimonios'].map(t => (
+                        <a key={t} href={`#${t.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.2em] hover:text-[var(--accent)] transition-colors" style={{ '--accent': accent } as any}>{t}</a>
+                    ))}
+                </div>
+                <Link to="/book" className="px-8 py-3 text-white rounded font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-opacity shadow-md" style={{ backgroundColor: accent }}>Agendar Cita</Link>
             </nav>
 
-            <header className="h-screen relative flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 z-10" />
-                <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Luxury Beauty Studio" />
-                <div className="relative z-20 text-center space-y-6 flex flex-col items-center max-w-5xl px-8">
-                    <div className="flex items-center gap-6">
-                        <div className="h-px w-16 bg-[#D4AF37]/40" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.8em] text-[#D4AF37]/70">{slides?.[currentSlide || 0]?.subtitle || "The Art of Perfection"}</span>
-                        <div className="h-px w-16 bg-[#D4AF37]/40" />
-                    </div>
-                    <h1 className="text-7xl md:text-[120px] font-black text-[#D4AF37] leading-[0.85] tracking-tighter uppercase">
-                        {slides?.[currentSlide || 0]?.title || settings.businessName || "Shula Studio"}
+            {/* Clean Hero Section */}
+            <header id="inicio" className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-zinc-100">
+                <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[4000ms] hover:scale-105" alt="Beauty Salon" />
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]" />
+                
+                <div className="relative z-10 text-center max-w-4xl px-6 py-16 bg-white/80 backdrop-blur-md rounded-tr-[4rem] rounded-bl-[4rem] border border-white/50 shadow-2xl mx-4">
+                    <span className="block text-[10px] font-black uppercase tracking-[0.4em] mb-4" style={{ color: accent }}>
+                        {slides?.[currentSlide || 0]?.subtitle || "Bienvenida al mejor cuidado"}
+                    </span>
+                    <h1 className="text-5xl md:text-7xl font-playfair font-black tracking-tight text-zinc-900 mb-6 leading-tight">
+                        {slides?.[currentSlide || 0]?.title || settings.businessName || "Beauty Experience"}
                     </h1>
-                    <p className="text-lg md:text-2xl font-light tracking-[0.3em] text-white/50 uppercase italic">
-                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Redefiniendo tu esencia."}
+                    <p className="text-zinc-600 text-lg md:text-xl font-light italic mb-10 max-w-2xl mx-auto leading-relaxed">
+                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Resalta tu belleza natural con nuestros expertos."}
                     </p>
-                    <div className="pt-10">
-                        <Link to="/book" className="group relative inline-flex items-center gap-4 px-20 py-7 border border-[#D4AF37]/50 overflow-hidden hover:border-[#D4AF37] transition-all">
-                            <div className="absolute inset-0 bg-[#D4AF37] translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <span className="relative z-10 text-[11px] font-black uppercase tracking-[0.5em] text-[#D4AF37] group-hover:text-black">Solicitar Experiencia</span>
-                            <ArrowRight size={18} className="relative z-10 text-[#D4AF37] group-hover:text-black group-hover:translate-x-2 transition-all" />
-                        </Link>
-                    </div>
+                    <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white rounded font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all shadow-lg hover:-translate-y-1" style={{ backgroundColor: accent }}>
+                        Hacer una Reserva <ArrowRight size={14} />
+                    </Link>
                 </div>
             </header>
 
-            {/* Stats Strip */}
-            <section className="py-16 border-y border-[#D4AF37]/10 bg-[#080808]">
-                <div className="max-w-5xl mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                    {[
-                        { num: settings.stats?.[0]?.value || '8+', label: settings.stats?.[0]?.label || 'Años de Experiencia' },
-                        { num: settings.stats?.[1]?.value || '2,400+', label: settings.stats?.[1]?.label || 'Clientas Satisfechas' },
-                        { num: settings.stats?.[2]?.value || '15', label: settings.stats?.[2]?.label || 'Especialistas Elite' },
-                        { num: settings.stats?.[3]?.value || '98%', label: settings.stats?.[3]?.label || 'Satisfacción Total' },
-                    ].map((s, i) => (
-                        <div key={i} className="space-y-1">
-                            <p className="text-3xl md:text-5xl font-black text-[#D4AF37]">{s.num}</p>
-                            <p className="text-[8px] uppercase tracking-[0.4em] text-zinc-700 font-bold">{s.label}</p>
+            {/* About Section */}
+            <section id="nosotros" className="py-24 px-8 bg-white">
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                    <div className="relative aspect-square">
+                        <div className="absolute inset-4 border-2 z-10 pointer-events-none" style={{ borderColor: accent }} />
+                        <img src="https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80" className="w-full h-full object-cover p-8 shadow-sm" alt="Nuestro Studio" />
+                        <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-zinc-50 rounded-full flex flex-col items-center justify-center p-6 shadow-xl border border-zinc-100 hidden md:flex">
+                            <h4 className="text-4xl font-playfair font-black mb-1" style={{ color: accent }}>{settings.stats?.[0]?.value || '10+'}</h4>
+                            <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold text-center">Años de<br/>Excelencia</p>
                         </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Services */}
-            <section className="py-28 px-8 bg-[#050505]">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 items-start">
-                        <div className="lg:col-span-4 sticky top-32 space-y-6">
-                            <div className="h-px w-12 bg-[#D4AF37]/40" />
-                            <h2 className="text-5xl font-black text-white uppercase tracking-tighter leading-tight">
-                                Servicios<br /><span className="italic font-light text-[#D4AF37]">Magnificados.</span>
-                            </h2>
-                            <p className="text-zinc-500 leading-relaxed font-light text-sm">{settings.aboutText || "Cada tratamiento es una obra de arte. Fusionamos técnicas avanzadas con una visión estética única e irrepetible."}</p>
-                            <Link to="/book" className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] border-b border-[#D4AF37]/30 pb-1 hover:border-[#D4AF37] transition-colors">
-                                Ver Disponibilidad <ArrowRight size={12} />
-                            </Link>
+                    </div>
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-4">
+                            <div className="h-px w-12 bg-zinc-300" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sobre Nosotros</span>
                         </div>
-                        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-20">
-                            {displayServices.map((s, i) => (
-                                <div key={i} className={`group cursor-pointer ${i % 2 !== 0 ? 'md:translate-y-16' : ''}`}>
-                                    <div className="relative aspect-[3/4] overflow-hidden mb-6 rounded-[2rem]">
-                                        <div className="absolute inset-0 bg-black/50 group-hover:bg-black/10 transition-colors duration-700 z-10" />
-                                        <img src={s.imageUrl || "https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80"} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[1200ms]" alt={s.name} />
-                                        <div className="absolute bottom-5 left-5 right-5 z-20">
-                                            <Link to="/book" className="w-full py-3 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-400 flex items-center justify-center rounded-full">Reservar</Link>
-                                        </div>
+                        <h2 className="text-4xl md:text-5xl font-playfair font-black text-zinc-900 leading-tight">
+                            Tu santuario de <span className="italic" style={{ color: accent }}>belleza y lujo.</span>
+                        </h2>
+                        <p className="text-zinc-500 leading-relaxed text-sm md:text-base font-light">
+                            {settings.aboutText || "Creemos que cada persona tiene una belleza única. Nuestro objetivo es resaltarla a través de tratamientos personalizados, utilizando productos de la más alta calidad en un ambiente diseñado para tu tranquilidad."}
+                        </p>
+                        <div className="pt-6 grid grid-cols-2 gap-8">
+                            {[
+                                { t: 'Expertos', d: 'Personal calificado' },
+                                { t: 'Premium', d: 'Productos de lujo' },
+                                { t: 'Resultados', d: 'Naturales y bellos' },
+                                { t: 'Bienestar', d: 'Ambiente tranquilo' }
+                            ].map((item, i) => (
+                                <div key={i} className="flex gap-4 items-start">
+                                    <CheckCircle2 className="mt-1" size={18} style={{ color: accent }} />
+                                    <div>
+                                        <h4 className="font-bold text-zinc-900 text-sm">{item.t}</h4>
+                                        <p className="text-xs text-zinc-500 font-light">{item.d}</p>
                                     </div>
-                                    <div className="flex justify-between items-end mb-2">
-                                        <h3 className="text-xl font-black text-white uppercase tracking-tight">{s.name}</h3>
-                                        <span className="text-lg font-black text-[#D4AF37] opacity-60">${s.price}</span>
-                                    </div>
-                                    <p className="text-zinc-600 text-xs leading-relaxed">{s.description}</p>
                                 </div>
                             ))}
                         </div>
@@ -417,37 +418,78 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </div>
             </section>
 
-            {/* CTA Marquee Banner */}
-            <section className="py-10 bg-[#D4AF37] overflow-hidden">
-                <div className="flex gap-10 whitespace-nowrap animate-marquee">
-                    {[...Array(6)].map((_, i) => (
-                        <span key={i} className="text-[10px] font-black uppercase tracking-[0.5em] text-black flex items-center gap-8">
-                            {settings.businessName || "Shula Studio"} <Star size={10} className="fill-black inline" /> Reserva Tu Lugar <Star size={10} className="fill-black inline" />
-                        </span>
-                    ))}
+            {/* Services Grid (BeautySpot Aesthetic) */}
+            <section id="servicios" className="py-24 px-8 bg-zinc-50">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+                        <div className="flex items-center justify-center gap-4">
+                            <div className="h-px w-12 bg-zinc-300" />
+                            <Sparkles size={16} style={{ color: accent }} />
+                            <div className="h-px w-12 bg-zinc-300" />
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-playfair font-black text-zinc-900">Nuestros Servicios</h2>
+                        <p className="text-zinc-500 font-light italic">Descubre nuestra exclusiva gama de tratamientos de belleza y cuidado personal.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
+                        {displayServices.map((s, i) => (
+                            <div key={i} className="flex gap-6 group items-start">
+                                <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 border-4 border-white shadow-lg group-hover:scale-110 transition-transform duration-500">
+                                    <img src={s.imageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} className="w-full h-full object-cover" alt={s.name} />
+                                </div>
+                                <div className="flex-1 space-y-3 pt-2">
+                                    <div className="flex items-baseline justify-between gap-4">
+                                        <h3 className="text-lg font-playfair font-black text-zinc-800 whitespace-nowrap">{s.name}</h3>
+                                        <div className="flex-1 border-b-[2px] border-dotted border-zinc-300 mb-2 opacity-60" />
+                                        <span className="text-xl font-black" style={{ color: accent }}>${s.price}</span>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 leading-relaxed font-light">{s.description}</p>
+                                    <Link to="/book" className="inline-block text-[10px] font-black uppercase tracking-widest hover:underline pt-2" style={{ color: accent }}>Reservar Ahora</Link>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </section>
 
             {/* Testimonials */}
             {(settings.testimonials?.length ?? 0) > 0 && (
-                <section className="py-28 bg-[#080808] px-8">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="text-center mb-16 space-y-2">
-                            <span className="text-[9px] uppercase tracking-[0.5em] text-[#D4AF37]/50 font-bold">Lo Que Dicen</span>
-                            <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Ellas Ya Lo Vivieron</h2>
+                <section id="testimonios" className="py-24 bg-white px-8 border-t border-zinc-100">
+                    <div className="max-w-5xl mx-auto text-center">
+                        <div className="mb-16">
+                            <Heart className="mx-auto mb-6 opacity-80" size={32} style={{ fill: accent, color: accent }} />
+                            <h2 className="text-4xl font-playfair font-black text-zinc-900">Lo que dicen nuestras clientas</h2>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {settings.testimonials!.map((t, i) => (
-                                <div key={i} className="p-8 rounded-[2rem] border border-[#D4AF37]/10 space-y-4">
-                                    <div className="flex gap-1">{[...Array(t.rating || 5)].map((_, j) => <Star key={j} size={12} className="fill-[#D4AF37] text-[#D4AF37]" />)}</div>
-                                    <p className="text-zinc-400 italic font-light text-sm leading-relaxed">"{t.text}"</p>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]/50">— {t.name}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                            {settings.testimonials!.slice(0, 3).map((t, i) => (
+                                <div key={i} className="p-8 bg-zinc-50 rounded-tr-[3rem] rounded-bl-[3rem] border border-zinc-100 flex flex-col gap-6 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex gap-1">
+                                        {[...Array(t.rating || 5)].map((_, j) => <Star key={j} size={14} className="fill-[var(--accent)] text-[var(--accent)]" style={{ '--accent': accent } as any} />)}
+                                    </div>
+                                    <p className="text-zinc-600 font-light text-sm italic leading-relaxed flex-1">"{t.text}"</p>
+                                    <div className="flex items-center gap-4 pt-4 border-t border-zinc-200">
+                                        <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center font-playfair text-lg font-black text-zinc-600 shrink-0">
+                                            {t.name.charAt(0)}
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-900">{t.name}</p>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </section>
             )}
+
+            {/* CTA Final Pre-footer */}
+            <section className="py-20 bg-zinc-900 text-center px-6" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80')`, backgroundSize: 'cover', backgroundAttachment: 'fixed' }}>
+                <div className="max-w-2xl mx-auto space-y-8">
+                    <h2 className="text-4xl md:text-5xl font-playfair font-black text-white leading-tight">¿Lista para transformar tu look?</h2>
+                    <p className="text-zinc-300 font-light italic text-lg">Reserva hoy mismo y déjate consentir por nuestros profesionales.</p>
+                    <Link to="/book" className="inline-block px-14 py-5 bg-white text-zinc-900 font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl rounded" style={{ color: accent }}>
+                        Agenda tu Experiencia
+                    </Link>
+                </div>
+            </section>
 
             {/* Footer delegated to global layout */}
         </div>
