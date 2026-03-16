@@ -11,8 +11,8 @@ datasource db {
 model Appointment {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title           String?   @db.VarChar(150)
-  startDatetime   DateTime? @db.Timestamp(6) @map("start_datetime")
-  endDatetime     DateTime? @db.Timestamp(6) @map("end_datetime")
+  startDateTime   DateTime? @db.Timestamp(6) @map("start_datetime")
+  endDateTime     DateTime? @db.Timestamp(6) @map("end_datetime")
   clientName      String?   @db.VarChar(100) @map("client_name")
   clientPhone     String?   @db.VarChar(20) @map("client_phone")
   status          String?   @db.VarChar(20)

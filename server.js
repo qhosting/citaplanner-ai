@@ -393,54 +393,44 @@ const tenantMiddleware = async (req, res, next) => {
     try {
         const fullHost = (req.headers.host || '').toLowerCase();
         const host = fullHost.split(':')[0];
-        let tenantId = 'demo';
+        let subdomain = 'demo';
 
         if (req.path.includes('/api/settings/landing')) {
-            console.log(`[TENANT DEBUG]Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN} `);
+            console.log(`[TENANT DEBUG] Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN}`);
         }
 
+        // 1. Master Hub Detection
         if (host === `master.${ROOT_DOMAIN}`) {
-            tenantId = 'master';
-            console.log(`[TENANT] Master Hub detected: ${tenantId}`);
+            subdomain = 'master';
         }
-        // 1. Subdomain Detection (e.g., shula.citaplanner.com)
+        // 2. Subdomain Detection (e.g., shula.citaplanner.com)
         else if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
-            const subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
-            if (subdomain) {
-                tenantId = subdomain;
-                console.log(`[TENANT] Detected subdomain: ${tenantId}`);
-            }
+            subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
         }
-        // 2. Custom Domain Detection (e.g., shulastudio.com)
+        // 3. Custom Domain Detection (e.g., shulastudio.com)
         else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
-            // Remove www. for lookup if present
             const cleanHost = host.replace('www.', '');
-
-            const tenant = await prisma.tenant.findFirst({
-                where: {
-                    OR: [
-                        { customDomain: host },
-                        { customDomain: cleanHost }
-                    ]
-                },
+            const tenant = await getCached(`domain:${cleanHost}`, () => prisma.tenant.findFirst({
+                where: { OR: [{ customDomain: host }, { customDomain: cleanHost }] },
                 select: { subdomain: true }
-            });
+            }), 3600);
 
             if (tenant) {
-                tenantId = tenant.subdomain;
-                console.log(`[TENANT] Detected custom domain: ${host} -> ${tenantId}`);
+                subdomain = tenant.subdomain;
             } else {
-                console.warn(`[TENANT] No tenant found for custom domain: ${host}`);
-                tenantId = req.headers['x-tenant-id'] || 'demo';
+                subdomain = req.headers['x-tenant-id'] || 'demo';
             }
-        } else {
-            // ROOT DOMAIN (citaplanner.com) -> Always DEMO but displayed as CitaPlanner
-            tenantId = 'demo';
-            console.log(`[TENANT] Root Domain detected: ${tenantId}`);
         }
 
-        req.tenantId = tenantId;
-        req.organizationId = tenantId; // Map to organization_id used in database
+        // Resolve Tenant UUID and Object
+        const tenant = await getCached(`tenant_obj:${subdomain}`, () => prisma.tenant.findUnique({
+            where: { subdomain }
+        }), 600);
+
+        req.tenant = tenant;
+        req.tenantId = subdomain; // Legacy slug
+        req.tenantUuid = tenant?.id; // Actual DB UUID
+        req.organizationId = subdomain; // Legacy slug for queries
         req.branchId = req.headers['x-branch-id'];
 
         next();
