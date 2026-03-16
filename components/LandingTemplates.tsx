@@ -15,12 +15,13 @@ interface TemplateProps {
     services: Service[];
     accent: string;
     currentSlide?: number;
+    slides?: any[];
 }
 
 // ==========================================
 // 1. TEMPLATE: CITAPLANNER (SaaS Demo)
 // ==========================================
-export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => {
+export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: 's1', name: 'Plan Starter', price: 290, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Gestión básica para estudios individuales. Calendario y clientes ilimitados.' },
         { id: 's2', name: 'Plan Professional', price: 950, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Para equipos de hasta 5 especialistas. IA de agendamiento incluida.' },
@@ -52,9 +53,9 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                         </span>
                     </div>
                     <h1 className="text-7xl md:text-[110px] font-black tracking-tighter text-white leading-[0.85] uppercase">
-                        {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName || "CitaPlanner"} <br />
+                        {slides?.[currentSlide || 0]?.title || settings.businessName || "CitaPlanner"} <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-                            {settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan || "Scale your studio effortlessly."}
+                            {slides?.[currentSlide || 0]?.text || settings.slogan || "Scale your studio effortlessly."}
                         </span>
                     </h1>
                     <p className="max-w-2xl mx-auto text-xl text-slate-400 font-medium leading-relaxed">
@@ -72,7 +73,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                     <div className="absolute inset-x-20 -bottom-20 h-40 bg-indigo-500/30 blur-[120px] -z-10" />
                     <div className="aspect-video rounded-[3rem] bg-slate-900/50 border border-white/5 overflow-hidden shadow-[0_0_100px_rgba(79,70,229,0.1)] relative">
                         <img
-                            src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/saas_hero.png"}
+                            src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/saas_hero.png"}
                             className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-all duration-[2000ms]"
                             alt="SaaS Platform"
                         />
@@ -194,7 +195,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 2. TEMPLATE: MASTER (Ultra-Clean Hub)
 // ==========================================
-export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => {
+export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: '1', name: 'Microblading Profesional', price: 2500, duration: 120, category: 'Cejas', status: 'ACTIVE' as const, description: 'Cejas perfectas con técnica de pelo a pelo. Resultados naturales de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Nails Art Studio', price: 650, duration: 60, category: 'Uñas', status: 'ACTIVE' as const, description: 'Diseño exclusivo de uñas con materiales premium importados.', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80' },
@@ -224,11 +225,11 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                     <div className="lg:col-span-6 space-y-8">
                         <div className="flex items-center gap-3">
                             <ShieldCheck size={16} className="text-emerald-600" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400">{settings.heroSlides?.[currentSlide || 0]?.subtitle || "Red de Excelencia Certificada"}</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400">{slides?.[currentSlide || 0]?.subtitle || "Red de Excelencia Certificada"}</span>
                         </div>
                         <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.88] uppercase text-slate-950">
-                            {settings.heroSlides?.[currentSlide || 0]?.title || "Master"}<br />
-                            <span className="text-emerald-600">{settings.heroSlides?.[currentSlide || 0]?.text || settings.businessName || "Beauty Hub"}</span>
+                            {slides?.[currentSlide || 0]?.title || "Master"}<br />
+                            <span className="text-emerald-600">{slides?.[currentSlide || 0]?.text || settings.businessName || "Beauty Hub"}</span>
                         </h1>
                         <p className="text-lg text-slate-500 max-w-lg font-medium leading-relaxed">
                             {settings.aboutText || "La red de salones de belleza más completa. Gestión centralizada, profesionales certificados y la mejor tecnología en cada sucursal."}
@@ -254,7 +255,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                     </div>
                     <div className="lg:col-span-6 relative">
                         <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
-                            <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/master_hero.png"} className="w-full h-full object-cover hover:scale-103 transition-transform duration-700" alt="Master Beauty Hub" />
+                            <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/master_hero.png"} className="w-full h-full object-cover hover:scale-103 transition-transform duration-700" alt="Master Beauty Hub" />
                         </div>
                         <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-[2rem] shadow-2xl border border-slate-100">
                             <div className="flex gap-3 items-center">
@@ -337,7 +338,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
 // ==========================================
 // 3. TEMPLATE: SHULASTUDIO (Luxury Beauty)
 // ==========================================
-export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => {
+export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: '1', name: 'Microblading Elite', price: 2800, duration: 120, category: 'Cejas', status: 'ACTIVE' as const, description: 'Técnica de pelo a pelo para cejas perfectas y naturales de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80&w=600' },
         { id: '2', name: 'Extensiones de Pestañas', price: 1200, duration: 90, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Volumen y curvatura perfecta con extensiones de seda premium.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80&w=600' },
@@ -355,18 +356,18 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 
             <header className="h-screen relative flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 z-10" />
-                <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Luxury Beauty Studio" />
+                <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Luxury Beauty Studio" />
                 <div className="relative z-20 text-center space-y-6 flex flex-col items-center max-w-5xl px-8">
                     <div className="flex items-center gap-6">
                         <div className="h-px w-16 bg-[#D4AF37]/40" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.8em] text-[#D4AF37]/70">{settings.heroSlides?.[currentSlide || 0]?.subtitle || "The Art of Perfection"}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.8em] text-[#D4AF37]/70">{slides?.[currentSlide || 0]?.subtitle || "The Art of Perfection"}</span>
                         <div className="h-px w-16 bg-[#D4AF37]/40" />
                     </div>
                     <h1 className="text-7xl md:text-[120px] font-black text-[#D4AF37] leading-[0.85] tracking-tighter uppercase">
-                        {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName || "Shula Studio"}
+                        {slides?.[currentSlide || 0]?.title || settings.businessName || "Shula Studio"}
                     </h1>
                     <p className="text-lg md:text-2xl font-light tracking-[0.3em] text-white/50 uppercase italic">
-                        {settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan || "Redefiniendo tu esencia."}
+                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Redefiniendo tu esencia."}
                     </p>
                     <div className="pt-10">
                         <Link to="/book" className="group relative inline-flex items-center gap-4 px-20 py-7 border border-[#D4AF37]/50 overflow-hidden hover:border-[#D4AF37] transition-all">
@@ -478,7 +479,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 4. TEMPLATE: MINIMAL (Aurum Minimal)
 // ==========================================
-export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => (
+export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => (
     <div className="bg-white text-zinc-950">
         <nav className="p-8 flex justify-between items-center border-b border-zinc-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
             <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
@@ -489,10 +490,10 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
         <section className="py-24 md:py-40 px-8 text-center bg-zinc-50 relative overflow-hidden">
             <div className="max-w-4xl mx-auto space-y-8 relative z-10">
                 <h1 className="text-5xl md:text-[100px] font-black tracking-tighter leading-none uppercase transition-all duration-1000">
-                    {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName}
+                    {slides?.[currentSlide || 0]?.title || settings.businessName}
                 </h1>
                 <p className="text-xl md:text-3xl font-light text-zinc-400 italic transition-all duration-1000">
-                    "{settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan}"
+                    "{slides?.[currentSlide || 0]?.text || settings.slogan}"
                 </p>
                 <div className="pt-10">
                     <Link to="/book" className="px-16 py-6 rounded-2xl font-black text-xs uppercase tracking-[0.3em] inline-block text-white shadow-2xl" style={{ backgroundColor: accent }}>
@@ -505,7 +506,7 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
             <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
                 <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl bg-zinc-100">
                     <img
-                        src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/minimal.png"}
+                        src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/minimal.png"}
                         className="w-full h-full object-cover transition-all duration-1000"
                         alt="Minimalist"
                     />
@@ -539,7 +540,7 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
 // ==========================================
 // 5. TEMPLATE: LUXURY (Luxury White)
 // ==========================================
-export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide }) => (
+export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => (
     <div className="bg-[#0a0a0a] text-white">
         <header className="h-screen relative flex flex-col">
             <nav className="p-10 flex justify-between items-center z-50">
@@ -551,16 +552,16 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, ac
             <div className="flex-1 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-black/40 z-10" />
                 <img
-                    src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/luxury_white.png"}
+                    src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/luxury_white.png"}
                     className="absolute inset-0 w-full h-full object-cover transition-all duration-[2000ms]"
                     alt="Luxury"
                 />
                 <div className="relative z-20 text-center space-y-6 max-w-5xl px-8">
                     <h1 className="text-7xl md:text-[160px] font-playfair font-black tracking-tighter leading-[0.85] uppercase mb-4 transition-all duration-1000" style={{ color: accent }}>
-                        {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName}
+                        {slides?.[currentSlide || 0]?.title || settings.businessName}
                     </h1>
                     <p className="text-2xl md:text-3xl font-light tracking-[0.2em] opacity-80 uppercase transition-all duration-1000">
-                        {settings.heroSlides?.[currentSlide || 0]?.text || settings.slogan}
+                        {slides?.[currentSlide || 0]?.text || settings.slogan}
                     </p>
                     <div className="pt-10">
                         <Link to="/book" className="px-20 py-8 border-2 font-black text-xs uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all" style={{ borderColor: accent, color: accent }}>Entrar al Santuario</Link>

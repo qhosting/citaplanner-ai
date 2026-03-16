@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { LandingSettings, Service } from '../types';
-import { AIConciergeWidget } from '../components/AIConciergeWidget';
+// WhatsApp button replaces AI chat widget — managed inline below
 import {
   TemplateCitaPlanner,
   TemplateMaster,
@@ -251,12 +251,34 @@ export const LandingPage: React.FC = () => {
 
   const slides = useMemo(() => {
     if (settings.heroSlides && settings.heroSlides.length > 0) return settings.heroSlides;
-    return [{
-      image: settings.heroImageUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035",
-      title: settings.businessName || "CitaPlanner",
-      subtitle: "",
-      text: settings.slogan || "Gestiona tu negocio con inteligencia."
-    }];
+    // Rich fallback slides per template — siempre hay contenido visual
+    const fallbacks: Record<string, { image: string; title: string; subtitle: string; text: string }[]> = {
+      shulastudio: [
+        { image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Shula Studio', subtitle: 'Arte & Precisión', text: settings.slogan || 'Donde el arte se encuentra con la elegancia.' },
+        { image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80&w=1400', title: 'Tratamientos Elite', subtitle: 'Resultados Premium', text: 'Microblading y extensiones de pestañas a nivel galería.' },
+        { image: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80&w=1400', title: 'Experiencia VIP', subtitle: 'Lujo & Confort', text: 'Tu tratamiento, en un ambiente de ultra-lujo.' },
+      ],
+      shula_dark: [
+        { image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Studio', subtitle: 'Lujo Oscuro', text: settings.slogan || 'Elegancia en cada detalle.' },
+        { image: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80&w=1400', title: 'Faciales Premium', subtitle: 'Piel Perfecta', text: 'Tratamientos diseñados para potenciar tu belleza natural.' },
+      ],
+      master: [
+        { image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Master Hub', subtitle: 'Red Certificada', text: settings.slogan || 'Excelencia operativa centralizada.' },
+        { image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1400', title: 'Especialistas', subtitle: '150+ Profesionales', text: 'Certificados y listos para atenderte.' },
+        { image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&q=80&w=1400', title: 'Tratamientos', subtitle: 'Catálogo Completo', text: 'Desde faciales hasta tratamientos corporales.' },
+      ],
+      citaplanner: [
+        { image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'CitaPlanner', subtitle: 'Plataforma IA', text: settings.slogan || 'Tu negocio, en piloto automático.' },
+        { image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1400', title: 'Analytics en Tiempo Real', subtitle: 'Data Intelligence', text: 'Insights para tomar decisiones más inteligentes.' },
+      ],
+    };
+    const tid = settings.templateId as string;
+    const templateSlides = fallbacks[tid] || [
+      { image: settings.heroImageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'CitaPlanner', subtitle: '', text: settings.slogan || 'Gestiona tu negocio con inteligencia.' },
+      { image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=1400', title: 'Profesionales', subtitle: 'Staff Elite', text: 'Especialistas certificados para tu bienestar.' },
+      { image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80&w=1400', title: 'Tratamientos', subtitle: 'Catálogo Premium', text: 'Servicios diseñados para potenciar tu belleza.' },
+    ];
+    return templateSlides;
   }, [settings]);
 
   const waTarget = settings.whatsappPhone || settings.contactPhone;
@@ -296,9 +318,8 @@ export const LandingPage: React.FC = () => {
     );
   }
 
-  // Routing to templates (Logic separated in components/LandingTemplates.tsx)
   const renderTemplate = () => {
-    const props = { settings, services: landingServices, accent, currentSlide };
+    const props = { settings, services: landingServices, accent, currentSlide, slides };
 
     switch (settings.templateId) {
       case 'citaplanner': return <TemplateCitaPlanner {...props} />;
@@ -362,7 +383,24 @@ export const LandingPage: React.FC = () => {
         </div>
       </footer>
 
-      <AIConciergeWidget settings={settings} />
+      {/* Floating WhatsApp Button */}
+      {waTarget && (
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+          style={{ backgroundColor: '#25D366' }}
+          title={`Contactar por WhatsApp`}
+        >
+          {/* WhatsApp SVG oficial */}
+          <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 fill-white">
+            <path d="M16.003 3C9.375 3 4 8.376 4 15.003c0 2.132.557 4.133 1.528 5.87L4 29l8.392-1.49A12.913 12.913 0 0016.003 28C22.63 28 28 22.625 28 15.997 28 9.373 22.63 3 16.003 3zm6.38 18.376c-.265.744-1.548 1.418-2.116 1.508-.545.087-1.234.124-1.99-.124-.46-.147-1.05-.344-1.808-.673-3.184-1.375-5.262-4.557-5.42-4.767-.159-.21-1.295-1.72-1.295-3.28 0-1.56.82-2.33 1.11-2.645.291-.316.635-.395.847-.395.211 0 .423.002.607.01.195.009.456-.074.713.544.265.636.9 2.196.979 2.355.079.159.132.344.026.554-.105.211-.158.342-.316.527-.158.185-.332.413-.475.554-.158.155-.323.323-.138.634.185.31.822 1.356 1.764 2.197 1.212 1.08 2.235 1.414 2.546 1.572.31.158.49.133.67-.08.185-.211.79-.924 1.001-1.24.211-.317.422-.264.71-.158.291.105 1.85.873 2.168 1.031.317.158.528.237.607.37.079.132.079.764-.185 1.503z"/>
+          </svg>
+          {/* Pulse ring */}
+          <span className="absolute inset-0 rounded-full animate-ping opacity-30" style={{ backgroundColor: '#25D366' }} />
+        </a>
+      )}
     </div>
   );
 };
