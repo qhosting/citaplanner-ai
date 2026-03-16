@@ -5,7 +5,7 @@ import {
     ArrowRight, Sparkles, MapPin, Instagram, Facebook, Twitter,
     MessageCircle, ShieldCheck, Zap, Globe, Heart, Star, CheckCircle2,
     Calendar, Users, Clock, Menu, X, MessageSquare, Heart as HeartIcon,
-    Zap as ZapIcon, Shield, CalendarDays
+    Zap as ZapIcon, Shield, CalendarDays, Quote, Award, Activity
 } from 'lucide-react';
 import { LandingSettings, Service } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
@@ -16,6 +16,13 @@ interface TemplateProps {
     accent: string;
     currentSlide?: number;
 }
+
+const PlaceholderImage = ({ text = "Imagen", className = "" }: { text?: string; className?: string }) => (
+    <div className={`flex flex-col items-center justify-center bg-zinc-900 border border-white/5 text-zinc-700 ${className}`}>
+        <Sparkles size={24} className="mb-2 opacity-20" />
+        <span className="text-[10px] font-black uppercase tracking-widest opacity-20">{text}</span>
+    </div>
+);
 
 // ==========================================
 // 1. TEMPLATE: CITAPLANNER (SaaS Demo)
@@ -64,11 +71,14 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                 <div className="mt-24 max-w-6xl mx-auto relative group">
                     <div className="absolute inset-x-20 -bottom-10 h-20 bg-indigo-500/50 blur-[100px] -z-10 group-hover:bg-indigo-400/60 transition-all duration-1000" />
                     <div className="aspect-video rounded-[2.5rem] bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl relative">
-                        <img
-                            src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/saas.png"}
-                            className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all duration-1000"
-                            alt="SaaS Dashboard"
-                        />
+                        {(settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl) ? (
+                            <img
+                                src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl}
+                                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all duration-1000"
+                                alt="SaaS Dashboard"
+                                onError={(e) => (e.currentTarget.style.display = 'none')}
+                            />
+                        ) : <PlaceholderImage className="w-full h-full opacity-20" />}
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
                     </div>
                 </div>
@@ -99,6 +109,39 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                             </div>
                         ))}
                     </div>
+
+                    {/* Standard Gallery Section for Template */}
+                    {settings.images && settings.images.length > 0 && (
+                        <div className="mt-32">
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-12 text-center">Galería Visual</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {settings.images.map((img, i) => (
+                                    <div key={i} className="aspect-square rounded-3xl overflow-hidden border border-slate-800 group bg-slate-900">
+                                        <img src={img.url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={`Galería ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Testimonials for CitaPlanner */}
+                    {settings.testimonials && settings.testimonials.length > 0 && (
+                        <div className="mt-32">
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-16 text-center">Casos de Éxito</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {settings.testimonials.map((t, i) => (
+                                    <div key={i} className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/[0.07] transition-all">
+                                        <Quote className="text-indigo-500 mb-6 opacity-40" size={32} />
+                                        <p className="text-slate-300 italic mb-10 leading-relaxed">"{t.text}"</p>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center font-black text-indigo-400 text-xs">{t.name.charAt(0)}</div>
+                                            <span className="font-bold text-white text-xs uppercase tracking-widest">{t.name}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </section>
         </div>
@@ -167,8 +210,10 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                         </div>
                     </div>
                     <div className="lg:col-span-6 relative">
-                        <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
-                            <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/master_hero.png"} className="w-full h-full object-cover hover:scale-103 transition-transform duration-700" alt="Master Beauty Hub" />
+                        <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl bg-slate-100">
+                            {(settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl) ? (
+                                <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl} className="w-full h-full object-cover hover:scale-103 transition-transform duration-700" alt="Master Beauty Hub" />
+                            ) : <PlaceholderImage className="w-full h-full" />}
                         </div>
                         <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-[2rem] shadow-2xl border border-slate-100">
                             <div className="flex gap-3 items-center">
@@ -183,6 +228,46 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                 </div>
             </section>
 
+            {/* Testimonials for Master */}
+            {settings.testimonials && settings.testimonials.length > 0 && (
+                <section className="py-24 px-8 bg-white">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="text-center mb-16">
+                            <span className="text-[9px] text-emerald-600 font-black uppercase tracking-widest">Opiniones</span>
+                            <h2 className="text-4xl font-black uppercase tracking-tighter mt-2 text-slate-950">Lo Que Nuestros Clientes Dicen</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {settings.testimonials.map((t, i) => (
+                                <div key={i} className="p-10 rounded-[2.5rem] bg-slate-50 border border-slate-100 relative">
+                                    <Quote className="absolute top-8 right-8 text-emerald-600/10" size={40} />
+                                    <div className="flex gap-1 mb-6">
+                                        {[...Array(t.rating)].map((_, j) => <Star key={j} size={14} className="fill-emerald-500 text-emerald-500" />)}
+                                    </div>
+                                    <p className="text-slate-600 italic mb-8 leading-relaxed">"{t.text}"</p>
+                                    <p className="font-black uppercase tracking-widest text-[10px] text-slate-950">— {t.name}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Gallery for Master */}
+            {settings.images && settings.images.length > 0 && (
+                <section className="py-24 px-8 bg-slate-50">
+                    <div className="max-w-7xl mx-auto">
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-950 mb-12 text-center">Nuestras Instalaciones</h2>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            {settings.images.map((img, i) => (
+                                <div key={i} className="aspect-square rounded-[2rem] overflow-hidden shadow-lg border border-white bg-slate-100">
+                                    <img src={img.url} className="w-full h-full object-cover hover:scale-110 transition-transform duration-700" alt={`Instalación ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Services */}
             <section id="servicios" className="bg-slate-50 py-24 px-8">
                 <div className="max-w-7xl mx-auto space-y-12">
@@ -196,7 +281,11 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {displayServices.map((s, i) => (
                             <div key={i} className="bg-white p-6 border border-slate-100 rounded-[2rem] group hover:shadow-xl hover:border-emerald-200 transition-all hover:-translate-y-1">
-                                {s.imageUrl && <div className="h-36 rounded-2xl overflow-hidden mb-5"><img src={s.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={s.name} /></div>}
+                                <div className="h-36 rounded-2xl overflow-hidden mb-5 bg-slate-50">
+                                    {s.imageUrl ? (
+                                        <img src={s.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={s.name} />
+                                    ) : <PlaceholderImage className="w-full h-full opacity-10" text="Beauty Service" />}
+                                </div>
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="text-base font-black uppercase text-slate-950 tracking-tight leading-tight">{s.name}</h3>
                                     <span className="text-sm font-black text-emerald-600 ml-2 whitespace-nowrap">${s.price}</span>
@@ -269,7 +358,9 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 
             <header className="h-screen relative flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80 z-10" />
-                <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Luxury Beauty Studio" />
+                {(settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl) ? (
+                    <img src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl} className="absolute inset-0 w-full h-full object-cover scale-105" alt="Luxury Beauty Studio" />
+                ) : <PlaceholderImage className="absolute inset-0 w-full h-full opacity-20" text="Santuario Shula" />}
                 <div className="relative z-20 text-center space-y-6 flex flex-col items-center max-w-5xl px-8">
                     <div className="flex items-center gap-6">
                         <div className="h-px w-16 bg-[#D4AF37]/40" />
@@ -326,9 +417,11 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                         <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-20">
                             {displayServices.map((s, i) => (
                                 <div key={i} className={`group cursor-pointer ${i % 2 !== 0 ? 'md:translate-y-16' : ''}`}>
-                                    <div className="relative aspect-[3/4] overflow-hidden mb-6 rounded-[2rem]">
+                                    <div className="relative aspect-[3/4] overflow-hidden mb-6 rounded-[2rem] bg-zinc-900">
                                         <div className="absolute inset-0 bg-black/50 group-hover:bg-black/10 transition-colors duration-700 z-10" />
-                                        <img src={s.imageUrl || "https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80"} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[1200ms]" alt={s.name} />
+                                        {s.imageUrl ? (
+                                            <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[1200ms]" alt={s.name} />
+                                        ) : <PlaceholderImage className="w-full h-full opacity-30" text="Servicio Elite" />}
                                         <div className="absolute bottom-5 left-5 right-5 z-20">
                                             <Link to="/book" className="w-full py-3 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-[0.3em] opacity-0 group-hover:opacity-100 translate-y-3 group-hover:translate-y-0 transition-all duration-400 flex items-center justify-center rounded-full">Reservar</Link>
                                         </div>
@@ -356,9 +449,29 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </div>
             </section>
 
+            {/* Gallery for Shula */}
+            {settings.images && settings.images.length > 0 && (
+                <section className="py-28 bg-[#080808] px-8">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="flex items-center gap-6 mb-16">
+                            <div className="h-px flex-1 bg-[#D4AF37]/10" />
+                            <h2 className="text-3xl font-black text-white uppercase tracking-widest px-8">La Galería</h2>
+                            <div className="h-px flex-1 bg-[#D4AF37]/10" />
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {settings.images.map((img, i) => (
+                                <div key={i} className="aspect-square rounded-3xl overflow-hidden border border-[#D4AF37]/5 group bg-zinc-900">
+                                    <img src={img.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000" alt={`Gallery Shula ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Testimonials */}
             {(settings.testimonials?.length ?? 0) > 0 && (
-                <section className="py-28 bg-[#080808] px-8">
+                <section className="py-28 bg-[#050505] px-8 border-t border-[#D4AF37]/5">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16 space-y-2">
                             <span className="text-[9px] uppercase tracking-[0.5em] text-[#D4AF37]/50 font-bold">Lo Que Dicen</span>
@@ -418,11 +531,13 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
         <section className="py-24 px-8 max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
                 <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl bg-zinc-100">
-                    <img
-                        src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/minimal.png"}
-                        className="w-full h-full object-cover transition-all duration-1000"
-                        alt="Minimalist"
-                    />
+                    {(settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl) ? (
+                        <img
+                            src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl}
+                            className="w-full h-full object-cover transition-all duration-1000"
+                            alt="Minimalist"
+                        />
+                    ) : <PlaceholderImage className="w-full h-full" text="Minimalist" />}
                 </div>
                 <div className="space-y-6">
                     <h2 className="text-4xl font-black uppercase tracking-tighter">Nosotros</h2>
@@ -436,6 +551,11 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {services.map((s, i) => (
                         <div key={i} className="p-10 bg-white rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all">
+                            <div className="h-40 rounded-2xl overflow-hidden mb-6 bg-zinc-50">
+                                {s.imageUrl ? (
+                                    <img src={s.imageUrl} className="w-full h-full object-cover" />
+                                ) : <PlaceholderImage className="w-full h-full opacity-10" text="Minimal Service" />}
+                            </div>
                             <h3 className="text-xl font-black mb-4 uppercase tracking-tighter">{s.name}</h3>
                             <p className="text-zinc-500 mb-8 font-medium text-sm leading-relaxed">{s.description}</p>
                             <div className="flex justify-between items-center pt-6 border-t border-zinc-100">
@@ -447,6 +567,37 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
                 </div>
             </div>
         </section>
+
+        {/* Gallery for Minimal */}
+        {settings.images && settings.images.length > 0 && (
+            <section className="py-24 px-8 max-w-7xl mx-auto">
+                <h2 className="text-3xl font-black uppercase tracking-tighter mb-12">Galería</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {settings.images.map((img, i) => (
+                        <div key={i} className="aspect-square rounded-[2rem] overflow-hidden bg-zinc-100">
+                            <img src={img.url} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" alt={`Minimal Gallery ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                        </div>
+                    ))}
+                </div>
+            </section>
+        )}
+
+        {/* Testimonials for Minimal */}
+        {settings.testimonials && settings.testimonials.length > 0 && (
+            <section className="py-24 bg-zinc-950 text-white px-8">
+                <div className="max-w-7xl mx-auto">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter mb-16 text-center">Experiencias</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        {settings.testimonials.map((t, i) => (
+                            <div key={i} className="space-y-6">
+                                <p className="text-2xl font-light italic leading-relaxed text-zinc-300">"{t.text}"</p>
+                                <p className="font-black uppercase tracking-widest text-xs" style={{ color: accent }}>— {t.name}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )}
     </div>
 );
 
@@ -464,11 +615,13 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, ac
             </nav>
             <div className="flex-1 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-black/40 z-10" />
-                <img
-                    src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/luxury_white.png"}
-                    className="absolute inset-0 w-full h-full object-cover transition-all duration-[2000ms]"
-                    alt="Luxury"
-                />
+                {(settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl) ? (
+                    <img
+                        src={settings.heroSlides?.[currentSlide || 0]?.image || settings.heroImageUrl}
+                        className="absolute inset-0 w-full h-full object-cover transition-all duration-[2000ms]"
+                        alt="Luxury"
+                    />
+                ) : <PlaceholderImage className="absolute inset-0 w-full h-full opacity-10" text="Lujo Absolute" />}
                 <div className="relative z-20 text-center space-y-6 max-w-5xl px-8">
                     <h1 className="text-7xl md:text-[160px] font-playfair font-black tracking-tighter leading-[0.85] uppercase mb-4 transition-all duration-1000" style={{ color: accent }}>
                         {settings.heroSlides?.[currentSlide || 0]?.title || settings.businessName}
@@ -493,7 +646,7 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, ac
                     <div className="grid grid-cols-2 gap-4">
                         {(settings.images || []).slice(0, 4).map((img, i) => (
                             <div key={i} className={`aspect-[4/5] rounded-3xl overflow-hidden ${i % 2 !== 0 ? 'translate-y-12' : ''}`}>
-                                <img src={img.url} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000" />
+                                <img src={img.url} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             </div>
                         ))}
                     </div>
@@ -507,12 +660,19 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, ac
                     <h2 className="text-6xl font-playfair font-black tracking-tighter">Servicios <br /><span className="italic font-light opacity-50 text-white">Exclusivos.</span></h2>
                     <Link to="/book" className="mb-4 text-[11px] font-black uppercase tracking-[0.5em] pb-2 border-b-2" style={{ borderColor: accent }}>Ver Catálogo Completo</Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1 px-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 px-8">
                     {services.map((s, i) => (
-                        <div key={i} className="flex justify-between items-center py-10 border-b border-white/10 group hover:px-8 transition-all duration-500">
-                            <div>
-                                <h3 className="text-2xl font-bold mb-2 group-hover:text-[var(--accent)] transition-colors">{s.name}</h3>
-                                <p className="text-zinc-500 text-sm max-w-sm">{s.description}</p>
+                        <div key={i} className="flex justify-between items-center py-10 border-b border-white/10 group hover:px-4 transition-all duration-500">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-full overflow-hidden border border-white/10 bg-zinc-900 flex-shrink-0">
+                                    {s.imageUrl ? (
+                                        <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                                    ) : <PlaceholderImage className="w-full h-full opacity-20" text="Service" />}
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold mb-2 group-hover:text-[var(--accent)] transition-colors">{s.name}</h3>
+                                    <p className="text-zinc-500 text-sm max-w-sm">{s.description}</p>
+                                </div>
                             </div>
                             <div className="text-right">
                                 <p className="text-2xl font-black mb-2" style={{ color: accent }}>${s.price}</p>
@@ -523,6 +683,25 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, ac
                 </div>
             </div>
         </section>
+
+        {/* Testimonials for Luxury */}
+        {settings.testimonials && settings.testimonials.length > 0 && (
+            <section className="py-40 bg-black px-8">
+                <div className="max-w-7xl mx-auto">
+                    <h2 className="text-5xl font-playfair font-black text-center mb-24 uppercase tracking-widest" style={{ color: accent }}>Experiencias Inolvidables</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+                        {settings.testimonials.map((t, i) => (
+                            <div key={i} className="text-center space-y-8">
+                                <Quote className="mx-auto opacity-20" size={40} style={{ color: accent }} />
+                                <p className="text-xl font-light italic text-zinc-400 leading-relaxed">"{t.text}"</p>
+                                <div className="h-px w-12 bg-white/20 mx-auto" />
+                                <p className="font-black uppercase tracking-[0.4em] text-xs">{t.name}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )}
     </div>
 );
 
@@ -543,11 +722,23 @@ export const TemplateClassic: React.FC<TemplateProps & {
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group">
                 <div className="relative">
                     <div className="absolute inset-0 rounded-full animate-ping opacity-25 scale-125" style={{ backgroundColor: accent }} />
-                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-all duration-500" style={{ background: `linear-gradient(135deg, ${accent}, #000)` }}>
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-all duration-500 shadow-[0_0_50px_rgba(0,0,0,0.5)]" style={{ background: `linear-gradient(135deg, ${accent}, #000)` }}>
                         <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
                     </div>
                 </div>
             </a>
+        )}
+
+        {mobileMenuOpen && (
+            <div className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-2xl animate-entrance flex flex-col items-center justify-center p-12 text-center">
+                <button onClick={() => setMobileMenuOpen(false)} className="absolute top-10 right-10 text-zinc-500 hover:text-white p-4"><X size={32} /></button>
+                <div className="space-y-8">
+                    {['Servicios', 'Nosotros', 'Galería'].map(item => (
+                        <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMobileMenuOpen(false)} className="block text-4xl font-black text-white uppercase tracking-tighter hover:text-[var(--accent)] transition-colors">{item}</a>
+                    ))}
+                    <Link to="/book" onClick={() => setMobileMenuOpen(false)} className="block px-12 py-5 rounded-full font-black text-sm uppercase tracking-widest text-black" style={{ backgroundColor: accent }}>Mi Cita</Link>
+                </div>
+            </div>
         )}
 
         <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 shadow-2xl' : 'bg-transparent py-8'}`} style={scrolled ? { borderBottom: `1px solid ${accent}20` } : {}}>
@@ -569,7 +760,9 @@ export const TemplateClassic: React.FC<TemplateProps & {
             {slides.map((slide, index) => (
                 <div key={index} className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
                     <div className="absolute inset-0 bg-black/60 z-10" />
-                    <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
+                    {slide.image ? (
+                        <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
+                    ) : <PlaceholderImage className="w-full h-full opacity-20" text="Elegancia" />}
                     <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
                         <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
                             <span className="text-[11px] font-black uppercase tracking-[1em] mb-8 block" style={{ color: accent }}>{settings.businessName}</span>
@@ -589,7 +782,11 @@ export const TemplateClassic: React.FC<TemplateProps & {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {services.map((s, i) => (
                         <article key={i} className="group bg-[#0a0a0a] rounded-[3rem] border border-white/5 transition-all duration-700 overflow-hidden hover:-translate-y-5 shadow-2xl">
-                            {s.imageUrl && <div className="h-[250px] overflow-hidden"><img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" /></div>}
+                            <div className="h-[250px] overflow-hidden bg-zinc-900">
+                                {s.imageUrl ? (
+                                    <img src={s.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" />
+                                ) : <PlaceholderImage className="w-full h-full opacity-40" text="Luxury Service" />}
+                            </div>
                             <div className="p-12">
                                 <h3 className="text-2xl font-bold text-white mb-6">{s.name}</h3>
                                 <p className="text-zinc-500 font-medium leading-relaxed mb-10 min-h-[60px]">{s.description}</p>
@@ -603,5 +800,41 @@ export const TemplateClassic: React.FC<TemplateProps & {
                 </div>
             </div>
         </section>
+
+        {/* Gallery for Classic */}
+        {settings.images && settings.images.length > 0 && (
+            <section id="galería" className="py-32 bg-[#050505] px-8">
+                <div className="max-w-7xl mx-auto">
+                    <h2 className="text-4xl font-playfair font-black text-white text-center mb-20 uppercase tracking-tighter">Galería <span style={{ color: accent }}>Exclusiva</span></h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {settings.images.map((img, i) => (
+                            <div key={i} className="aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl bg-zinc-900">
+                                <img src={img.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-[1200ms]" alt={`Classic Gallery ${i}`} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )}
+
+        {/* Testimonials for Classic */}
+        {settings.testimonials && settings.testimonials.length > 0 && (
+            <section className="py-32 bg-black px-8 border-y border-white/5">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                        {settings.testimonials.map((t, i) => (
+                            <div key={i} className="p-12 rounded-[3.5rem] bg-[#0a0a0a] border border-white/5 space-y-8 relative overflow-hidden group">
+                                <Quote className="absolute -top-4 -right-4 opacity-5 group-hover:opacity-10 transition-opacity" size={120} style={{ color: accent }} />
+                                <div className="flex gap-1">
+                                    {[...Array(t.rating)].map((_, j) => <Star key={j} size={14} className="fill-white text-white" />)}
+                                </div>
+                                <p className="text-xl font-light text-zinc-400 leading-relaxed italic">"{t.text}"</p>
+                                <p className="font-black uppercase tracking-widest text-[10px]" style={{ color: accent }}>— {t.name}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )}
     </div>
 );

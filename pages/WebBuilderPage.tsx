@@ -40,14 +40,19 @@ export const WebBuilderPage: React.FC = () => {
         socialTwitter: ''
     });
 
-    // Sync preview with settings in real-time
-    useEffect(() => {
+    const syncPreview = () => {
         if (iframeRef.current?.contentWindow) {
+            console.log("🔄 [BUILDER] Syncing settings with iframe...");
             iframeRef.current.contentWindow.postMessage({
                 type: 'LANDING_PREVIEW_UPDATE',
                 settings: settings
             }, '*');
         }
+    };
+
+    // Sync preview with settings in real-time
+    useEffect(() => {
+        syncPreview();
     }, [settings]);
 
     useEffect(() => {
@@ -534,6 +539,110 @@ return (
                                 </div>
                             </div>
                         </section>
+
+                        {/* Testimonials */}
+                        <section className="space-y-4 pt-6 border-t border-theme">
+                            <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <Star size={16} /> Testimonios
+                            </h3>
+                            <div className="space-y-3">
+                                {(settings.testimonials || []).map((t, index) => (
+                                    <div key={index} className="p-3 bg-input-theme border border-theme rounded-2xl relative group">
+                                        <button
+                                            onClick={() => {
+                                                const newT = [...(settings.testimonials || [])];
+                                                newT.splice(index, 1);
+                                                setSettings({ ...settings, testimonials: newT });
+                                            }}
+                                            className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre del Cliente"
+                                            value={t.name}
+                                            onChange={e => {
+                                                const newT = [...(settings.testimonials || [])];
+                                                newT[index] = { ...newT[index], name: e.target.value };
+                                                setSettings({ ...settings, testimonials: newT });
+                                            }}
+                                            className="w-full bg-transparent border-b border-theme pb-1 text-[10px] font-bold text-main outline-none mb-2"
+                                        />
+                                        <textarea
+                                            placeholder="Comentario..."
+                                            value={t.text}
+                                            onChange={e => {
+                                                const newT = [...(settings.testimonials || [])];
+                                                newT[index] = { ...newT[index], text: e.target.value };
+                                                setSettings({ ...settings, testimonials: newT });
+                                            }}
+                                            className="w-full bg-transparent text-[9px] text-muted outline-none resize-none"
+                                            rows={2}
+                                        />
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={() => setSettings({ ...settings, testimonials: [...(settings.testimonials || []), { name: '', text: '', rating: 5 }] })}
+                                    className="w-full py-2 border border-dashed border-theme rounded-xl text-[8px] font-black text-muted uppercase tracking-widest hover:border-[#CE4676] hover:text-[#CE4676] transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Plus size={10} /> Agregar Testimonio
+                                </button>
+                            </div>
+                        </section>
+
+                        {/* Stats */}
+                        <section className="space-y-4 pt-6 border-t border-theme">
+                            <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <Activity size={16} /> Estadísticas / Logros
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                {(settings.stats || []).map((s, index) => (
+                                    <div key={index} className="p-3 bg-input-theme border border-theme rounded-2xl relative group">
+                                        <button
+                                            onClick={() => {
+                                                const newS = [...(settings.stats || [])];
+                                                newS.splice(index, 1);
+                                                setSettings({ ...settings, stats: newS });
+                                            }}
+                                            className="absolute top-1 right-1 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 size={10} />
+                                        </button>
+                                        <input
+                                            type="text"
+                                            placeholder="Valor (Ej: 500+)"
+                                            value={s.value}
+                                            onChange={e => {
+                                                const newS = [...(settings.stats || [])];
+                                                newS[index] = { ...newS[index], value: e.target.value };
+                                                setSettings({ ...settings, stats: newS });
+                                            }}
+                                            className="w-full bg-transparent text-xs font-black text-[#CE4676] outline-none text-center"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Etiqueta"
+                                            value={s.label}
+                                            onChange={e => {
+                                                const newS = [...(settings.stats || [])];
+                                                newS[index] = { ...newS[index], label: e.target.value };
+                                                setSettings({ ...settings, stats: newS });
+                                            }}
+                                            className="w-full bg-transparent text-[8px] text-muted font-bold uppercase tracking-widest outline-none text-center"
+                                        />
+                                    </div>
+                                ))}
+                                {(settings.stats || []).length < 4 && (
+                                    <button
+                                        onClick={() => setSettings({ ...settings, stats: [...(settings.stats || []), { label: '', value: '' }] })}
+                                        className="h-16 border border-dashed border-theme rounded-2xl flex items-center justify-center text-muted hover:text-[#CE4676] hover:border-[#CE4676] transition-all"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                )}
+                            </div>
+                        </section>
                     </div>
                 )}
 
@@ -596,14 +705,25 @@ return (
         <div className="flex-1 flex flex-col bg-main overflow-hidden">
             {/* Preview Header */}
             <div className="h-14 bg-card-theme border-b border-theme flex items-center justify-between px-6">
-                <div className="flex bg-input-theme p-1 rounded-xl border border-theme">
-                    <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2 rounded-lg transition-all ${previewMode === 'DESKTOP' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Monitor size={14} /></button>
-                    <button onClick={() => setPreviewMode('TABLET')} className={`p-2 rounded-lg transition-all ${previewMode === 'TABLET' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Tablet size={14} /></button>
-                    <button onClick={() => setPreviewMode('MOBILE')} className={`p-2 rounded-lg transition-all ${previewMode === 'MOBILE' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Smartphone size={14} /></button>
+                <div className="flex items-center gap-4">
+                    <div className="flex bg-input-theme p-1 rounded-xl border border-theme">
+                        <button onClick={() => setPreviewMode('DESKTOP')} className={`p-2 rounded-lg transition-all ${previewMode === 'DESKTOP' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Monitor size={14} /></button>
+                        <button onClick={() => setPreviewMode('TABLET')} className={`p-2 rounded-lg transition-all ${previewMode === 'TABLET' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Tablet size={14} /></button>
+                        <button onClick={() => setPreviewMode('MOBILE')} className={`p-2 rounded-lg transition-all ${previewMode === 'MOBILE' ? 'bg-card text-main shadow' : 'text-muted hover:text-main'}`}><Smartphone size={14} /></button>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (iframeRef.current) iframeRef.current.src = iframeRef.current.src;
+                        }}
+                        className="p-2 text-muted hover:text-[#CE4676] transition-colors"
+                        title="Recargar vista previa"
+                    >
+                        <RefreshCw size={14} />
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa</span>
+                    <span className="text-[9px] font-black text-muted uppercase tracking-widest">Vista Previa Real-time</span>
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
             </div>
@@ -618,7 +738,11 @@ return (
                     <iframe
                         ref={iframeRef}
                         src="/"
-                        className="w-full h-full border-none"
+                        onLoad={() => {
+                            console.log("✅ [BUILDER] Iframe Loaded");
+                            syncPreview();
+                        }}
+                        className="w-full h-full border-none bg-white"
                         title="Live Preview"
                     />
 
