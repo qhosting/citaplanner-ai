@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import crypto from 'crypto';
-import pg from 'pg';
 import cors from 'cors';
 import path from 'path';
 import axios from 'axios';
@@ -42,7 +41,6 @@ import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema 
 
 const prisma = new PrismaClient();
 
-const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -209,21 +207,6 @@ webPush.setVapidDetails(
     vapidKeys.privateKey
 );
 
-const connectionString = process.env.DATABASE_URL || 'postgres://user:password@localhost:5432/citaplanner_dev';
-
-// @DEPRECATED: Pool is only used for initDB() legacy migrations
-// TODO: Migrate to Prisma Migrate (npx prisma migrate dev)
-const pool = new Pool({
-    connectionString: connectionString,
-    ssl: connectionString.includes('sslmode=disable') || !process.env.DATABASE_URL ? false : { rejectUnauthorized: false },
-    connectionTimeoutMillis: 5000,
-    statement_timeout: 10000
-});
-
-pool.on('error', (err, client) => {
-    console.error('❌ Unexpected error on idle client', err);
-});
-
 // Redis Client initialized by initRedis() above
 
 const getCached = async (key, fetchFn, ttl = 300) => {
@@ -253,7 +236,7 @@ const getCached = async (key, fetchFn, ttl = 300) => {
     }
 };
 
-const sendWhatsAppMessage = async (phone, text, branchId) => {
+const sendWhatsAppMessage = async (phone, text, branchId, organizationId) => {
     if (!phone) return;
     try {
         // WAHA requires formatted phone numbers (e.g. 52155...)
@@ -275,7 +258,8 @@ const sendWhatsAppMessage = async (phone, text, branchId) => {
                 payload: { chatId, text },
                 response: 'Sent',
                 status: 'SUCCESS',
-                branchId
+                branchId,
+                organizationId
             }
         });
     } catch (e) {
@@ -287,7 +271,8 @@ const sendWhatsAppMessage = async (phone, text, branchId) => {
                 payload: { phone, text },
                 response: e.message,
                 status: 'ERROR',
-                branchId
+                branchId,
+                organizationId
             }
         });
     }
@@ -304,7 +289,7 @@ const emailTransporter = nodemailer.createTransport({
     }
 });
 
-const sendEmail = async (to, subject, html, branchId) => {
+const sendEmail = async (to, subject, html, branchId, organizationId) => {
     try {
         if (!process.env.SMTP_HOST && process.env.NODE_ENV !== 'production') {
             console.log(`📧 [MOCK EMAIL] To: ${to} | Subject: ${subject}`);
@@ -323,7 +308,8 @@ const sendEmail = async (to, subject, html, branchId) => {
                 payload: { to, subject },
                 response: 'Sent',
                 status: 'SUCCESS',
-                branchId
+                branchId,
+                organizationId
             }
         });
         return true;
@@ -336,7 +322,8 @@ const sendEmail = async (to, subject, html, branchId) => {
                 payload: { to, subject },
                 response: e.message,
                 status: 'ERROR',
-                branchId
+                branchId,
+                organizationId
             }
         });
         return false;
@@ -400,742 +387,6 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     res.json({ url: imageUrl });
 });
 
-// @DEPRECATED: This function uses raw SQL for schema creation and seeding
-// TODO: Replace with Prisma Migrate migrations and seed scripts
-// Run: npx prisma migrate dev --name init
-// Then: npx prisma db seed
-const initDB = async () => {
-    const client = await pool.connect();
-    try {
-        await client.query('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
-
-        // Create tables if not exists
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS branches (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(255) NOT NULL,
-                address VARCHAR(500),
-                phone VARCHAR(50),
-                manager VARCHAR(255),
-                status VARCHAR(20) DEFAULT 'ACTIVE',
-                organization_id VARCHAR(50) DEFAULT 'demo',
-                tenant_id UUID,
-                created_at TIMESTAMP DEFAULT now()
-            );
-        `);
-
-        // --- MIGRACIÓN: ASEGURAR COLUMNAS ---
-        // Si las tablas ya existen de una versión previa, CREATE TABLE IF NOT EXISTS no las actualiza.
-        await client.query(`
-            DO $$ 
-            BEGIN 
-                -- Tenants
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
-                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                END IF;
-
-                -- Branches
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'branches') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='organization_id') THEN
-                        ALTER TABLE branches ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='address') THEN
-                        ALTER TABLE branches ADD COLUMN address VARCHAR(500);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='phone') THEN
-                        ALTER TABLE branches ADD COLUMN phone VARCHAR(50);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='manager') THEN
-                        ALTER TABLE branches ADD COLUMN manager VARCHAR(255);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='branches' AND column_name='status') THEN
-                        ALTER TABLE branches ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
-                    END IF;
-                END IF;
-
-                -- Users
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='organization_id') THEN
-                        ALTER TABLE users ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='related_id') THEN
-                        ALTER TABLE users ADD COLUMN related_id VARCHAR(100);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='branch_id') THEN
-                        ALTER TABLE users ADD COLUMN branch_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='tenant_id') THEN
-                        ALTER TABLE users ADD COLUMN tenant_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='preferences') THEN
-                        ALTER TABLE users ADD COLUMN preferences JSONB DEFAULT '{}';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='push_subscription') THEN
-                        ALTER TABLE users ADD COLUMN push_subscription JSONB;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='skin_type') THEN
-                        ALTER TABLE users ADD COLUMN skin_type VARCHAR(100);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='allergies') THEN
-                        ALTER TABLE users ADD COLUMN allergies TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='medical_conditions') THEN
-                        ALTER TABLE users ADD COLUMN medical_conditions TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='loyalty_points') THEN
-                        ALTER TABLE users ADD COLUMN loyalty_points INTEGER DEFAULT 0;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='avatar') THEN
-                        ALTER TABLE users ADD COLUMN avatar TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='refresh_token') THEN
-                        ALTER TABLE users ADD COLUMN refresh_token TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='reset_token') THEN
-                        ALTER TABLE users ADD COLUMN reset_token TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='users' AND column_name='reset_token_expiry') THEN
-                        ALTER TABLE users ADD COLUMN reset_token_expiry TIMESTAMP;
-                    END IF;
-                END IF;
-
-                -- Professionals
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'professionals') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='organization_id') THEN
-                        ALTER TABLE professionals ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='branch_id') THEN
-                        ALTER TABLE professionals ADD COLUMN branch_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='tenant_id') THEN
-                        ALTER TABLE professionals ADD COLUMN tenant_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='aurum_employee_id') THEN
-                        ALTER TABLE professionals ADD COLUMN aurum_employee_id VARCHAR(50);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='service_ids') THEN
-                        ALTER TABLE professionals ADD COLUMN service_ids TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='weekly_schedule') THEN
-                        ALTER TABLE professionals ADD COLUMN weekly_schedule JSONB DEFAULT '[]';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='exceptions') THEN
-                        ALTER TABLE professionals ADD COLUMN exceptions JSONB DEFAULT '[]';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_access_token') THEN
-                        ALTER TABLE professionals ADD COLUMN google_access_token TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_refresh_token') THEN
-                        ALTER TABLE professionals ADD COLUMN google_refresh_token TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='google_calendar_id') THEN
-                        ALTER TABLE professionals ADD COLUMN google_calendar_id TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='calendar_sync_enabled') THEN
-                        ALTER TABLE professionals ADD COLUMN calendar_sync_enabled BOOLEAN DEFAULT FALSE;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='professionals' AND column_name='ical_token') THEN
-                        ALTER TABLE professionals ADD COLUMN ical_token TEXT;
-                    END IF;
-                END IF;
-
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'services') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='organization_id') THEN
-                        ALTER TABLE services ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='branch_id') THEN
-                        ALTER TABLE services ADD COLUMN branch_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='tenant_id') THEN
-                        ALTER TABLE services ADD COLUMN tenant_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='services' AND column_name='care_instructions') THEN
-                        ALTER TABLE services ADD COLUMN care_instructions TEXT;
-                    END IF;
-                END IF;
-
-                -- Appointments
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'appointments') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='organization_id') THEN
-                        ALTER TABLE appointments ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='notes') THEN
-                        ALTER TABLE appointments ADD COLUMN notes TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='branch_id') THEN
-                        ALTER TABLE appointments ADD COLUMN branch_id UUID;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='reminder_sent') THEN
-                        ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
-                        ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='appointments' AND column_name='updated_at') THEN
-                        ALTER TABLE appointments ADD COLUMN updated_at TIMESTAMP DEFAULT now();
-                    END IF;
-                END IF;
-
-                -- Integration Logs
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'integration_logs') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='organization_id') THEN
-                        ALTER TABLE integration_logs ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='integration_logs' AND column_name='branch_id') THEN
-                        ALTER TABLE integration_logs ADD COLUMN branch_id UUID;
-                    END IF;
-                END IF;
-
-                -- Products
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'products') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='organization_id') THEN
-                        ALTER TABLE products ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='products' AND column_name='branch_id') THEN
-                        ALTER TABLE products ADD COLUMN branch_id UUID;
-                    END IF;
-                END IF;
-
-                -- Transactions
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'transactions') THEN
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='organization_id') THEN
-                        ALTER TABLE transactions ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='transactions' AND column_name='branch_id') THEN
-                        ALTER TABLE transactions ADD COLUMN branch_id UUID;
-                    END IF;
-                END IF;
-
-                -- Full SaaS Infrastructure Migration (Hardened)
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN
-                    -- Identity & Routing
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='organization_id') THEN
-                        ALTER TABLE tenants ADD COLUMN organization_id VARCHAR(50) DEFAULT 'demo';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='custom_domain') THEN
-                        ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255);
-                    END IF;
-
-                    -- Subscription & Billing
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='status') THEN
-                        ALTER TABLE tenants ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='plan_type') THEN
-                        ALTER TABLE tenants ADD COLUMN plan_type VARCHAR(20) DEFAULT 'ELITE';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='features') THEN
-                        ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true, "ai_automation": true}';
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='openpay_id') THEN
-                        ALTER TABLE tenants ADD COLUMN openpay_id VARCHAR(100);
-                    END IF;
-
-                    -- Lifecycle & Dates (Fixed P2022: suspended_at)
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='suspended_at') THEN
-                        ALTER TABLE tenants ADD COLUMN suspended_at TIMESTAMP;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='trial_ends_at') THEN
-                        ALTER TABLE tenants ADD COLUMN trial_ends_at TIMESTAMP;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='last_login_at') THEN
-                        ALTER TABLE tenants ADD COLUMN last_login_at TIMESTAMP;
-                    END IF;
-
-                    -- Bridge Integration Ecosystem
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_enabled') THEN
-                        ALTER TABLE tenants ADD COLUMN bridge_enabled BOOLEAN DEFAULT FALSE;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_webhook_url') THEN
-                        ALTER TABLE tenants ADD COLUMN bridge_webhook_url TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_api_key') THEN
-                        ALTER TABLE tenants ADD COLUMN bridge_api_key UUID DEFAULT gen_random_uuid();
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='tenants' AND column_name='bridge_satellite_id') THEN
-                        ALTER TABLE tenants ADD COLUMN bridge_satellite_id INTEGER DEFAULT 3;
-                    END IF;
-
-                    -- ENSURE UNIQUE CONSTRAINTS
-                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'tenants' AND indexname = 'tenants_subdomain_key') THEN
-                        ALTER TABLE tenants ADD CONSTRAINT tenants_subdomain_key UNIQUE (subdomain);
-                    END IF;
-                END IF;
-
-                -- Multi-Tenant Phone Fix: drop legacy global unique on phone, keep composite
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
-                    -- Safely drop the old unique constraint (which also drops the underlying index)
-                    BEGIN
-                        IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'users' AND constraint_name = 'users_phone_key' AND constraint_type = 'UNIQUE') THEN
-                            ALTER TABLE users DROP CONSTRAINT users_phone_key;
-                        ELSIF EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'users' AND indexname = 'users_phone_key') THEN
-                            DROP INDEX users_phone_key;
-                        END IF;
-                    EXCEPTION WHEN OTHERS THEN
-                        RAISE NOTICE 'users_phone_key already removed or not applicable: %', SQLERRM;
-                    END;
-                    -- Ensure composite unique exists
-                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'users' AND indexname = 'users_phone_organization_id_key') THEN
-                        CREATE UNIQUE INDEX users_phone_organization_id_key ON users(phone, organization_id);
-                    END IF;
-                END IF;
-
-                -- Landing Settings Multi-Tenancy
-                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'landing_settings') THEN
-                    -- Change id from INT to UUID if needed, but keeping simple: Ensure organization_id is unique
-                    IF NOT EXISTS (SELECT FROM pg_indexes WHERE tablename = 'landing_settings' AND indexname = 'idx_landing_org_unique') THEN
-                        CREATE UNIQUE INDEX idx_landing_org_unique ON landing_settings(organization_id);
-                    END IF;
-                    
-                    -- New columns for Web Builder Pro
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_title') THEN
-                        ALTER TABLE landing_settings ADD COLUMN seo_title VARCHAR(100);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_description') THEN
-                        ALTER TABLE landing_settings ADD COLUMN seo_description TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='seo_keywords') THEN
-                        ALTER TABLE landing_settings ADD COLUMN seo_keywords TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='latitude') THEN
-                        ALTER TABLE landing_settings ADD COLUMN latitude DOUBLE PRECISION;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='longitude') THEN
-                        ALTER TABLE landing_settings ADD COLUMN longitude DOUBLE PRECISION;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='whatsapp_phone') THEN
-                        ALTER TABLE landing_settings ADD COLUMN whatsapp_phone VARCHAR(20);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='footer_text') THEN
-                        ALTER TABLE landing_settings ADD COLUMN footer_text TEXT;
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_instagram') THEN
-                        ALTER TABLE landing_settings ADD COLUMN social_instagram VARCHAR(255);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_facebook') THEN
-                        ALTER TABLE landing_settings ADD COLUMN social_facebook VARCHAR(255);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='social_twitter') THEN
-                        ALTER TABLE landing_settings ADD COLUMN social_twitter VARCHAR(255);
-                    END IF;
-                    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='logo_url') THEN
-                        ALTER TABLE landing_settings ADD COLUMN logo_url TEXT;
-                    END IF;
-                END IF;
-
-            END $$;
-        `);
-
-        // 0. Preliminary Tables (Independent of others)
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS landing_settings(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            business_name VARCHAR(100) DEFAULT 'CitaPlanner Elite',
-            primary_color VARCHAR(20) DEFAULT '#630E14',
-            secondary_color VARCHAR(20) DEFAULT '#C5A028',
-            template_id VARCHAR(20) DEFAULT 'citaplanner',
-            slogan TEXT,
-            about_text TEXT,
-            address TEXT,
-            contact_phone VARCHAR(20),
-            hero_image_url TEXT,
-            logo_url TEXT,
-            organization_id VARCHAR(50) UNIQUE DEFAULT 'demo',
-            seo_title VARCHAR(100),
-            seo_description TEXT,
-            seo_keywords TEXT,
-            latitude DOUBLE PRECISION,
-            longitude DOUBLE PRECISION,
-            whatsapp_phone VARCHAR(20),
-            footer_text TEXT,
-            social_instagram VARCHAR(255),
-            social_facebook VARCHAR(255),
-            social_twitter VARCHAR(255),
-            images JSONB DEFAULT '[]',
-            services JSONB DEFAULT '[]',
-            hero_slides JSONB DEFAULT '[]',
-            stats JSONB DEFAULT '[]',
-            testimonials JSONB DEFAULT '[]',
-            features JSONB DEFAULT '{"ai": true, "inventory": true, "marketing": true}'
-        );
-        `);
-
-        // 1. Fundamental Tables (Expanded for Modo Dios)
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS tenants(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            name VARCHAR(100) NOT NULL,
-            subdomain VARCHAR(50) NOT NULL,
-            custom_domain VARCHAR(255),
-            status VARCHAR(20) DEFAULT 'ACTIVE', --ACTIVE, SUSPENDED, TRIAL
-                plan_type VARCHAR(20) DEFAULT 'ELITE',
-            features JSONB DEFAULT '{"ai_scheduler": true, "marketing_pro": true, "inventory_advanced": true, "analytics_nexus": true}',
-            openpay_id VARCHAR(100),
-            suspended_at TIMESTAMP,
-            trial_ends_at TIMESTAMP,
-            last_login_at TIMESTAMP,
-            bridge_enabled BOOLEAN DEFAULT FALSE,
-            bridge_webhook_url TEXT,
-            bridge_api_key UUID DEFAULT gen_random_uuid(),
-            bridge_satellite_id INTEGER DEFAULT 3,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS subscriptions(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID REFERENCES tenants(id),
-            plan_id VARCHAR(50),
-            status VARCHAR(20) DEFAULT 'INACTIVE',
-            provider VARCHAR(20) DEFAULT 'MERCADOPAGO',
-            external_id VARCHAR(100),
-            current_period_start TIMESTAMP,
-            current_period_end TIMESTAMP,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS billing_logs(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID REFERENCES tenants(id),
-            amount DECIMAL(12, 2),
-            currency VARCHAR(10) DEFAULT 'MXN',
-            status VARCHAR(20),
-            provider VARCHAR(20),
-            description TEXT,
-            invoice_url TEXT,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS branches(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            address VARCHAR(500),
-            phone VARCHAR(50),
-            manager VARCHAR(255),
-            status VARCHAR(20) DEFAULT 'ACTIVE',
-            tenant_id UUID REFERENCES tenants(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS users(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(100),
-            phone VARCHAR(20),
-            email VARCHAR(100),
-            password VARCHAR(100),
-            role VARCHAR(20),
-            related_id VARCHAR(100),
-            branch_id UUID REFERENCES branches(id),
-            tenant_id UUID REFERENCES tenants(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            preferences JSONB DEFAULT '{}',
-            push_subscription JSONB,
-            skin_type VARCHAR(100),
-            allergies TEXT,
-            medical_conditions TEXT,
-            avatar TEXT,
-            loyalty_points INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS professionals(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            role VARCHAR(255),
-            email VARCHAR(255),
-            aurum_employee_id VARCHAR(50),
-            weekly_schedule JSONB DEFAULT '[]',
-            exceptions JSONB DEFAULT '[]',
-            service_ids TEXT,
-            tenant_id UUID REFERENCES tenants(id),
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS services(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            duration INTEGER NOT NULL,
-            price DECIMAL(12, 2) NOT NULL,
-            category VARCHAR(100),
-            status VARCHAR(20) DEFAULT 'ACTIVE',
-            description TEXT,
-            image_url TEXT,
-            tenant_id UUID REFERENCES tenants(id),
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo'
-        );
-
-            CREATE TABLE IF NOT EXISTS appointments(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            title VARCHAR(255) NOT NULL,
-            start_date_time TIMESTAMP NOT NULL,
-            end_date_time TIMESTAMP NOT NULL,
-            client_name VARCHAR(255),
-            client_phone VARCHAR(50),
-            status VARCHAR(20) DEFAULT 'SCHEDULED',
-            description TEXT,
-            notes TEXT,
-            professional_id UUID REFERENCES professionals(id),
-            service_id UUID REFERENCES services(id),
-            tenant_id UUID REFERENCES tenants(id),
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo'
-        );
-
-            CREATE TABLE IF NOT EXISTS settings(
-            key VARCHAR(100) NOT NULL,
-            value JSONB NOT NULL,
-            tenant_id UUID REFERENCES tenants(id),
-            PRIMARY KEY(key, tenant_id)
-        );
-
-            CREATE TABLE IF NOT EXISTS leads(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            phone VARCHAR(50) NOT NULL,
-            email VARCHAR(255),
-            source VARCHAR(50) DEFAULT 'MANUAL',
-            status VARCHAR(50) DEFAULT 'NEW',
-            notes TEXT,
-            tenant_id UUID REFERENCES tenants(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS integration_logs(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            platform VARCHAR(50),
-            event_type VARCHAR(100),
-            payload JSONB,
-            response TEXT,
-            status VARCHAR(20),
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS products(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            name VARCHAR(255) NOT NULL,
-            price DECIMAL(12, 2),
-            stock INTEGER DEFAULT 0,
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-            CREATE TABLE IF NOT EXISTS transactions(
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            amount DECIMAL(12, 2),
-            mp_payment_id VARCHAR(100),
-            mp_status VARCHAR(50),
-            branch_id UUID REFERENCES branches(id),
-            organization_id VARCHAR(50) DEFAULT 'demo',
-            created_at TIMESTAMP DEFAULT NOW()
-        );
-
-        -- Maintenance & MMS Infrastructure (Created after Professionals to avoid FK issues)
-        CREATE TABLE IF NOT EXISTS maintenance_tasks (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            day_of_week INTEGER NOT NULL,
-            task_name VARCHAR(255) NOT NULL,
-            priority INTEGER DEFAULT 1,
-            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-            created_at TIMESTAMP DEFAULT now()
-        );
-
-        CREATE TABLE IF NOT EXISTS task_assignments (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            date DATE NOT NULL,
-            task_id UUID REFERENCES maintenance_tasks(id) ON DELETE CASCADE,
-            assigned_to UUID REFERENCES professionals(id) ON DELETE CASCADE,
-            status VARCHAR(20) DEFAULT 'PENDING',
-            completed_at TIMESTAMP,
-            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-            created_at TIMESTAMP DEFAULT now()
-        );
-
-
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain);
-
-            DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_phone_org') THEN
-                    CREATE UNIQUE INDEX idx_users_phone_org ON users(phone, organization_id);
-                END IF;
-            END $$;
-        `);
-
-        // 2. Seeding Master Tenant
-        let masterId;
-        try {
-            const masterIdRes = await client.query(`
-                INSERT INTO tenants(name, subdomain, status, plan_type, organization_id)
-        VALUES('Aurum Global Nexus', 'master', 'ACTIVE', 'LEGACY', 'master') 
-                ON CONFLICT(subdomain) DO UPDATE SET organization_id = 'master', name = EXCLUDED.name 
-                RETURNING id
-            `);
-            masterId = masterIdRes.rows[0].id;
-        } catch (masterErr) {
-            console.warn("⚠️ Master Tenant Seeding warning (likely exists):", masterErr.message);
-            const m = await client.query("SELECT id FROM tenants WHERE subdomain = 'master'");
-            masterId = m.rows[0]?.id;
-        }
-
-        // 3. Seeding Default Branch
-        const branchRes = await client.query(`
-            INSERT INTO branches(name, organization_id, tenant_id)
-        VALUES('Sucursal Central', 'demo', $1) 
-            ON CONFLICT DO NOTHING
-            RETURNING id
-            `, [masterId]);
-
-        let defaultBranchId = branchRes.rows[0]?.id;
-        if (!defaultBranchId) {
-            const b = await client.query("SELECT id FROM branches WHERE organization_id = 'demo' LIMIT 1");
-            defaultBranchId = b.rows[0].id;
-        }
-
-        // 4. Default Landing Settings (Seeded via Prisma in get route if missing)
-        // No manual id=1 insert here to avoid UUID conflicts
-
-        // 5. Seeding Services
-        const serviceCount = await client.query("SELECT count(*) FROM services");
-        if (parseInt(serviceCount.rows[0].count) === 0) {
-            const servicesToSeed = [
-                ['PESTAÑAS', 'TECNICA CLASICA', 550, 'NATURAL', 90],
-                ['UÑAS', 'GEL SEMIPERMANENTE', 120, '1 TONO', 45]
-            ];
-            for (const s of servicesToSeed) {
-                await client.query(
-                    "INSERT INTO services (category, name, price, description, duration, branch_id, tenant_id, organization_id, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE')",
-                    [s[0], s[1], s[2], s[3], s[4], defaultBranchId, masterId, 'demo']
-                );
-            }
-        }
-
-        // 6. User Seeding & Persistence
-        // We ensure critical users (Nexus & QHosting) exist regardless of previous state
-
-        // Nexus God Mode (Master Overseer)
-        const nexusExists = await client.query("SELECT id FROM users WHERE phone = 'nexus' AND organization_id = 'master'");
-        if (nexusExists.rows.length === 0) {
-            console.log("🛠️ Seeding Nexus Superintendent...");
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-        VALUES('Superintendente Nexus', 'nexus', 'nexus@aurum.ai', $1, 'GOD_MODE', $2, $3, 'master', '{"whatsapp":true,"email":true}')
-            `, [bcrypt.hashSync('nexus123', 10), defaultBranchId, masterId]);
-        }
-
-        // Default Admin (Demo Tenant)
-        const adminPhone = (process.env.SEED_ADMIN_PHONE || 'admin').trim();
-        await client.query(`
-            INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-            VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-            ON CONFLICT (phone, organization_id) DO UPDATE SET
-                name = EXCLUDED.name,
-                email = EXCLUDED.email,
-                password = EXCLUDED.password
-        `, [
-            process.env.SEED_ADMIN_NAME || 'Admin Master',
-            adminPhone,
-            process.env.SEED_ADMIN_EMAIL || 'admin@aurum.ai',
-            bcrypt.hashSync(process.env.SEED_ADMIN_PASSWORD || '123', 10),
-            defaultBranchId,
-            masterId
-        ]);
-
-        // QHOSTING ADMIN (ON CONFLICT LOGIC)
-        if (process.env.QHOSTING_ADMIN_PHONE) {
-            const qPhone = process.env.QHOSTING_ADMIN_PHONE.trim();
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES($1, $2, $3, $4, 'ADMIN', $5, $6, 'demo', '{"whatsapp":true,"email":true}')
-                ON CONFLICT (phone, organization_id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    email = EXCLUDED.email,
-                    password = CASE WHEN EXCLUDED.password IS NOT NULL THEN EXCLUDED.password ELSE users.password END
-            `, [
-                process.env.QHOSTING_ADMIN_NAME || 'CEO AURUM',
-                qPhone,
-                process.env.QHOSTING_ADMIN_EMAIL || 'admin@qhosting.net',
-                process.env.QHOSTING_ADMIN_PASSWORD ? bcrypt.hashSync(process.env.QHOSTING_ADMIN_PASSWORD.trim(), 10) : null,
-                defaultBranchId,
-                masterId
-            ]);
-        }
-
-        // GOD_MODE CONFIGURABLE ADMIN (ON CONFLICT LOGIC)
-        if (process.env.GOD_MODE_PHONE) {
-            const godPhone = process.env.GOD_MODE_PHONE.trim();
-            await client.query(`
-                INSERT INTO users(name, phone, email, password, role, branch_id, tenant_id, organization_id, preferences)
-                VALUES($1, $2, $3, $4, 'GOD_MODE', $5, $6, 'master', '{"whatsapp":true,"email":true}')
-                ON CONFLICT (phone, organization_id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    email = EXCLUDED.email,
-                    password = CASE WHEN EXCLUDED.password IS NOT NULL THEN EXCLUDED.password ELSE users.password END,
-                    role = 'GOD_MODE'
-            `, [
-                process.env.GOD_MODE_NAME || 'Super Admin Nexus',
-                godPhone,
-                process.env.GOD_MODE_EMAIL || 'god@aurum.ai',
-                process.env.GOD_MODE_PASSWORD ? bcrypt.hashSync(process.env.GOD_MODE_PASSWORD.trim(), 10) : null,
-                defaultBranchId,
-                masterId
-            ]);
-        }
-
-
-
-
-        try {
-            console.log("🚀 [INFRA] Starting Global Infrastructure Sync v5.3...");
-            const shulaExists = await client.query("SELECT id FROM tenants WHERE subdomain = 'shula'");
-            if (shulaExists.rows.length === 0) {
-                console.log("🛠️ Seeding Shula Studio Global (Premium Domain Optimized)...");
-                const shulaIdRes = await client.query(`
-                    INSERT INTO tenants(name, subdomain, custom_domain, status, plan_type, organization_id)
-        VALUES('Shula Studio Global', 'shula', 'shulastudio.com', 'ACTIVE', 'ELITE', 'shula')
-                    RETURNING id
-            `);
-                const shulaId = shulaIdRes.rows[0].id;
-
-                // Seed Shula Landing
-                await client.query(`
-                    INSERT INTO landing_settings(organization_id, business_name, primary_color, secondary_color, slogan, about_text, template_id, contact_phone, hero_image_url, images, services)
-                    VALUES('shula', 'Shula Studio Global', '#D4AF37', '#000000', 'Elegancia en cada detalle de tu mirada',
-                    'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.',
-                    'shula_dark', '+52 55 1234 5678', 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899',
-                    '[{"url": "https://images.unsplash.com/photo-1560750588-73207b1ef5b8", "caption": "Mirada Perfecta"}, {"url": "https://images.unsplash.com/photo-1522337660859-02fbefca4702", "caption": "Estudio Luxury"}]'::jsonb,
-                    '[{"title": "Pestañas Clásicas", "price": "$550"}, {"title": "Diseño Pro", "price": "$350"}]'::jsonb)
-                    ON CONFLICT(organization_id) DO NOTHING
-            `);
-
-                // Seed Shula Branch
-                await client.query(`
-                    INSERT INTO branches(name, organization_id, tenant_id)
-        VALUES('Shula Studio Matriz', 'shula', $1)
-            `, [shulaId]);
-                console.log("✅ Shula Studio Node Provisioned.");
-            }
-        } catch (shulaErr) {
-            console.error("❌ Shula Seeding Failed:", shulaErr.message);
-        }
-
-        console.log("✅ Infraestructura Aurum Nexus v5.3 Operativa.");
-    } catch (e) {
-        console.error("❌ Error en initDB:", e.message);
-    } finally {
-        client.release();
-    }
-};
 
 
 const tenantMiddleware = async (req, res, next) => {
@@ -1281,17 +532,13 @@ app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req,
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- SAAS PLANS CONFIGURATION ---
-app.get('/api/saas/plans', (req, res) => {
-    res.json(SAAS_PLANS);
-});
 
 // --- SAAS TENANT MANAGEMENT (GOD MODE ONLY) ---
 
 app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (req, res) => {
     try {
-        const poolRes = await pool.query("SELECT * FROM tenants ORDER BY created_at DESC");
-        res.json({ count: poolRes.rowCount, rows: poolRes.rows });
+        const tenants = await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
+        res.json({ count: tenants.length, rows: tenants });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1481,6 +728,7 @@ app.get('/api/saas/openpay/plans', authenticateToken, checkGodMode, async (req, 
 });
 
 
+
 // --- NEXUS IMPERSONATION (SUPPORT BYPASS) ---
 app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
     try {
@@ -1610,7 +858,7 @@ app.delete('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMo
 
 // --- SAAS PLANS MANAGEMENT (DYNAMIC) ---
 
-app.get('/api/saas/plans', authenticateToken, async (req, res) => {
+app.get('/api/saas/plans', (req, res) => {
     res.json(SAAS_PLANS);
 });
 
@@ -2008,7 +1256,7 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
                     data: { status: 'CONFIRMED' }
                 });
                 console.log(`✅ Appointment ${appointment.id} confirmed via WhatsApp`);
-                sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null);
+                sendWhatsAppMessage(cleanPhone, "¡Gracias! Tu cita ha sido confirmada.", null, appointment.organizationId);
             }
         }
 
@@ -2118,7 +1366,7 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
         if (clientPhone) {
             const dateStr = new Date(startDateTime).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
             const message = `Hola ${clientName}, tu cita para "${title}" ha sido confirmada para el ${dateStr}. Te esperamos en Aurum.`;
-            sendWhatsAppMessage(clientPhone, message, req.branchId);
+            sendWhatsAppMessage(clientPhone, message, req.branchId, req.tenantId);
         }
 
         // Notify Professional via Web Push
@@ -2179,11 +1427,11 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
 
         for (const user of users) {
             if (campaign.channel === 'EMAIL' && user.email) {
-                const success = await sendEmail(user.email, campaign.subject, campaign.content, req.branchId);
+                const success = await sendEmail(user.email, campaign.subject, campaign.content, req.branchId, req.tenantId);
                 if (success) sentCount++;
             } else if (campaign.channel === 'WHATSAPP' && user.phone) {
                 // Use existing sendWhatsAppMessage
-                await sendWhatsAppMessage(user.phone, campaign.content, req.branchId);
+                await sendWhatsAppMessage(user.phone, campaign.content, req.branchId, req.tenantId);
                 sentCount++;
             }
         }
@@ -3537,13 +2785,13 @@ app.post('/api/maintenance/assignments/:id/complete', authenticateToken, tenantM
                 status: 'COMPLETED',
                 completedAt: new Date()
             },
-            include: { task: true, tenants: true }
+            include: { task: true, tenant: true }
         });
 
         // Notify Admin via WhatsApp
-        const adminPhone = assignment.tenants?.verificationRecord?.adminPhone || '52155...'; // Use tenant config
+        const adminPhone = assignment.tenant?.verificationRecord?.adminPhone || '52155...'; // Use tenant config
         const message = `✅ Tarea Completada: "${assignment.task.taskName}" ha sido finalizada por ${req.user.name} a las ${new Date().toLocaleTimeString('es-MX')}.`;
-        await sendWhatsAppMessage(adminPhone, message, null);
+        await sendWhatsAppMessage(adminPhone, message, null, req.tenantId);
 
         res.json(assignment);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -3594,7 +2842,7 @@ cron.schedule('0 * * * *', async () => {
             if (app.tenant?.features?.ai_automation) {
                 const dateStr = app.startDateTime.toLocaleString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
                 const message = `🌟 Recordatorio Aurum: Hola ${app.clientName}, te esperamos mañana ${dateStr} para tu cita de "${app.title}". ¿Deseas confirmar tu asistencia?`;
-                await sendWhatsAppMessage(app.clientPhone, message, app.branchId);
+                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, app.organizationId);
 
                 await prisma.appointment.update({
                     where: { id: app.id },
@@ -3624,7 +2872,7 @@ cron.schedule('30 * * * *', async () => {
         for (const app of apps) {
             if (app.tenant?.features?.ai_automation && app.service?.careInstructions) {
                 const message = `🌸 En Aurum nos importa tu belleza: Para prolongar los resultados de tu "${app.service.name}", te recomendamos:\n\n${app.service.careInstructions}\n\n¡Esperamos verte pronto!`;
-                await sendWhatsAppMessage(app.clientPhone, message, app.branchId);
+                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, app.organizationId);
 
                 await prisma.appointment.update({
                     where: { id: app.id },
@@ -3653,7 +2901,7 @@ cron.schedule('0 6 * * *', async () => {
             const tenant = await prisma.tenant.findUnique({ where: { subdomain: client.organizationId } });
             if (tenant?.features?.ai_automation) {
                 const message = `🎂 ¡Feliz Cumpleaños ${client.name}! En ${tenant.name} celebramos tu día. Visítanos este mes y recibe un 15% de regalo en tu próximo servicio. ✨`;
-                await sendWhatsAppMessage(client.phone, message, null);
+                await sendWhatsAppMessage(client.phone, message, null, client.organizationId);
             }
         }
     } catch (e) { console.error("❌ Birthday Worker Error:", e); }
@@ -3720,7 +2968,7 @@ cron.schedule('0 6 * * *', async () => {
                 // Assuming phone is stored in professional's email or we need to find the user
                 const user = await prisma.user.findFirst({ where: { relatedId: staff.id } });
                 if (user?.phone) {
-                    await sendWhatsAppMessage(user.phone, message, staff.branchId);
+                    await sendWhatsAppMessage(user.phone, message, staff.branchId, tenant.organizationId);
                 }
             }
         }
@@ -3733,11 +2981,9 @@ cron.schedule('0 6 * * *', async () => {
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
-    initDB().then(() => {
-        httpServer.listen(PORT, () => {
-            console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
-            console.log(`📡 WebSockets enabled on same port`);
-        });
+    httpServer.listen(PORT, () => {
+        console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+        console.log(`📡 WebSockets enabled on same port`);
     });
 }
 
