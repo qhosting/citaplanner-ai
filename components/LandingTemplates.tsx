@@ -1,10 +1,12 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import {
     ArrowRight, Sparkles, MapPin, Instagram, Facebook, Twitter, Phone,
     MessageCircle, ShieldCheck, Zap, Globe, Heart, Star, CheckCircle2,
     Calendar, Users, Clock, Menu, X, MessageSquare, Heart as HeartIcon,
     Zap as ZapIcon, Shield, CalendarDays
+} from 'lucide-react';
 import { LandingSettings, Service } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
 
