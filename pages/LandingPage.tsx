@@ -347,41 +347,43 @@ export const LandingPage: React.FC = () => {
       {renderTemplate()}
 
       {/* Common Footer (Enhanced) */}
-      <footer className="bg-[#050505] pt-32 pb-12 border-t border-white/5 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-20 mb-20">
-            <div className="space-y-6">
-              <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
-              <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || "Experiencia de salud y bienestar diseñada para tu estilo de vida."}</p>
-            </div>
-            <div>
-              <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Encuéntranos</h4>
-              <p className="text-zinc-500 text-xs leading-relaxed">{settings.address || "Visita nuestro estudio"}</p>
-              <p className="text-zinc-300 font-bold mt-4 text-sm">{settings.contactPhone}</p>
-            </div>
-            <div>
-              <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Síguenos</h4>
-              <div className="flex gap-4">
-                {settings.socialInstagram && <a href={settings.socialInstagram} className="text-zinc-600 hover:text-white transition-colors"><Instagram size={20} /></a>}
-                {settings.socialFacebook && <a href={settings.socialFacebook} className="text-zinc-600 hover:text-white transition-colors"><Facebook size={20} /></a>}
-                {settings.socialTwitter && <a href={settings.socialTwitter} className="text-zinc-600 hover:text-white transition-colors"><Twitter size={20} /></a>}
+      {settings.templateId !== 'shulastudio' && settings.templateId !== 'shula_dark' && (
+        <footer className="bg-[#050505] pt-32 pb-12 border-t border-white/5 px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-20 mb-20">
+              <div className="space-y-6">
+                <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
+                <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || "Experiencia de salud y bienestar diseñada para tu estilo de vida."}</p>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Encuéntranos</h4>
+                <p className="text-zinc-500 text-xs leading-relaxed">{settings.address || "Visita nuestro estudio"}</p>
+                <p className="text-zinc-300 font-bold mt-4 text-sm">{settings.contactPhone}</p>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Síguenos</h4>
+                <div className="flex gap-4">
+                  {settings.socialInstagram && <a href={settings.socialInstagram} className="text-zinc-600 hover:text-white transition-colors"><Instagram size={20} /></a>}
+                  {settings.socialFacebook && <a href={settings.socialFacebook} className="text-zinc-600 hover:text-white transition-colors"><Facebook size={20} /></a>}
+                  {settings.socialTwitter && <a href={settings.socialTwitter} className="text-zinc-600 hover:text-white transition-colors"><Twitter size={20} /></a>}
+                </div>
+              </div>
+              <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5">
+                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Servidor en Línea
+                </p>
+                <p className="text-zinc-500 text-[10px] leading-relaxed">Infraestructura Aurum Nexus v5.0 segura con cifrado de grado militar.</p>
               </div>
             </div>
-            <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5">
-              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Servidor en Línea
-              </p>
-              <p className="text-zinc-500 text-[10px] leading-relaxed">Infraestructura Aurum Nexus v5.0 segura con cifrado de grado militar.</p>
+            <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+              <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">© {new Date().getFullYear()} {settings.businessName} • Powered by CitaPlanner</p>
+              <div className="flex gap-4">
+                <Link to="/login" className="text-[9px] font-black text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors">Acceso de Staff</Link>
+              </div>
             </div>
           </div>
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">© {new Date().getFullYear()} {settings.businessName} • Powered by CitaPlanner</p>
-            <div className="flex gap-4">
-              <Link to="/login" className="text-[9px] font-black text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors">Acceso de Staff</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Floating WhatsApp Button */}
       {waTarget && (
