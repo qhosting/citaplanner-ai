@@ -325,128 +325,100 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
 // ==========================================
 export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
     const defaultServices = [
-        { id: '1', name: 'Microblading Elite', price: 2800, duration: 120, category: 'Cejas', status: 'ACTIVE' as const, description: 'Técnica de pelo a pelo para cejas perfectas y naturales de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80&w=600' },
-        { id: '2', name: 'Extensiones de Pestañas', price: 1200, duration: 90, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Volumen y curvatura perfecta con extensiones de seda premium.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80&w=600' },
-        { id: '3', name: 'Nano Brows HD', price: 3200, duration: 150, category: 'Cejas', status: 'ACTIVE' as const, description: 'Definición ultra-fina con pigmentos orgánicos de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80&w=600' },
-        { id: '4', name: 'Lifting de Pestañas', price: 850, duration: 60, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Rizador permanente que abre y realza tu mirada de manera natural.', imageUrl: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80&w=600' },
+        { id: '1', name: 'Clásicas', price: 950, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Técnica 1 a 1 para un look natural y sofisticado.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
+        { id: '2', name: 'Volumen Híbrido', price: 1250, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Mezcla perfecta de clásicas y volumen para mayor densidad.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80' },
+        { id: '3', name: 'Volumen Ruso', price: 1550, duration: 150, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Máximo volumen y dramatismo con abanicos hechos a mano.', imageUrl: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80' },
+        { id: '4', name: 'Lifting de Pestañas', price: 850, duration: 60, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Levantamiento natural de tus propias pestañas.', imageUrl: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80' },
     ];
-    const displayServices = services.length > 0 ? services : defaultServices;
+    const displayServices = services.length > 0 ? services.slice(0, 4) : defaultServices;
+    const gold = "#D4AF37";
+    const magenta = "#CE467B";
 
     return (
-        <div className="bg-white text-zinc-800 font-inter selection:bg-pink-100">
-            {/* Top Bar */}
-            <div className="hidden md:flex justify-between items-center py-2 px-8 border-b border-zinc-100 text-[10px] uppercase tracking-widest font-bold text-zinc-500 bg-zinc-50">
-                <div className="flex gap-6">
-                    {settings.contactPhone && <span className="flex items-center gap-2"><Phone size={12} style={{ color: accent }} /> {settings.contactPhone}</span>}
-                    {settings.address && <span className="flex items-center gap-2"><MapPin size={12} style={{ color: accent }} /> {settings.address}</span>}
-                </div>
-                <div className="flex gap-4">
-                    {settings.socialInstagram && <a href={settings.socialInstagram} target="_blank" rel="noreferrer" className="hover:text-black transition-colors"><Instagram size={14} /></a>}
-                    {settings.socialFacebook && <a href={settings.socialFacebook} target="_blank" rel="noreferrer" className="hover:text-black transition-colors"><Facebook size={14} /></a>}
-                </div>
-            </div>
+        <div className="bg-black text-zinc-300 font-inter min-h-screen">
+            {/* 1. Navbar Fijo Transparente -> Negro */}
+            <nav className="fixed w-full z-50 bg-black/90 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-20">
+                    <Link to="/" className="flex items-center gap-1 font-playfair font-black text-2xl tracking-tight">
+                        <span style={{ color: gold }}>Lash</span>
+                        <span style={{ color: magenta }}>Studio</span>
+                    </Link>
+                    
+                    <div className="hidden md:flex items-center gap-8">
+                        {['Inicio', 'Servicios', 'Galería', 'Contacto'].map(t => (
+                            <a key={t} href={`#${t.toLowerCase()}`} className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-[#D4AF37] transition-colors">{t}</a>
+                        ))}
+                    </div>
 
-            {/* Main Nav */}
-            <nav className="py-6 px-8 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-md z-50 shadow-sm transition-all duration-300">
-                <LogoCitaplanner size={28} color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
-                <div className="hidden lg:flex items-center gap-8">
-                    {['Inicio', 'Nosotros', 'Servicios', 'Testimonios'].map(t => (
-                        <a key={t} href={`#${t.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.2em] hover:text-[var(--accent)] transition-colors" style={{ '--accent': accent } as any}>{t}</a>
-                    ))}
+                    <div className="flex items-center gap-4">
+                        <Link to="/book" className="hidden md:inline-block px-6 py-2.5 rounded-sm font-bold text-[10px] uppercase tracking-[0.2em] text-white hover:scale-105 transition-transform" style={{ backgroundColor: magenta }}>
+                            Agendar Cita
+                        </Link>
+                        <button className="md:hidden text-zinc-400">
+                            <Menu size={24} />
+                        </button>
+                    </div>
                 </div>
-                <Link to="/book" className="px-8 py-3 text-white rounded font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-opacity shadow-md" style={{ backgroundColor: accent }}>Agendar Cita</Link>
             </nav>
 
-            {/* Clean Hero Section */}
-            <header id="inicio" className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-zinc-100">
-                <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/shula_hero.png"} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[4000ms] hover:scale-105" alt="Beauty Salon" />
-                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]" />
+            {/* 2. Hero Slider Pantalla Completa */}
+            <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-black z-10" />
+                <img 
+                    src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-40 transition-transform duration-[5000ms] scale-105" 
+                    alt="Lash Studio Background" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
-                <div className="relative z-10 text-center max-w-4xl px-6 py-16 bg-white/80 backdrop-blur-md rounded-tr-[4rem] rounded-bl-[4rem] border border-white/50 shadow-2xl mx-4">
-                    <span className="block text-[10px] font-black uppercase tracking-[0.4em] mb-4" style={{ color: accent }}>
-                        {slides?.[currentSlide || 0]?.subtitle || "Bienvenida al mejor cuidado"}
+                <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
+                    <span className="block text-xs font-black uppercase tracking-[0.5em] mb-6 animate-pulse" style={{ color: gold }}>
+                        {slides?.[currentSlide || 0]?.subtitle || "Tu mirada, nuestra pasión"}
                     </span>
-                    <h1 className="text-5xl md:text-7xl font-playfair font-black tracking-tight text-zinc-900 mb-6 leading-tight">
-                        {slides?.[currentSlide || 0]?.title || settings.businessName || "Beauty Experience"}
+                    <h1 className="text-6xl md:text-[100px] font-playfair font-black tracking-tighter text-white mb-6 leading-none">
+                        {slides?.[currentSlide || 0]?.title || "Despierta tu belleza"}
                     </h1>
-                    <p className="text-zinc-600 text-lg md:text-xl font-light italic mb-10 max-w-2xl mx-auto leading-relaxed">
-                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Resalta tu belleza natural con nuestros expertos."}
+                    <p className="text-lg md:text-2xl font-light text-zinc-400 italic mb-10 max-w-2xl mx-auto">
+                        {slides?.[currentSlide || 0]?.text || "Extensiones de pestañas premium diseñadas para resaltar la arquitectura de tus ojos."}
                     </p>
-                    <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white rounded font-black text-[11px] uppercase tracking-widest hover:opacity-90 transition-all shadow-lg hover:-translate-y-1" style={{ backgroundColor: accent }}>
-                        Hacer una Reserva <ArrowRight size={14} />
+                    <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
+                        Reserva Tu Cita <ArrowRight size={16} />
                     </Link>
+                </div>
+
+                {/* Slider dots */}
+                <div className="absolute bottom-10 z-30 flex gap-3">
+                    {[0, 1, 2].map((_, idx) => (
+                        <div key={idx} className={`w-2 h-2 rounded-full transition-all ${idx === (currentSlide || 0) ? 'w-8 bg-[#D4AF37]' : 'bg-white/30'}`} />
+                    ))}
                 </div>
             </header>
 
-            {/* About Section */}
-            <section id="nosotros" className="py-24 px-8 bg-white">
-                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                    <div className="relative aspect-square">
-                        <div className="absolute inset-4 border-2 z-10 pointer-events-none" style={{ borderColor: accent }} />
-                        <img src="https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80" className="w-full h-full object-cover p-8 shadow-sm" alt="Nuestro Studio" />
-                        <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-zinc-50 rounded-full flex flex-col items-center justify-center p-6 shadow-xl border border-zinc-100 hidden md:flex">
-                            <h4 className="text-4xl font-playfair font-black mb-1" style={{ color: accent }}>{settings.stats?.[0]?.value || '10+'}</h4>
-                            <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold text-center">Años de<br/>Excelencia</p>
-                        </div>
-                    </div>
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4">
-                            <div className="h-px w-12 bg-zinc-300" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sobre Nosotros</span>
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-playfair font-black text-zinc-900 leading-tight">
-                            Tu santuario de <span className="italic" style={{ color: accent }}>belleza y lujo.</span>
-                        </h2>
-                        <p className="text-zinc-500 leading-relaxed text-sm md:text-base font-light">
-                            {settings.aboutText || "Creemos que cada persona tiene una belleza única. Nuestro objetivo es resaltarla a través de tratamientos personalizados, utilizando productos de la más alta calidad en un ambiente diseñado para tu tranquilidad."}
-                        </p>
-                        <div className="pt-6 grid grid-cols-2 gap-8">
-                            {[
-                                { t: 'Expertos', d: 'Personal calificado' },
-                                { t: 'Premium', d: 'Productos de lujo' },
-                                { t: 'Resultados', d: 'Naturales y bellos' },
-                                { t: 'Bienestar', d: 'Ambiente tranquilo' }
-                            ].map((item, i) => (
-                                <div key={i} className="flex gap-4 items-start">
-                                    <CheckCircle2 className="mt-1" size={18} style={{ color: accent }} />
-                                    <div>
-                                        <h4 className="font-bold text-zinc-900 text-sm">{item.t}</h4>
-                                        <p className="text-xs text-zinc-500 font-light">{item.d}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Services Grid (BeautySpot Aesthetic) */}
-            <section id="servicios" className="py-24 px-8 bg-zinc-50">
+            {/* 3. Servicios - Grid de 4 */}
+            <section id="servicios" className="py-24 px-8 bg-zinc-950 border-t border-white/5">
                 <div className="max-w-6xl mx-auto">
-                    <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
-                        <div className="flex items-center justify-center gap-4">
-                            <div className="h-px w-12 bg-zinc-300" />
-                            <Sparkles size={16} style={{ color: accent }} />
-                            <div className="h-px w-12 bg-zinc-300" />
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-playfair font-black text-zinc-900">Nuestros Servicios</h2>
-                        <p className="text-zinc-500 font-light italic">Descubre nuestra exclusiva gama de tratamientos de belleza y cuidado personal.</p>
+                    <div className="text-center mb-20 space-y-4">
+                        <Sparkles className="mx-auto block" size={32} style={{ color: gold }} />
+                        <h2 className="text-4xl md:text-5xl font-playfair font-black" style={{ color: gold }}>Nuestros Servicios</h2>
+                        <p className="text-zinc-500 font-light italic text-lg max-w-2xl mx-auto">
+                            Técnicas exclusivas para diseñar una mirada de impacto y larga duración.
+                        </p>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {displayServices.map((s, i) => (
-                            <div key={i} className="flex gap-6 group items-start">
-                                <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 border-4 border-white shadow-lg group-hover:scale-110 transition-transform duration-500">
-                                    <img src={s.imageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} className="w-full h-full object-cover" alt={s.name} />
+                            <div key={i} className="group flex flex-col items-center text-center p-8 bg-zinc-900/50 rounded-lg border border-white/5 hover:border-[#D4AF37] transition-all duration-300 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[#D4AF37] opacity-0 group-hover:opacity-5 transition-opacity" />
+                                
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-zinc-950 border border-white/5 group-hover:border-[#D4AF37]/50 shadow-inner">
+                                    <Sparkles size={24} style={{ color: magenta }} className="group-hover:scale-110 transition-transform" />
                                 </div>
-                                <div className="flex-1 space-y-3 pt-2">
-                                    <div className="flex items-baseline justify-between gap-4">
-                                        <h3 className="text-lg font-playfair font-black text-zinc-800 whitespace-nowrap">{s.name}</h3>
-                                        <div className="flex-1 border-b-[2px] border-dotted border-zinc-300 mb-2 opacity-60" />
-                                        <span className="text-xl font-black" style={{ color: accent }}>${s.price}</span>
-                                    </div>
-                                    <p className="text-xs text-zinc-500 leading-relaxed font-light">{s.description}</p>
-                                    <Link to="/book" className="inline-block text-[10px] font-black uppercase tracking-widest hover:underline pt-2" style={{ color: accent }}>Reservar Ahora</Link>
+                                <h3 className="text-xl font-playfair font-black text-white mb-3 tracking-wide">{s.name}</h3>
+                                <p className="text-sm text-zinc-500 font-light leading-relaxed mb-6 flex-1">{s.description}</p>
+                                
+                                <div className="w-full flex justify-between items-center pt-6 border-t border-white/5">
+                                    <span className="font-black text-lg" style={{ color: magenta }}>${s.price}</span>
+                                    <Link to="/book" className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:underline">Agendar</Link>
                                 </div>
                             </div>
                         ))}
@@ -454,46 +426,67 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </div>
             </section>
 
-            {/* Testimonials */}
-            {(settings.testimonials?.length ?? 0) > 0 && (
-                <section id="testimonios" className="py-24 bg-white px-8 border-t border-zinc-100">
-                    <div className="max-w-5xl mx-auto text-center">
-                        <div className="mb-16">
-                            <Heart className="mx-auto mb-6 opacity-80" size={32} style={{ fill: accent, color: accent }} />
-                            <h2 className="text-4xl font-playfair font-black text-zinc-900">Lo que dicen nuestras clientas</h2>
+            {/* 4. Footer */}
+            <footer id="contacto" className="py-20 bg-black border-t border-white/10 px-8">
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 text-center md:text-left">
+                    
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-center md:justify-start gap-1 font-playfair font-black text-2xl tracking-tight mb-4">
+                            <span style={{ color: gold }}>Lash</span>
+                            <span style={{ color: magenta }}>Studio</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-                            {settings.testimonials!.slice(0, 3).map((t, i) => (
-                                <div key={i} className="p-8 bg-zinc-50 rounded-tr-[3rem] rounded-bl-[3rem] border border-zinc-100 flex flex-col gap-6 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex gap-1">
-                                        {[...Array(t.rating || 5)].map((_, j) => <Star key={j} size={14} className="fill-[var(--accent)] text-[var(--accent)]" style={{ '--accent': accent } as any} />)}
-                                    </div>
-                                    <p className="text-zinc-600 font-light text-sm italic leading-relaxed flex-1">"{t.text}"</p>
-                                    <div className="flex items-center gap-4 pt-4 border-t border-zinc-200">
-                                        <div className="w-10 h-10 rounded-full bg-zinc-200 flex items-center justify-center font-playfair text-lg font-black text-zinc-600 shrink-0">
-                                            {t.name.charAt(0)}
-                                        </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-900">{t.name}</p>
-                                    </div>
-                                </div>
-                            ))}
+                        <p className="text-xs text-zinc-500 leading-relaxed font-light">
+                            {settings.aboutText || "Especialistas en la belleza de tu mirada. Usamos productos premium e hipoalergénicos para cuidar la salud de tus pestañas naturales."}
+                        </p>
+                        <div className="flex gap-4 justify-center md:justify-start pt-4">
+                            <a href="#" className="p-2 bg-zinc-900 rounded-full hover:bg-[#CE467B] text-zinc-400 hover:text-white transition-colors"><Instagram size={16} /></a>
+                            <a href="#" className="p-2 bg-zinc-900 rounded-full hover:bg-[#CE467B] text-zinc-400 hover:text-white transition-colors"><Facebook size={16} /></a>
                         </div>
                     </div>
-                </section>
-            )}
 
-            {/* CTA Final Pre-footer */}
-            <section className="py-20 bg-zinc-900 text-center px-6" style={{ backgroundImage: `linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80')`, backgroundSize: 'cover', backgroundAttachment: 'fixed' }}>
-                <div className="max-w-2xl mx-auto space-y-8">
-                    <h2 className="text-4xl md:text-5xl font-playfair font-black text-white leading-tight">¿Lista para transformar tu look?</h2>
-                    <p className="text-zinc-300 font-light italic text-lg">Reserva hoy mismo y déjate consentir por nuestros profesionales.</p>
-                    <Link to="/book" className="inline-block px-14 py-5 bg-white text-zinc-900 font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl rounded" style={{ color: accent }}>
-                        Agenda tu Experiencia
-                    </Link>
+                    <div className="space-y-6">
+                        <h4 className="font-playfair font-black text-xl text-white">Contacto</h4>
+                        <ul className="space-y-4 text-xs text-zinc-400 font-light">
+                            <li className="flex items-start justify-center md:justify-start gap-3">
+                                <MapPin size={16} style={{ color: gold }} className="shrink-0" />
+                                <span>{settings.address || "123 Beauty Ave, Suite 100"}</span>
+                            </li>
+                            <li className="flex items-center justify-center md:justify-start gap-3">
+                                <Phone size={16} style={{ color: gold }} className="shrink-0" />
+                                <span>{settings.contactPhone || "+1 (555) 123-4567"}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-6">
+                        <h4 className="font-playfair font-black text-xl text-white">Horarios</h4>
+                        <ul className="space-y-3 text-xs text-zinc-400 font-light">
+                            <li className="flex justify-between border-b mx-auto md:mx-0 max-w-[200px] border-white/5 pb-2">
+                                <span>Lunes a Viernes</span>
+                                <span className="text-white font-medium">9:00 - 19:00</span>
+                            </li>
+                            <li className="flex justify-between border-b mx-auto md:mx-0 max-w-[200px] border-white/5 pb-2">
+                                <span>Sábados</span>
+                                <span className="text-white font-medium">9:00 - 15:00</span>
+                            </li>
+                            <li className="flex justify-between mx-auto md:mx-0 max-w-[200px] pb-2">
+                                <span>Domingos</span>
+                                <span style={{ color: magenta }}>Cerrado</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </section>
 
-            {/* Footer delegated to global layout */}
+                <div className="max-w-6xl mx-auto mt-20 pt-8 border-t border-white/5 text-center flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
+                        © {new Date().getFullYear()} Lash Studio by CitaPlanner. Todos los derechos reservados.
+                    </p>
+                    <div className="flex gap-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
+                        <span className="hover:text-white cursor-pointer">Privacidad</span>
+                        <span className="hover:text-white cursor-pointer">Términos</span>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };
