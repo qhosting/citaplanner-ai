@@ -8,7 +8,7 @@ import {
   Linkedin, Twitter, ShieldCheck, Activity, ChevronUp
 } from 'lucide-react';
 import { api } from '../services/api';
-import { LandingSettings, Service } from '../types';
+import { LandingSettings, Service, Product } from '../types';
 // WhatsApp button replaces AI chat widget — managed inline below
 import {
   TemplateCitaPlanner,
@@ -40,8 +40,8 @@ const DEFAULT_SETTINGS: LandingSettings = {
 
 
 export const LandingPage: React.FC = () => {
-  const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
-  const [services, setServices] = useState<Service[]>([]);
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -72,18 +72,24 @@ export const LandingPage: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const [s, sv] = await Promise.allSettled([
+        const [s, sv, pv] = await Promise.allSettled([
           api.getLandingSettings(),
-          api.getServices()
+          api.getServices(),
+          api.getProducts()
         ]);
 
+        let finalSettings = DEFAULT_SETTINGS;
         if (s.status === 'fulfilled' && s.value) {
-          setSettings({ ...DEFAULT_SETTINGS, ...s.value });
+          finalSettings = { ...DEFAULT_SETTINGS, ...s.value };
+          setSettings(finalSettings);
         }
 
         if (sv.status === 'fulfilled' && sv.value) {
-          const activeServices = sv.value.filter(svItem => svItem.status === 'ACTIVE').slice(0, 6);
-          setServices(activeServices.length > 0 ? activeServices : sv.value.slice(0, 6));
+          setAllServices(sv.value);
+        }
+
+        if (pv.status === 'fulfilled' && pv.value) {
+          setAllProducts(pv.value);
         }
       } catch (error) {
         console.error("Error loading landing:", error);
@@ -286,8 +292,18 @@ export const LandingPage: React.FC = () => {
 
   // Landing services from web-builder or from database
   const landingServices = useMemo(() => {
-    if (services.length > 0) return services;
-    // Fallback to web-builder configured services
+    // 1. Prioritize Production Services selected via IDs
+    const selectedIds = settings.serviceIds || [];
+    if (selectedIds.length > 0 && allServices.length > 0) {
+      return allServices.filter(s => selectedIds.includes(s.id));
+    }
+
+    // 2. Fallback: If no IDs selected, show top 6 active production services
+    if (allServices.length > 0) {
+      return allServices.filter(s => s.status === 'ACTIVE').slice(0, 6);
+    }
+    
+    // 3. Last Resort: Web-builder manually configured services (legacy/demo)
     if (settings.services && Array.isArray(settings.services) && settings.services.length > 0) {
       return settings.services.map((s: any, i: number) => ({
         id: `landing-${i}`,
@@ -301,7 +317,16 @@ export const LandingPage: React.FC = () => {
       }));
     }
     return [];
-  }, [services, settings.services]);
+  }, [allServices, settings.serviceIds, settings.services]);
+
+  // Products from production
+  const landingProducts = useMemo(() => {
+    const selectedIds = settings.productIds || [];
+    if (selectedIds.length > 0 && allProducts.length > 0) {
+      return allProducts.filter(p => selectedIds.includes(p.id));
+    }
+    return [];
+  }, [allProducts, settings.productIds]);
 
   // Gallery from web-builder
   const gallery = useMemo(() => {
@@ -319,7 +344,7 @@ export const LandingPage: React.FC = () => {
   }
 
   const renderTemplate = () => {
-    const props = { settings, services: landingServices, accent, currentSlide, slides };
+    const props = { settings, services: landingServices, products: landingProducts, accent, currentSlide, slides };
 
     switch (settings.templateId) {
       case 'citaplanner': return <TemplateCitaPlanner {...props} />;

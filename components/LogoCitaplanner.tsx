@@ -21,6 +21,8 @@ export const LogoCitaplanner: React.FC<LogoProps> = ({ size = 20, color = "#fff"
                 </svg>
             )}
         </div>
-        <span className="text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 group-hover:tracking-[0.6em]" style={{ color }}>{businessName || "CitaPlanner"}</span>
+        {!customUrl && (
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] transition-all duration-500 group-hover:tracking-[0.6em]" style={{ color }}>{businessName || "CitaPlanner"}</span>
+        )}
     </div>
 );

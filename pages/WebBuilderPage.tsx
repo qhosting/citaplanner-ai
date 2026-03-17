@@ -37,8 +37,13 @@ export const WebBuilderPage: React.FC = () => {
         latitude: undefined,
         longitude: undefined,
         socialInstagram: '',
-        socialTwitter: ''
+        socialTwitter: '',
+        serviceIds: [],
+        productIds: []
     });
+
+    const [productionServices, setProductionServices] = useState<any[]>([]);
+    const [productionProducts, setProductionProducts] = useState<any[]>([]);
 
     // Sync preview with settings in real-time
     useEffect(() => {
@@ -57,7 +62,12 @@ export const WebBuilderPage: React.FC = () => {
     const loadSettings = async () => {
         setLoading(true);
         try {
-            const data = await api.getLandingSettings();
+            const [data, servicesList, productsList] = await Promise.all([
+                api.getLandingSettings(),
+                api.getServices(),
+                api.getProducts()
+            ]);
+            
             setSettings({
                 ...data,
                 businessName: data.businessName || '',
@@ -72,8 +82,12 @@ export const WebBuilderPage: React.FC = () => {
                 footerText: data.footerText || '',
                 socialInstagram: data.socialInstagram || '',
                 socialFacebook: data.socialFacebook || '',
-                socialTwitter: data.socialTwitter || ''
+                socialTwitter: data.socialTwitter || '',
+                serviceIds: data.serviceIds || [],
+                productIds: data.productIds || []
             });
+            setProductionServices(servicesList);
+            setProductionProducts(productsList);
         } catch (e) {
             toast.error("Error al cargar configuración web.");
         } finally {
@@ -333,7 +347,6 @@ export const WebBuilderPage: React.FC = () => {
                                 </div>
                             </section>
 
-                            {/* About */}
                             <section className="space-y-4">
                                 <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
                                     <Type size={16} /> Acerca de Nosotros
@@ -347,69 +360,82 @@ export const WebBuilderPage: React.FC = () => {
                                 />
                             </section>
 
-                            {/* Services */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Sparkles size={16} /> Servicios en Landing
-                                </h3>
-                                <div className="space-y-3">
-                                    {(settings.services || []).map((service, index) => (
-                                        <div key={index} className="p-3 bg-input-theme border border-theme rounded-2xl relative group">
-                                            <button
+                            {/* Services & Products Selection */}
+                            <section className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                        <Sparkles size={16} /> Servicios en Landing (Producción)
+                                    </h3>
+                                    <span className="text-[8px] font-black text-muted uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
+                                        {settings.serviceIds?.length || 0} Seleccionados
+                                    </span>
+                                </div>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {productionServices.length === 0 && (
+                                        <p className="text-[9px] text-muted italic text-center py-4">No hay servicios creados en producción.</p>
+                                    )}
+                                    {productionServices.map((service) => {
+                                        const isSelected = settings.serviceIds?.includes(service.id);
+                                        return (
+                                            <div
+                                                key={service.id}
                                                 onClick={() => {
-                                                    const newServices = [...(settings.services || [])];
-                                                    newServices.splice(index, 1);
-                                                    setSettings({ ...settings, services: newServices });
+                                                    const currentIds = settings.serviceIds || [];
+                                                    const newIds = isSelected 
+                                                        ? currentIds.filter(id => id !== service.id)
+                                                        : [...currentIds, service.id];
+                                                    setSettings({ ...settings, serviceIds: newIds });
                                                 }}
-                                                className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#CE4676]/10 border-[#CE4676]' : 'bg-input-theme border-theme hover:border-muted'}`}
                                             >
-                                                <Trash2 size={14} />
-                                            </button>
-                                            <div className="space-y-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Nombre del Servicio"
-                                                    value={service.title}
-                                                    onChange={e => {
-                                                        const newServices = [...(settings.services || [])];
-                                                        newServices[index] = { ...newServices[index], title: e.target.value };
-                                                        setSettings({ ...settings, services: newServices });
-                                                    }}
-                                                    className="w-full bg-transparent border-b border-theme pb-1 text-xs font-bold text-main outline-none"
-                                                />
-                                                <div className="flex gap-3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="$Precio"
-                                                        value={service.price || ''}
-                                                        onChange={e => {
-                                                            const newServices = [...(settings.services || [])];
-                                                            newServices[index] = { ...newServices[index], price: e.target.value };
-                                                            setSettings({ ...settings, services: newServices });
-                                                        }}
-                                                        className="w-1/3 bg-transparent border-b border-theme pb-1 text-[10px] text-muted outline-none"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Descripción corta"
-                                                        value={service.description || ''}
-                                                        onChange={e => {
-                                                            const newServices = [...(settings.services || [])];
-                                                            newServices[index] = { ...newServices[index], description: e.target.value };
-                                                            setSettings({ ...settings, services: newServices });
-                                                        }}
-                                                        className="flex-1 bg-transparent border-b border-theme pb-1 text-[10px] text-muted outline-none"
-                                                    />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#CE4676]' : 'text-main'}`}>{service.name}</p>
+                                                    <p className="text-[8px] text-muted font-bold">${service.price} • {service.duration} min</p>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#CE4676] border-[#CE4676]' : 'border-theme'}`}>
+                                                    {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                    <button
-                                        onClick={() => setSettings({ ...settings, services: [...(settings.services || []), { title: '', price: '', description: '' }] })}
-                                        className="w-full py-3 border border-dashed border-theme rounded-2xl text-[10px] font-black text-muted uppercase tracking-widest hover:border-[#CE4676] hover:text-[#CE4676] transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Plus size={12} /> Agregar Servicio
-                                    </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-4">
+                                    <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                        <Layers size={16} /> Productos en Landing (Producción)
+                                    </h3>
+                                    <span className="text-[8px] font-black text-muted uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
+                                        {settings.productIds?.length || 0} Seleccionados
+                                    </span>
+                                </div>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {productionProducts.length === 0 && (
+                                        <p className="text-[9px] text-muted italic text-center py-4">No hay productos creados en producción.</p>
+                                    )}
+                                    {productionProducts.map((product) => {
+                                        const isSelected = settings.productIds?.includes(product.id);
+                                        return (
+                                            <div
+                                                key={product.id}
+                                                onClick={() => {
+                                                    const currentIds = settings.productIds || [];
+                                                    const newIds = isSelected 
+                                                        ? currentIds.filter(id => id !== product.id)
+                                                        : [...currentIds, product.id];
+                                                    setSettings({ ...settings, productIds: newIds });
+                                                }}
+                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#CE4676]/10 border-[#CE4676]' : 'bg-input-theme border-theme hover:border-muted'}`}
+                                            >
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#CE4676]' : 'text-main'}`}>{product.name}</p>
+                                                    <p className="text-[8px] text-muted font-bold">${product.price} • {product.category}</p>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#CE4676] border-[#CE4676]' : 'border-theme'}`}>
+                                                    {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </section>
 

@@ -5,14 +5,15 @@ import {
     ArrowRight, Sparkles, MapPin, Instagram, Facebook, Twitter, Phone,
     MessageCircle, ShieldCheck, Zap, Globe, Heart, Star, CheckCircle2,
     Calendar, Users, Clock, Menu, X, MessageSquare, Heart as HeartIcon,
-    Zap as ZapIcon, Shield, CalendarDays
+    Zap as ZapIcon, Shield, CalendarDays, Layers
 } from 'lucide-react';
-import { LandingSettings, Service } from '../types';
+import { LandingSettings, Service, Product } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
 
 interface TemplateProps {
     settings: LandingSettings;
     services: Service[];
+    products?: Product[];
     accent: string;
     currentSlide?: number;
     slides?: any[];
@@ -21,7 +22,7 @@ interface TemplateProps {
 // ==========================================
 // 1. TEMPLATE: CITAPLANNER (SaaS Demo)
 // ==========================================
-export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
+export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: 's1', name: 'Plan Starter', price: 290, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Gestión básica para estudios individuales. Calendario y clientes ilimitados.' },
         { id: 's2', name: 'Plan Professional', price: 950, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Para equipos de hasta 5 especialistas. IA de agendamiento incluida.' },
@@ -187,7 +188,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 2. TEMPLATE: MASTER (Ultra-Clean Hub)
 // ==========================================
-export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
+export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: '1', name: 'Microblading Profesional', price: 2500, duration: 120, category: 'Cejas', status: 'ACTIVE' as const, description: 'Cejas perfectas con técnica de pelo a pelo. Resultados naturales de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Nails Art Studio', price: 650, duration: 60, category: 'Uñas', status: 'ACTIVE' as const, description: 'Diseño exclusivo de uñas con materiales premium importados.', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80' },
@@ -323,7 +324,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, ac
 // ==========================================
 // 3. TEMPLATE: SHULASTUDIO (Luxury Beauty)
 // ==========================================
-export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => {
+export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
     const defaultServices = [
         { id: '1', name: 'Clásicas', price: 950, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Técnica 1 a 1 para un look natural y sofisticado.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Volumen Híbrido', price: 1250, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Mezcla perfecta de clásicas y volumen para mayor densidad.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80' },
@@ -337,10 +338,10 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
     return (
         <div className="bg-black text-zinc-300 font-inter min-h-screen">
             {/* 1. Navbar Fijo Transparente -> Negro */}
-            <nav className="fixed w-full z-50 bg-black/90 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+            <nav className="fixed w-full z-50 bg-black/95 backdrop-blur-md border-b border-white/5 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-20">
-                    <Link to="/" className="flex items-center gap-1 font-playfair font-black text-2xl tracking-tight">
-                        <LogoCitaplanner size={30} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
+                    <Link to="/" className="flex items-center">
+                        <LogoCitaplanner size={28} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
                     </Link>
                     
                     <div className="hidden md:flex items-center gap-8">
@@ -361,11 +362,10 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             </nav>
 
             {/* 2. Hero Slider Pantalla Completa */}
-            <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-black z-10" />
+            <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#050505]">
                 <img 
                     src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} 
-                    className="absolute inset-0 w-full h-full object-cover opacity-40 transition-transform duration-[5000ms] scale-105" 
+                    className="absolute inset-0 w-full h-full object-cover opacity-80 z-10 transition-transform duration-[5000ms] scale-105" 
                     alt="Lash Studio Background" 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
@@ -424,6 +424,46 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                     </div>
                 </div>
             </section>
+            {/* 3.1 Productos en Landing (opcional) */}
+            {products && products.length > 0 && (
+                <section id="productos" className="py-24 px-8 bg-black border-t border-white/5">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-20 space-y-4">
+                            <Layers className="mx-auto block" size={32} style={{ color: gold }} />
+                            <h2 className="text-4xl md:text-5xl font-playfair font-black" style={{ color: gold }}>Productos Exclusivos</h2>
+                            <p className="text-zinc-500 font-light italic text-lg max-w-2xl mx-auto">
+                                Consiente tu cuidado personal con nuestra selección de productos profesionales de alta gama.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {products.map((p, i) => (
+                                <div key={i} className="group flex flex-col p-6 bg-zinc-900/30 rounded-lg border border-white/5 hover:border-[#D4AF37]/50 transition-all duration-300">
+                                    <div className="aspect-square rounded-md bg-zinc-800/50 mb-6 overflow-hidden relative">
+                                        <img 
+                                            src={p.imageUrl || "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=80"} 
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            alt={p.name}
+                                        />
+                                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <h3 className="text-lg font-playfair font-black text-white mb-1 tracking-wide">{p.name}</h3>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-4">{p.category}</p>
+                                    
+                                    <div className="mt-auto pt-4 border-t border-white/5 flex justify-between items-center">
+                                        <span className="font-black text-lg" style={{ color: magenta }}>${p.price}</span>
+                                        <button 
+                                            className="text-[9px] font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all rounded-sm"
+                                        >
+                                            Ver Detalle
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* 3.5 Galería Section */}
             {(settings.images && settings.images.length > 0) || true ? (
@@ -528,7 +568,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 4. TEMPLATE: MINIMAL (Aurum Minimal)
 // ==========================================
-export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => (
+export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
     <div className="bg-white text-zinc-950">
         <nav className="p-8 flex justify-between items-center border-b border-zinc-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
             <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
@@ -589,7 +629,7 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, a
 // ==========================================
 // 5. TEMPLATE: LUXURY (Luxury White)
 // ==========================================
-export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, accent, currentSlide, slides }) => (
+export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
     <div className="bg-[#0a0a0a] text-white">
         <header className="h-screen relative flex flex-col">
             <nav className="p-10 flex justify-between items-center z-50">
@@ -673,7 +713,7 @@ export const TemplateClassic: React.FC<TemplateProps & {
     whatsappLink: string;
     mobileMenuOpen: boolean;
     setMobileMenuOpen: (o: boolean) => void;
-}> = ({ settings, services, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen }) => (
+}> = ({ settings, services, products, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen }) => (
     <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
         {(settings.showWhatsappButton ?? true) && waTarget && (
             <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group">
@@ -739,5 +779,30 @@ export const TemplateClassic: React.FC<TemplateProps & {
                 </div>
             </div>
         </section>
+
+        {products && products.length > 0 && (
+            <section id="products" className="py-32 bg-black px-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="mb-20">
+                        <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Shopping <span style={{ color: accent }}>Collection</span></h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {products.map((p, i) => (
+                            <div key={i} className="group bg-zinc-900/40 rounded-3xl p-6 border border-white/5 hover:border-white/10 transition-all">
+                                <div className="aspect-square rounded-2xl overflow-hidden mb-6 bg-zinc-800">
+                                    <img src={p.imageUrl || "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=80"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
+                                </div>
+                                <h3 className="text-lg font-bold text-white mb-1">{p.name}</h3>
+                                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">{p.category}</p>
+                                <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                                    <span className="text-xl font-black" style={{ color: accent }}>${p.price}</span>
+                                    <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Detalles</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        )}
     </div>
 );
