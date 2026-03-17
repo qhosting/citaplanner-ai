@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, BriefcaseMedical, Clock, DollarSign, Tag, FileText, ImageIcon, Sparkles, Check, Upload, Loader2 } from 'lucide-react';
+import { X, BriefcaseMedical, Clock, DollarSign, Tag, FileText, ImageIcon, Sparkles, Check, Upload, Loader2, ShieldCheck } from 'lucide-react';
 import { Service } from '../types';
 import { api } from '../services/api';
 import { toast } from 'sonner';
