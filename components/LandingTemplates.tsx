@@ -340,8 +340,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             <nav className="fixed w-full z-50 bg-black/90 backdrop-blur-md border-b border-white/5 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-20">
                     <Link to="/" className="flex items-center gap-1 font-playfair font-black text-2xl tracking-tight">
-                        <span style={{ color: gold }}>Lash</span>
-                        <span style={{ color: magenta }}>Studio</span>
+                        <LogoCitaplanner size={30} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
                     </Link>
                     
                     <div className="hidden md:flex items-center gap-8">
