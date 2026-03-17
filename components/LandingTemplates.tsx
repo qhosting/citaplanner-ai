@@ -425,6 +425,41 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </div>
             </section>
 
+            {/* 3.5 Galería Section */}
+            {(settings.images && settings.images.length > 0) || true ? (
+                <section id="galería" className="py-24 px-8 bg-black">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-16 space-y-4">
+                            <span className="block text-[10px] font-black uppercase tracking-[0.4em] mb-4" style={{ color: gold }}>Portafolio de Arte</span>
+                            <h2 className="text-4xl md:text-5xl font-playfair font-black text-white">Nuestra Galería</h2>
+                            <div className="h-px w-24 bg-[#D4AF37] mx-auto mt-6" />
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            {(settings.images && settings.images.length > 0 ? settings.images : [
+                                { url: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
+                                { url: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&q=80' },
+                                { url: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80' },
+                                { url: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80' },
+                                { url: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80' },
+                                { url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&q=80' }
+                            ]).map((img, i) => (
+                                <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-white/5">
+                                    <img 
+                                        src={img.url} 
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                                        alt={`Galería ${i}`} 
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Sparkles size={24} style={{ color: gold }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            ) : null}
+
             {/* 4. Footer */}
             <footer id="contacto" className="py-20 bg-black border-t border-white/10 px-8">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 text-center md:text-left">
