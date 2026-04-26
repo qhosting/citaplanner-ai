@@ -740,6 +740,14 @@ export const TemplateClassic: React.FC<TemplateProps & {
     whatsappLink: string;
     mobileMenuOpen: boolean;
     setMobileMenuOpen: (o: boolean) => void;
+}> = ({ settings, services, products, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen }) => (
+    <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
+        {(settings.showWhatsappButton ?? true) && waTarget && (
+            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group">
+                <div className="relative">
+                    <div className="absolute inset-0 rounded-full animate-ping opacity-25 scale-125" style={{ backgroundColor: accent }} />
+                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-all duration-500" style={{ background: `linear-gradient(135deg, ${accent}, #000)` }}>
+                        <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
                     </div>
                 </div>
             </a>

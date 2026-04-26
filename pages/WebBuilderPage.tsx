@@ -375,7 +375,7 @@ export const WebBuilderPage: React.FC = () => {
                                         <div className="text-center">
                                             <Monitor className="text-muted mx-auto mb-2" size={28} />
                                             <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Video (MP4)</p>
-                                            <p className="text-[7px] text-muted font-bold uppercase mt-1">Recomendado: Loop corto < 10MB</p>
+                                            <p className="text-[7px] text-muted font-bold uppercase mt-1">Recomendado: Loop corto {'<'} 10MB</p>
                                         </div>
                                     )}
                                     <input type="file" id="video-upload" className="hidden" accept="video/mp4,video/webm" onChange={(e) => handleMediaUpload(e, 'heroVideoUrl')} />
