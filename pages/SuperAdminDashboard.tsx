@@ -572,10 +572,11 @@ export const SuperAdminDashboard: React.FC = () => {
                         {tenantAdmins.map((u: any) => (
                           <div key={u.id} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5 group hover:border-white/10 transition-all">
                             {editingUserId === u.id ? (
-                              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-3">
                                 <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Nombre" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                                 <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Teléfono" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
                                 <input className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                                <input type="password" className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" placeholder="Nueva Contraseña (opcional)" value={editForm.password} onChange={e => setEditForm({ ...editForm, password: e.target.value })} />
                                 <select className="p-2 bg-white/5 border border-white/10 rounded-lg text-white text-xs" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
                                   <option value="STUDIO_OWNER">STUDIO_OWNER</option>
                                   <option value="ADMIN">ADMIN</option>
