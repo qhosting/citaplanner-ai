@@ -112,11 +112,15 @@ export const LandingPage: React.FC = () => {
 
     window.addEventListener('message', handleMessage);
     (window as any).setMobileMenuOpen = setMobileMenuOpen;
+    (window as any).setLegalModal = (val: any) => setLegalModal(val);
     return () => {
       window.removeEventListener('message', handleMessage);
       delete (window as any).setMobileMenuOpen;
+      delete (window as any).setLegalModal;
     };
   }, []);
+
+  const [legalModal, setLegalModal] = useState<'PRIVACY' | 'TERMS' | null>(null);
 
   // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
@@ -374,7 +378,58 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505]" style={{ '--accent': accent } as React.CSSProperties}>
+    <>
+      {/* Legal Modals */}
+      {legalModal && (
+        <div className="fixed inset-0 z-[700] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-entrance">
+          <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+              <h2 className="text-xl font-black text-white uppercase tracking-tighter">
+                {legalModal === 'PRIVACY' ? 'Aviso de Privacidad' : 'Términos y Condiciones'}
+              </h2>
+              <button onClick={() => setLegalModal(null)} className="p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-10 max-h-[60vh] overflow-y-auto custom-scrollbar text-zinc-400 text-sm leading-relaxed space-y-6 bg-black/20">
+              {legalModal === 'PRIVACY' ? (
+                <>
+                  <div className="space-y-2">
+                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Responsable del Tratamiento</p>
+                    <p>En cumplimiento con la <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong> de México, se informa que <strong>{settings.businessName || 'El Establecimiento'}</strong> es el responsable del tratamiento de sus datos personales.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Finalidades</p>
+                    <p>Sus datos (nombre, teléfono y preferencias de servicio) serán utilizados exclusivamente para la gestión de su cita, confirmaciones vía WhatsApp y facturación.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Derechos ARCO</p>
+                    <p>Para ejercer sus derechos de Acceso, Rectificación, Cancelación u Oposición, favor de contactarnos directamente a través de los canales oficiales publicados en este sitio.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Uso del Servicio</p>
+                    <p>Al reservar una cita a través de esta plataforma, usted acepta las políticas de operación, puntualidad y cancelación de <strong>{settings.businessName || 'El Establecimiento'}</strong>.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Políticas de Cancelación</p>
+                    <p>Conforme a la <strong>Ley Federal de Protección al Consumidor</strong>, las cancelaciones deben realizarse con el tiempo de anticipación estipulado por el estudio para evitar cargos administrativos o pérdida de anticipos.</p>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end">
+              <button onClick={() => setLegalModal(null)} className="px-10 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-indigo-500 transition-all shadow-xl">
+                Cerrar Aviso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen bg-[#050505]" style={{ '--accent': accent } as React.CSSProperties}>
       {renderTemplate()}
 
       {/* Mobile Menu Overlay */}
@@ -445,11 +500,20 @@ export const LandingPage: React.FC = () => {
                 <p className="text-zinc-500 text-[10px] leading-relaxed">Infraestructura Aurum Nexus v5.0 segura con cifrado de grado militar.</p>
               </div>
             </div>
-            <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-              <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">© {new Date().getFullYear()} {settings.businessName} • Powered by CitaPlanner</p>
-              <div className="flex gap-4">
-                <Link to="/login" className="text-[9px] font-black text-zinc-600 hover:text-zinc-400 uppercase tracking-widest transition-colors">Acceso de Staff</Link>
-              </div>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 pt-12">
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+              © {new Date().getFullYear()} {settings.businessName} by CitaPlanner By Aurum Capital. Todos los derechos reservados.
+            </p>
+            <div className="flex gap-10">
+              {['Privacidad', 'Términos'].map((item) => (
+                <span 
+                  key={item} 
+                  onClick={() => setLegalModal(item === 'Privacidad' ? 'PRIVACY' : 'TERMS')}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all cursor-pointer"
+                >
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
         </footer>
