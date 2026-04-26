@@ -46,6 +46,8 @@ export const LandingPage: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
+
 
   // Dynamic accent color from tenant settings
   const accent = settings.primaryColor || '#C5A028';
@@ -221,12 +223,12 @@ export const LandingPage: React.FC = () => {
     }
 
     // Add services as offers
-    const allServices = services.length > 0 ? services : (settings.services || []);
-    if (allServices.length > 0) {
+    const servicesToDisplay = allServices.length > 0 ? allServices : (settings.services || []);
+    if (servicesToDisplay.length > 0) {
       jsonLdData.hasOfferCatalog = {
         '@type': 'OfferCatalog',
         name: 'Servicios',
-        itemListElement: allServices.map((s: any) => ({
+        itemListElement: servicesToDisplay.map((s: any) => ({
           '@type': 'Offer',
           itemOffered: {
             '@type': 'Service',
@@ -253,7 +255,7 @@ export const LandingPage: React.FC = () => {
       const el = document.querySelector('script[data-seo="landing-jsonld"]');
       if (el) el.remove();
     };
-  }, [settings, accent, canonicalUrl, services]);
+  }, [settings, accent, canonicalUrl, allServices]);
 
   const slides = useMemo(() => {
     if (settings.heroSlides && settings.heroSlides.length > 0) return settings.heroSlides;
