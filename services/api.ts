@@ -147,11 +147,11 @@ export const api = {
   },
 
   // Settings & Landing
-  getLandingSettings: async (): Promise<LandingSettings> => {
+  getLandingSettings: async (): Promise<{ success: boolean, value: LandingSettings }> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/settings/landing`);
-      return res.ok ? await res.json() : {} as LandingSettings;
-    } catch { return {} as LandingSettings; }
+      return res.ok ? await res.json() : { success: false, value: {} as LandingSettings };
+    } catch { return { success: false, value: {} as LandingSettings }; }
   },
 
 
