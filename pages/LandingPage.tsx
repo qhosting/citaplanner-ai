@@ -275,8 +275,8 @@ export const LandingPage: React.FC = () => {
         { image: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80&w=1400', title: 'Experiencia VIP', subtitle: 'Lujo & Confort', text: 'Tu tratamiento, en un ambiente de ultra-lujo.' },
       ],
       shula_dark: [
-        { image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Studio', subtitle: 'Lujo Oscuro', text: settings.slogan || 'Elegancia en cada detalle.' },
-        { image: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80&w=1400', title: 'Faciales Premium', subtitle: 'Piel Perfecta', text: 'Tratamientos diseñados para potenciar tu belleza natural.' },
+        { image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Studio', subtitle: '', text: settings.slogan || 'Elegancia en cada detalle.' },
+        { image: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80&w=1400', title: 'Faciales Premium', subtitle: '', text: 'Tratamientos diseñados para potenciar tu belleza natural.' },
       ],
       master: [
         { image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=1400', title: settings.businessName || 'Master Hub', subtitle: 'Red Certificada', text: settings.slogan || 'Excelencia operativa centralizada.' },

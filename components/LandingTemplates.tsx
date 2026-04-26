@@ -401,14 +401,13 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
                 <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
-                    <span className="block text-xs font-black uppercase tracking-[0.5em] mb-6 animate-pulse" style={{ color: gold }}>
-                        {slides?.[currentSlide || 0]?.subtitle || "Tu mirada, nuestra pasión"}
-                    </span>
-                    <h1 className="text-6xl md:text-[100px] font-playfair font-black tracking-tighter text-white mb-6 leading-none">
-                        {slides?.[currentSlide || 0]?.title || "Despierta tu belleza"}
+                    <h1 className="text-6xl md:text-[100px] font-playfair font-black tracking-tighter mb-6 leading-none">
+                        <span className="italic font-light block" style={{ color: gold }}>
+                            {slides?.[currentSlide || 0]?.title || settings.businessName}
+                        </span>
                     </h1>
-                    <p className="text-lg md:text-2xl font-light text-zinc-400 italic mb-10 max-w-2xl mx-auto">
-                        {slides?.[currentSlide || 0]?.text || "Extensiones de pestañas premium diseñadas para resaltar la arquitectura de tus ojos."}
+                    <p className="text-lg md:text-2xl font-bold italic mb-10 max-w-2xl mx-auto" style={{ color: magenta }}>
+                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Extensiones de pestañas premium diseñadas para resaltar la arquitectura de tus ojos."}
                     </p>
                     <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
                         Reserva Tu Cita <ArrowRight size={16} />
@@ -675,10 +674,12 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, pr
                     alt="Luxury"
                 />
                 <div className="relative z-20 text-center space-y-6 max-w-5xl px-8">
-                    <h1 className="text-7xl md:text-[160px] font-playfair font-black tracking-tighter leading-[0.85] uppercase mb-4 transition-all duration-1000" style={{ color: accent }}>
-                        {slides?.[currentSlide || 0]?.title || settings.businessName}
+                    <h1 className="text-5xl md:text-[100px] font-playfair font-black leading-none tracking-tighter mb-8">
+                        <span className="italic font-light block mb-4" style={{ color: gold }}>
+                            {slides?.[currentSlide || 0]?.title || settings.businessName}
+                        </span>
                     </h1>
-                    <p className="text-2xl md:text-3xl font-light tracking-[0.2em] opacity-80 uppercase transition-all duration-1000">
+                    <p className="text-xl md:text-2xl font-bold max-w-2xl mx-auto leading-relaxed mb-12" style={{ color: magenta }}>
                         {slides?.[currentSlide || 0]?.text || settings.slogan}
                     </p>
                     <div className="pt-10">
