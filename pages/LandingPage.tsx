@@ -21,7 +21,7 @@ import {
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 
 const DEFAULT_SETTINGS: LandingSettings = {
-  businessName: 'CitaPlanner',
+  businessName: '',
   primaryColor: '#C5A028',
   secondaryColor: '#1A1A1A',
   templateId: 'beauty',
@@ -111,7 +111,11 @@ export const LandingPage: React.FC = () => {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    (window as any).setMobileMenuOpen = setMobileMenuOpen;
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      delete (window as any).setMobileMenuOpen;
+    };
   }, []);
 
   // === FULL SEO/GEO ENGINE ===
@@ -372,6 +376,45 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505]" style={{ '--accent': accent } as React.CSSProperties}>
       {renderTemplate()}
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-xl animate-entrance flex flex-col p-10">
+          <div className="flex justify-between items-center mb-16">
+            <LogoCitaplanner color={accent} businessName={settings.businessName} customUrl={settings.logoUrl} />
+            <button onClick={() => setMobileMenuOpen(false)} className="p-4 text-white/50 hover:text-white bg-white/5 rounded-2xl">
+              <X size={32} />
+            </button>
+          </div>
+          
+          <nav className="flex flex-col gap-8">
+            {['Servicios', 'Nosotros', 'Galería', 'Contacto'].map((item, i) => (
+              <a 
+                key={item} 
+                href={`#${item.toLowerCase()}`} 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#CE4676] transition-colors animate-entrance"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                {item}
+              </a>
+            ))}
+            <Link 
+              to="/book" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="mt-8 px-10 py-6 rounded-3xl bg-indigo-600 text-white text-center font-black text-xs uppercase tracking-widest shadow-2xl"
+            >
+              Agendar Ahora
+            </Link>
+          </nav>
+
+          <div className="mt-auto pt-10 border-t border-white/5 flex gap-6 justify-center">
+             {settings.socialInstagram && <a href={`https://instagram.com/${settings.socialInstagram}`} className="text-white/40 hover:text-white"><Instagram size={24} /></a>}
+             {settings.socialFacebook && <a href={`https://facebook.com/${settings.socialFacebook}`} className="text-white/40 hover:text-white"><Facebook size={24} /></a>}
+             {waTarget && <a href={whatsappLink} className="text-white/40 hover:text-white"><MessageCircle size={24} /></a>}
+          </div>
+        </div>
+      )}
 
       {/* Common Footer (Enhanced) */}
       {settings.templateId !== 'shulastudio' && settings.templateId !== 'shula_dark' && (

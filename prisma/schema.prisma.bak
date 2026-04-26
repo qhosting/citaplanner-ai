@@ -137,8 +137,7 @@ model LandingSetting {
   aboutText        String? @map("about_text")
   address          String?
   contactPhone     String? @db.VarChar(20) @map("contact_phone")
-  heroImageUrl     String? @map("hero_image_url")
-  heroVideoUrl     String? @map("hero_video_url")
+  heroImageUrl    String? @map("hero_image_url")
   logoUrl         String? @map("logo_url")
   organizationId   String? @unique(map: "idx_landing_org_unique") @default("demo") @db.VarChar(50) @map("organization_id")
   features         Json?   @default("{\"ai\": true, \"inventory\": true, \"marketing\": true}")

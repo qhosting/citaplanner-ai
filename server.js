@@ -60,6 +60,9 @@ async function ensureSchemaIntegrity() {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
                     ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
                 END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='hero_video_url') THEN
+                    ALTER TABLE landing_settings ADD COLUMN hero_video_url TEXT;
+                END IF;
             END $$;
         `);
         console.log("✅ [NEXUS] Database schema integrity verified.");
@@ -401,7 +404,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit for high-quality videos/images
 });
 
 app.post('/api/upload', upload.single('image'), (req, res) => {

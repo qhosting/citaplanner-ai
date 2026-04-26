@@ -183,17 +183,19 @@ export const WebBuilderPage: React.FC = () => {
         }
     };
 
-    const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'heroImageUrl' | 'logoUrl') => {
+    const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'heroImageUrl' | 'logoUrl' | 'heroVideoUrl') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        toast.info("Transfiriendo activo digital...");
+        const isVideo = file.type.startsWith('video/');
+        toast.info(isVideo ? "Transfiriendo video de alta resolución..." : "Transfiriendo activo digital...");
+        
         const url = await api.uploadImage(file);
         if (url) {
             setSettings({ ...settings, [field]: url });
             toast.success("Activo sincronizado.");
         } else {
-            toast.error("Falla al subir imagen.");
+            toast.error("Falla al subir archivo.");
         }
     };
 
@@ -344,6 +346,39 @@ export const WebBuilderPage: React.FC = () => {
                                         </div>
                                     )}
                                     <input type="file" id="hero-upload" className="hidden" accept="image/*" onChange={(e) => handleMediaUpload(e, 'heroImageUrl')} />
+                                </div>
+                            </section>
+
+                            {/* Hero Video (NEW) */}
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+                                    <Monitor size={16} /> Video Background (Opcional)
+                                </h3>
+                                <div
+                                    className="group relative w-full h-40 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-indigo-400/40 transition-all"
+                                    onClick={() => document.getElementById('video-upload')?.click()}
+                                >
+                                    {settings.heroVideoUrl ? (
+                                        <>
+                                            <video src={settings.heroVideoUrl} className="w-full h-full object-cover opacity-50" muted loop autoPlay playsInline />
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-[9px] font-black text-white uppercase tracking-widest bg-indigo-600 px-6 py-2 rounded-full border border-white/20">Cambiar Video</span>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); setSettings({...settings, heroVideoUrl: ''}); }}
+                                                    className="mt-2 text-[8px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest"
+                                                >
+                                                    Eliminar Video
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center">
+                                            <Monitor className="text-muted mx-auto mb-2" size={28} />
+                                            <p className="text-[9px] font-black text-muted uppercase tracking-widest">Cargar Video (MP4)</p>
+                                            <p className="text-[7px] text-muted font-bold uppercase mt-1">Recomendado: Loop corto < 10MB</p>
+                                        </div>
+                                    )}
+                                    <input type="file" id="video-upload" className="hidden" accept="video/mp4,video/webm" onChange={(e) => handleMediaUpload(e, 'heroVideoUrl')} />
                                 </div>
                             </section>
 

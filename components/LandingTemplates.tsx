@@ -337,6 +337,23 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 
     return (
         <div className="bg-black text-zinc-300 font-inter min-h-screen">
+            {/* WhatsApp Floating Button */}
+            {(settings.showWhatsappButton ?? true) && (settings.whatsappPhone || settings.contactPhone) && (
+                <a 
+                    href={`https://wa.me/${(settings.whatsappPhone || settings.contactPhone)?.replace(/\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="fixed bottom-8 right-8 z-[100] group"
+                >
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-emerald-500 blur-xl opacity-40 group-hover:opacity-70 transition-opacity rounded-full animate-pulse" />
+                        <div className="relative w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 transition-all duration-500">
+                            <MessageCircle size={32} fill="currentColor" />
+                        </div>
+                    </div>
+                </a>
+            )}
+
             {/* 1. Navbar Fijo Transparente -> Negro */}
             <nav className="fixed w-full z-50 bg-black/95 backdrop-blur-md border-b border-white/5 transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-20">
@@ -354,7 +371,10 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                         <Link to="/book" className="hidden md:inline-block px-6 py-2.5 rounded-sm font-bold text-[10px] uppercase tracking-[0.2em] text-white hover:scale-105 transition-transform" style={{ backgroundColor: magenta }}>
                             Agendar Cita
                         </Link>
-                        <button className="md:hidden text-zinc-400">
+                        <button 
+                            onClick={() => (window as any).setMobileMenuOpen?.(true)}
+                            className="md:hidden text-zinc-400 p-2 hover:bg-white/5 rounded-lg transition-colors"
+                        >
                             <Menu size={24} />
                         </button>
                     </div>
@@ -363,11 +383,19 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 
             {/* 2. Hero Slider Pantalla Completa */}
             <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#050505]">
-                <img 
-                    src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} 
-                    className="absolute inset-0 w-full h-full object-cover opacity-80 z-10 transition-transform duration-[5000ms] scale-105" 
-                    alt="Lash Studio Background" 
-                />
+                {settings.heroVideoUrl ? (
+                    <video 
+                        src={settings.heroVideoUrl} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 z-10" 
+                        autoPlay muted loop playsInline 
+                    />
+                ) : (
+                    <img 
+                        src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80"} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-80 z-10 transition-transform duration-[5000ms] scale-105" 
+                        alt="Lash Studio Background" 
+                    />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
                 <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
@@ -505,9 +533,8 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 text-center md:text-left">
                     
                     <div className="space-y-4">
-                        <div className="flex items-center justify-center md:justify-start gap-1 font-playfair font-black text-2xl tracking-tight mb-4">
-                            <span style={{ color: gold }}>Lash</span>
-                            <span style={{ color: magenta }}>Studio</span>
+                        <div className="flex items-center justify-center md:justify-start mb-6">
+                            <LogoCitaplanner size={22} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
                         </div>
                         <p className="text-xs text-zinc-500 leading-relaxed font-light">
                             {settings.aboutText || "Especialistas en la belleza de tu mirada. Usamos productos premium e hipoalergénicos para cuidar la salud de tus pestañas naturales."}
@@ -745,7 +772,11 @@ export const TemplateClassic: React.FC<TemplateProps & {
             {slides.map((slide, index) => (
                 <div key={index} className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
                     <div className="absolute inset-0 bg-black/60 z-10" />
-                    <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
+                    {settings.heroVideoUrl && index === 0 ? (
+                         <video src={settings.heroVideoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                    ) : (
+                        <img src={slide.image} className={`w-full h-full object-cover transition-transform duration-[10000ms] ${index === currentSlide ? 'scale-110' : 'scale-100'}`} alt={slide.title} />
+                    )}
                     <div className="absolute inset-0 z-20 flex items-center justify-center text-center px-6">
                         <div className={`max-w-5xl transition-all duration-1000 delay-500 ${index === currentSlide ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
                             <span className="text-[11px] font-black uppercase tracking-[1em] mb-8 block" style={{ color: accent }}>{settings.businessName}</span>

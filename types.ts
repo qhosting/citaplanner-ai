@@ -75,6 +75,7 @@ export interface LandingSettings {
   socialFacebook?: string;
   socialTwitter?: string;
   heroImageUrl?: string; // Sincronizado con Prisma
+  heroVideoUrl?: string;
   serviceIds?: string[];
   productIds?: string[];
 }
