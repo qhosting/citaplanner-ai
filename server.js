@@ -41,6 +41,34 @@ import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema 
 
 const prisma = new PrismaClient();
 
+async function ensureSchemaIntegrity() {
+    console.log("🛠️ [NEXUS] Checking database schema integrity...");
+    try {
+        // Add columns if missing in appointments table
+        await prisma.$executeRawUnsafe(`
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='professional_id') THEN
+                    ALTER TABLE appointments ADD COLUMN professional_id UUID;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='service_id') THEN
+                    ALTER TABLE appointments ADD COLUMN service_id UUID;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='reminder_sent') THEN
+                    ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
+                    ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
+                END IF;
+            END $$;
+        `);
+        console.log("✅ [NEXUS] Database schema integrity verified.");
+    } catch (e) {
+        console.error("❌ [NEXUS] Schema integrity check failed:", e.message);
+    }
+}
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -3001,9 +3029,11 @@ cron.schedule('0 6 * * *', async () => {
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
-    httpServer.listen(PORT, () => {
-        console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
-        console.log(`📡 WebSockets enabled on same port`);
+    ensureSchemaIntegrity().then(() => {
+        httpServer.listen(PORT, () => {
+            console.log(`🚀 Server running on http://${ROOT_DOMAIN}:${PORT}`);
+            console.log(`📡 WebSockets enabled on same port`);
+        });
     });
 }
 
