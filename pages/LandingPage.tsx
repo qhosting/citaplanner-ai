@@ -81,8 +81,9 @@ export const LandingPage: React.FC = () => {
         ]);
 
         let finalSettings = DEFAULT_SETTINGS;
-        if (s.status === 'fulfilled' && s.value) {
-          finalSettings = { ...DEFAULT_SETTINGS, ...s.value };
+        if (s.status === 'fulfilled' && s.value && s.value.success) {
+          console.log(`[LANDING DEBUG] Settings extracted for tenant:`, s.value.value);
+          finalSettings = { ...DEFAULT_SETTINGS, ...s.value.value };
           setSettings(finalSettings);
         }
 
