@@ -51,21 +51,6 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
             <header className="relative pt-48 pb-32 px-6 overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-indigo-600/10 rounded-full blur-[150px] -z-10" />
                 <div className="max-w-6xl mx-auto text-center space-y-10">
-                    <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-                        <Zap size={14} className="text-indigo-400 animate-pulse" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-200">
-                            {settings.heroSlides?.[currentSlide || 0]?.subtitle || "La era de la Inteligencia Artificial"}
-                        </span>
-                    </div>
-                    <h1 className="text-7xl md:text-[110px] font-black tracking-tighter text-white leading-[0.85] uppercase">
-                        {slides?.[currentSlide || 0]?.title || settings.businessName || "CitaPlanner"} <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-                            {slides?.[currentSlide || 0]?.text || settings.slogan || "Scale your studio effortlessly."}
-                        </span>
-                    </h1>
-                    <p className="max-w-2xl mx-auto text-xl text-slate-400 font-medium leading-relaxed">
-                        {settings.aboutText || "Automatiza el 90% de tus tareas operativas. Desde agendamiento por IA hasta analítica predictiva de alto nivel."}
-                    </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
                         <Link to="/book" className="px-14 py-6 rounded-[2rem] bg-indigo-600 text-white font-black text-xs uppercase tracking-widest hover:bg-indigo-500 hover:scale-105 transition-all shadow-2xl shadow-indigo-600/40 flex items-center gap-4">
                             Solicitar Acceso <ArrowRight size={18} />
@@ -202,8 +187,10 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
         { id: '6', name: 'Masajes Terapéuticos', price: 800, duration: 60, category: 'Bienestar', status: 'ACTIVE' as const, description: 'Relajación total con técnicas orientales y occidentales.', imageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&q=80' },
     ];
     const displayServices = services.length > 0 ? services : defaultServices;
+    
     return (
         <div className="bg-white text-slate-900 min-h-screen font-inter">
+            <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
             <nav className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
                 <LogoCitaplanner color="#111" businessName={settings.businessName} customUrl={settings.logoUrl} />
                 <div className="flex items-center gap-8">
@@ -219,6 +206,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
             {/* Hero */}
             <section className="py-24 px-8 max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                    <div className="lg:col-span-6 space-y-8">
                         <div className="flex items-center gap-4">
                             <Link to="/book" className="px-10 py-5 bg-slate-950 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all flex items-center gap-3">
                                 Agendar Ahora <ArrowRight size={16} />
@@ -564,6 +552,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
     <div className="bg-white text-zinc-950">
+        <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
         <nav className="p-8 flex justify-between items-center border-b border-zinc-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
             <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
             <Link to="/book" className="px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-widest text-white transition-transform hover:scale-105 shadow-lg" style={{ backgroundColor: accent }}>
@@ -571,19 +560,11 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, p
             </Link>
         </nav>
         <section className="py-24 md:py-40 px-8 text-center bg-zinc-50 relative overflow-hidden">
-            <div className="max-w-4xl mx-auto space-y-8 relative z-10">
-                <h1 className="text-5xl md:text-[100px] font-black tracking-tighter leading-none uppercase transition-all duration-1000">
-                    {slides?.[currentSlide || 0]?.title || settings.businessName}
-                </h1>
-                <p className="text-xl md:text-3xl font-light text-zinc-400 italic transition-all duration-1000">
-                    "{slides?.[currentSlide || 0]?.text || settings.slogan}"
-                </p>
                 <div className="pt-10">
                     <Link to="/book" className="px-16 py-6 rounded-2xl font-black text-xs uppercase tracking-[0.3em] inline-block text-white shadow-2xl" style={{ backgroundColor: accent }}>
                         Reservar Experiencia
                     </Link>
                 </div>
-            </div>
         </section>
         <section className="py-24 px-8 max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
@@ -625,6 +606,7 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, p
 // ==========================================
 export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
     <div className="bg-[#0a0a0a] text-white">
+        <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
         <header className="h-screen relative flex flex-col">
             <nav className="p-10 flex justify-between items-center z-50">
                 <LogoCitaplanner size={24} color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
@@ -703,16 +685,7 @@ export const TemplateClassic: React.FC<TemplateProps & {
     setMobileMenuOpen: (o: boolean) => void;
 }> = ({ settings, services, products, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen }) => (
     <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
-        {(settings.showWhatsappButton ?? true) && waTarget && (
-            <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="fixed bottom-8 right-8 md:bottom-12 md:right-12 z-[500] group">
-                <div className="relative">
-                    <div className="absolute inset-0 rounded-full animate-ping opacity-25 scale-125" style={{ backgroundColor: accent }} />
-                    <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-black shadow-2xl hover:scale-110 transition-all duration-500" style={{ background: `linear-gradient(135deg, ${accent}, #000)` }}>
-                        <MessageCircle className="w-8 h-8 md:w-10 md:h-10" />
-                    </div>
-                </div>
-            </a>
-        )}
+        <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
         <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 shadow-2xl' : 'bg-transparent py-8'}`} style={scrolled ? { borderBottom: `1px solid ${accent}20` } : {}}>
             <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
