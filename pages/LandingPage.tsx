@@ -508,7 +508,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 pt-12">
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                © {new Date().getFullYear()} {settings.businessName} by CitaPlanner By Aurum Capital. Todos los derechos reservados.
+                © {new Date().getFullYear()} CitaPlanner By Aurum Capital
               </p>
               <div className="flex gap-10">
                 {['Privacidad', 'Términos'].map((item) => (
