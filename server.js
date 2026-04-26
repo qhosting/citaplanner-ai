@@ -383,8 +383,14 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    fallthrough: true // Allow proceeding to our custom 404 handler below
+}), (req, res) => {
+    // If we reach here, express.static didn't find the file
+    res.status(404).send('Archivo no encontrado en el servidor de CitaPlanner');
+});
+
 app.use(express.static(path.join(__dirname, 'dist')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, 'uploads');
@@ -2861,6 +2867,10 @@ app.post('/api/notifications/subscribe', async (req, res) => {
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'Endpoint de API no encontrado' });
 });
 
 app.get(/.*/, (req, res) => {
