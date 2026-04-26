@@ -402,14 +402,6 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
                 <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
-                    <h1 className="text-6xl md:text-[110px] font-playfair font-black tracking-tighter mb-6 leading-none">
-                        <span style={{ color: gold }}>
-                            {slides?.[currentSlide || 0]?.title || settings.businessName}
-                        </span>
-                    </h1>
-                    <p className="text-lg md:text-2xl font-bold italic mb-10 max-w-2xl mx-auto" style={{ color: magenta }}>
-                        {slides?.[currentSlide || 0]?.text || settings.slogan || "Extensiones de pestañas premium diseñadas para resaltar la arquitectura de tus ojos."}
-                    </p>
                     <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
                         Reserva Tu Cita <ArrowRight size={16} />
                     </Link>
@@ -675,14 +667,6 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, pr
                     alt="Luxury"
                 />
                 <div className="relative z-20 text-center space-y-6 max-w-5xl px-8">
-                    <h1 className="text-5xl md:text-[110px] font-playfair font-black tracking-tighter mb-8 leading-none">
-                        <span style={{ color: gold }}>
-                            {slides?.[currentSlide || 0]?.title || settings.businessName}
-                        </span>
-                    </h1>
-                    <p className="text-xl md:text-2xl font-bold max-w-2xl mx-auto leading-relaxed mb-12" style={{ color: magenta }}>
-                        {slides?.[currentSlide || 0]?.text || settings.slogan}
-                    </p>
                     <div className="pt-10">
                         <Link to="/book" className="px-20 py-8 border-2 font-black text-xs uppercase tracking-[0.5em] hover:bg-white hover:text-black transition-all" style={{ borderColor: accent, color: accent }}>Entrar al Santuario</Link>
                     </div>
