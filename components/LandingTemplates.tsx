@@ -10,6 +10,7 @@ import {
 import { LandingSettings, Service, Product } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
 import { WhatsAppButton } from './WhatsAppButton';
+import { SYSTEM_VERSION } from '../src/version';
 
 const gold = '#D4AF37';
 const magenta = '#CE4676';
@@ -534,8 +535,10 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 </div>
 
                 <div className="max-w-6xl mx-auto mt-20 pt-8 border-t border-white/5 text-center flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
-                        © {new Date().getFullYear()} CitaPlanner By Aurum Capital
+                    <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold flex items-center gap-4">
+                        <span>© {new Date().getFullYear()} CitaPlanner By Aurum Capital</span>
+                        <span className="opacity-30">|</span>
+                        <span className="opacity-50">v{SYSTEM_VERSION}</span>
                     </p>
                     <div className="flex gap-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
                         <span onClick={() => (window as any).setLegalModal?.('PRIVACY')} className="hover:text-white cursor-pointer transition-colors">Privacidad</span>

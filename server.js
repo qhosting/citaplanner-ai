@@ -40,6 +40,9 @@ import { validateRequest } from './middleware/validation.js';
 import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema } from './schemas/index.js';
 
 const prisma = new PrismaClient();
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+const SYSTEM_VERSION = pkg.version;
+console.log(`\n🚀 [CITAPLANNER] Starting SaaS Engine v${SYSTEM_VERSION}\n`);
 
 async function ensureSchemaIntegrity() {
     console.log("🛠️ [NEXUS] Checking database schema integrity...");

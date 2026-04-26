@@ -20,6 +20,7 @@ import {
 } from '../components/LandingTemplates';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 import { WhatsAppButton } from '../components/WhatsAppButton';
+import { SYSTEM_VERSION } from '../src/version';
 
 const DEFAULT_SETTINGS: LandingSettings = {
   businessName: '',
@@ -73,6 +74,7 @@ export const LandingPage: React.FC = () => {
   }, [settings.heroSlides]);
 
   useEffect(() => {
+    console.log(`%c CitaPlanner SaaS %c v${SYSTEM_VERSION} `, "background:#6366f1;color:#fff;padding:4px;border-radius:4px 0 0 4px;font-weight:bold;", "background:#1e293b;color:#fff;padding:4px;border-radius:0 4px 4px 0;");
     const init = async () => {
       try {
         const [s, sv, pv] = await Promise.allSettled([
@@ -509,8 +511,10 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
             <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 pt-12">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                © {new Date().getFullYear()} CitaPlanner By Aurum Capital
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-4">
+                <span>© {new Date().getFullYear()} CitaPlanner By Aurum Capital</span>
+                <span className="opacity-30">|</span>
+                <span className="opacity-50">v{SYSTEM_VERSION}</span>
               </p>
               <div className="flex gap-10">
                 {['Privacidad', 'Términos'].map((item) => (
