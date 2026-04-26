@@ -21,7 +21,7 @@ import {
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 
 const DEFAULT_SETTINGS: LandingSettings = {
-  businessName: '',
+  businessName: 'Cargando...',
   primaryColor: '#C5A028',
   secondaryColor: '#1A1A1A',
   templateId: 'beauty',
@@ -294,6 +294,12 @@ export const LandingPage: React.FC = () => {
       { image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&q=80&w=1400', title: 'Profesionales', subtitle: 'Staff Elite', text: 'Especialistas certificados para tu bienestar.' },
       { image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&q=80&w=1400', title: 'Tratamientos', subtitle: 'Catálogo Premium', text: 'Servicios diseñados para potenciar tu belleza.' },
     ];
+
+    // INJECTION: Si existe una heroImageUrl del usuario, forzarla en el primer slide del template seleccionado
+    if (settings.heroImageUrl && templateSlides.length > 0) {
+      templateSlides[0].image = settings.heroImageUrl;
+    }
+
     return templateSlides;
   }, [settings]);
 
