@@ -401,7 +401,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
                 <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
-                    <h1 className="text-6xl md:text-[100px] font-playfair font-black tracking-tighter mb-6 leading-none">
+                    <h1 className="text-6xl md:text-[100px] font-black tracking-tighter mb-6 leading-none">
                         <span className="italic font-light block" style={{ color: gold }}>
                             {slides?.[currentSlide || 0]?.title || settings.businessName}
                         </span>
@@ -674,7 +674,7 @@ export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, pr
                     alt="Luxury"
                 />
                 <div className="relative z-20 text-center space-y-6 max-w-5xl px-8">
-                    <h1 className="text-5xl md:text-[100px] font-playfair font-black leading-none tracking-tighter mb-8">
+                    <h1 className="text-5xl md:text-[100px] font-black leading-none tracking-tighter mb-8">
                         <span className="italic font-light block mb-4" style={{ color: gold }}>
                             {slides?.[currentSlide || 0]?.title || settings.businessName}
                         </span>
