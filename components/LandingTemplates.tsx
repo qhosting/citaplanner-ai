@@ -10,6 +10,9 @@ import {
 import { LandingSettings, Service, Product } from '../types';
 import { LogoCitaplanner } from './LogoCitaplanner';
 
+const gold = '#D4AF37';
+const magenta = '#CE4676';
+
 interface TemplateProps {
     settings: LandingSettings;
     services: Service[];
@@ -332,8 +335,6 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
         { id: '4', name: 'Lifting de Pestañas', price: 850, duration: 60, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Levantamiento natural de tus propias pestañas.', imageUrl: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&q=80' },
     ];
     const displayServices = services.length > 0 ? services.slice(0, 4) : defaultServices;
-    const gold = "#D4AF37";
-    const magenta = "#CE467B";
 
     return (
         <div className="bg-black text-zinc-300 font-inter min-h-screen">
