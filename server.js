@@ -46,7 +46,18 @@ console.log(`\n🚀 [CITAPLANNER] Starting SaaS Engine v${SYSTEM_VERSION}\n`);
 
 async function ensureSchemaIntegrity() {
     console.log("🛠️ [NEXUS] Checking database schema integrity...");
+    const { execSync } = await import('child_process');
+
     try {
+        // Verificar si la tabla fundamental existe
+        await prisma.tenant.findFirst().catch(async (err) => {
+            if (err.code === 'P2021') {
+                console.log("⚠️ [NEXUS] Tablas no encontradas. Iniciando sincronización automática...");
+                execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+                console.log("✅ [NEXUS] Sincronización de tablas completada.");
+            }
+        });
+
         // Add columns if missing in appointments table
         await prisma.$executeRawUnsafe(`
             DO $$ 
