@@ -11,6 +11,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [businessName, setBusinessName] = useState('Plataforma');
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const isMaintenance = false;
@@ -29,6 +30,20 @@ export const LoginPage: React.FC = () => {
       }
     }
   }, [isAuthenticated, user, navigate]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await api.getLandingSettings();
+        if (response.success && response.value) {
+          setBusinessName(response.value.businessName || 'Plataforma');
+        }
+      } catch (e) {
+        console.error('Failed to load settings in login');
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +99,7 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
             <h1 className="text-2xl font-black tracking-tighter text-main uppercase flex items-center gap-2">
-              Cita<span className="bugambilia-text-gradient font-light">Planner</span>
+              {businessName}
             </h1>
             <p className="text-[8px] font-bold text-muted uppercase tracking-[0.6em] mt-1.5 opacity-60">Elite Business Login</p>
           </div>
@@ -146,7 +161,7 @@ export const LoginPage: React.FC = () => {
               <ShieldCheck className="text-[#CE4676]" size={12} />
               <span className="text-[8px] font-black text-muted uppercase tracking-widest">Aurum Core Secured</span>
             </div>
-            <p className="text-[8px] text-muted font-bold uppercase tracking-widest">© 2026 CitaPlanner Infrastructure</p>
+            <p className="text-[8px] text-muted font-bold uppercase tracking-widest">© 2026 {businessName} Infrastructure</p>
           </div>
         </div>
       </div>

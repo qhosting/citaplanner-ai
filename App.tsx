@@ -126,7 +126,7 @@ const ThemeToggle = () => {
   );
 };
 
-const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
+const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, settings?: any }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
@@ -155,8 +155,8 @@ const Navbar = ({ maintenanceMode }: { maintenanceMode: boolean }) => {
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
-                <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Cita<span className="gold-text-gradient">Planner</span></span>
-                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'GOD_MODE' ? 'Nexus Infrastructure' : 'Aurum Ecosystem'}</span>
+                <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{settings?.businessName || 'Plataforma'}</span>
+                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'GOD_MODE' ? 'Nexus Infrastructure' : 'Ecosistema Elite'}</span>
               </div>
             </div>
           </Link>
@@ -319,7 +319,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col transition-colors">
       <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
-      {!isLoginPage && location.pathname !== '/' && <Navbar maintenanceMode={maintenanceMode} />}
+      {!isLoginPage && location.pathname !== '/' && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
       <div className="flex-grow">
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
