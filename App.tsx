@@ -284,18 +284,19 @@ const MainLayout = () => {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        const data = await api.getLandingSettings();
-        setSettings(data);
-        setMaintenanceMode(!!data.maintenanceMode);
+        const response = await api.getLandingSettings();
+        if (response.success && response.value) {
+          const data = response.value;
+          setSettings(data);
+          setMaintenanceMode(!!data.maintenanceMode);
 
-        // === MOTOR DE TÍTULO GLOBAL ===
-        // Asegura que todas las páginas (Builder, Admin, etc) tengan el branding correcto
-        const bizName = (data.businessName || '').trim();
-        const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
-        
-        // No sobreescribimos en la Landing Page para dejar que use su propio motor SEO avanzado
-        if (location.pathname !== '/') {
-          document.title = `${baseTitle} | Suite`;
+          // === MOTOR DE TÍTULO GLOBAL ===
+          const bizName = (data.businessName || '').trim();
+          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
+          
+          if (location.pathname !== '/') {
+            document.title = `${baseTitle} | Suite`;
+          }
         }
       } catch (e) {
         console.error("Failed to load settings");
