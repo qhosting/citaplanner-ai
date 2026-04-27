@@ -447,8 +447,14 @@ const tenantMiddleware = async (req, res, next) => {
             console.log(`[TENANT DEBUG] Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN}`);
         }
 
+        // 0. Single-Tenant Override (If ORGANIZATION_ID is set in .env)
+        const SYSTEM_ORG_ID = process.env.ORGANIZATION_ID || 'demo';
+        
+        if (process.env.ORGANIZATION_ID) {
+            subdomain = SYSTEM_ORG_ID;
+        } 
         // 1. Master Hub Detection
-        if (host === `master.${ROOT_DOMAIN}`) {
+        else if (host === `master.${ROOT_DOMAIN}`) {
             subdomain = 'master';
         }
         // 2. Subdomain Detection (e.g., shula.citaplanner.com)
@@ -466,8 +472,10 @@ const tenantMiddleware = async (req, res, next) => {
             if (tenant) {
                 subdomain = tenant.subdomain;
             } else {
-                subdomain = req.headers['x-tenant-id'] || 'demo';
+                subdomain = req.headers['x-tenant-id'] || SYSTEM_ORG_ID;
             }
+        } else {
+            subdomain = req.headers['x-tenant-id'] || SYSTEM_ORG_ID;
         }
 
         // Resolve Tenant UUID and Object
