@@ -2565,7 +2565,7 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
         });
 
         const normalized = {
-            businessName: organizationId === 'demo' ? 'CitaPlanner' : (data.businessName || organizationId.toUpperCase()),
+            businessName: organizationId === 'demo' ? 'CitaPlanner' : (data?.businessName?.trim() || organizationId.toUpperCase() || 'CitaPlanner'),
             primaryColor: data.primaryColor || '#630E14',
             secondaryColor: data.secondaryColor || '#C5A028',
             templateId: data.templateId || 'citaplanner',

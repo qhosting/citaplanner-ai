@@ -128,7 +128,8 @@ export const LandingPage: React.FC = () => {
 
   // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
-    const pageTitle = settings.seoTitle || (settings.businessName ? `${settings.businessName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
+    const cleanBizName = (settings.businessName || '').trim();
+    const pageTitle = settings.seoTitle || (cleanBizName ? `${cleanBizName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
     const pageDescription = settings.seoDescription || `${settings.businessName} — ${settings.slogan || 'Reserva tu cita en línea'}. ${settings.address || ''}`;
     const heroImage = settings.heroImageUrl || settings.logoUrl || '';
 
