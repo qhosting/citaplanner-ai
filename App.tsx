@@ -319,7 +319,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col transition-colors">
       <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
-      <Navbar maintenanceMode={maintenanceMode} />
+      {!isLoginPage && location.pathname !== '/' && <Navbar maintenanceMode={maintenanceMode} />}
       <div className="flex-grow">
         <Suspense fallback={<LoadingScreen />}>
           <Routes>

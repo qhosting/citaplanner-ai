@@ -319,28 +319,28 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             {/* WhatsApp Floating Button */}
             <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
-            {/* 1. Navbar Fijo Transparente -> Negro */}
-            <nav className="fixed w-full z-50 bg-black/95 backdrop-blur-md border-b border-white/5 transition-all duration-300">
-                <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-20">
-                    <Link to="/" className="flex items-center">
-                        <LogoCitaplanner size={28} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
+            {/* 1. Navbar Fijo Transparente con degradado inmersivo */}
+            <nav className="fixed w-full z-50 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-24">
+                    <Link to="/" className="flex items-center group">
+                        <LogoCitaplanner size={32} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
                     </Link>
                     
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden md:flex items-center gap-10">
                         {['Inicio', 'Servicios', 'Galería', 'Contacto'].map(t => (
-                            <a key={t} href={`#${t.toLowerCase()}`} className="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-[#D4AF37] transition-colors">{t}</a>
+                            <a key={t} href={`#${t.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 hover:text-[#D4AF37] transition-colors">{t}</a>
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <Link to="/book" className="hidden md:inline-block px-6 py-2.5 rounded-sm font-bold text-[10px] uppercase tracking-[0.2em] text-white hover:scale-105 transition-transform" style={{ backgroundColor: magenta }}>
+                    <div className="flex items-center gap-6">
+                        <Link to="/book" className="hidden md:inline-block px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.2em] text-white hover:scale-105 transition-all shadow-[0_10px_30px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
                             Agendar Cita
                         </Link>
                         <button 
                             onClick={() => (window as any).setMobileMenuOpen?.(true)}
-                            className="md:hidden text-zinc-400 p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            className="md:hidden text-white p-2 hover:bg-white/5 rounded-xl transition-colors"
                         >
-                            <Menu size={24} />
+                            <Menu size={28} />
                         </button>
                     </div>
                 </div>
