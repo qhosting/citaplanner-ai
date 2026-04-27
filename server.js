@@ -51,26 +51,37 @@ async function ensureSchemaIntegrity() {
         await prisma.$executeRawUnsafe(`
             DO $$ 
             BEGIN 
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='professional_id') THEN
-                    ALTER TABLE appointments ADD COLUMN professional_id UUID;
+                -- Solo intentar si la tabla existe
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='appointments') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='professional_id') THEN
+                        ALTER TABLE appointments ADD COLUMN professional_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='service_id') THEN
+                        ALTER TABLE appointments ADD COLUMN service_id UUID;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='reminder_sent') THEN
+                        ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
+                        ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
+                    END IF;
                 END IF;
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='service_id') THEN
-                    ALTER TABLE appointments ADD COLUMN service_id UUID;
-                END IF;
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='reminder_sent') THEN
-                    ALTER TABLE appointments ADD COLUMN reminder_sent BOOLEAN DEFAULT FALSE;
-                END IF;
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
-                    ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
-                END IF;
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='hero_video_url') THEN
-                    ALTER TABLE landing_settings ADD COLUMN hero_video_url TEXT;
+
+                -- Solo intentar si la tabla existe
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='landing_settings') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='hero_video_url') THEN
+                        ALTER TABLE landing_settings ADD COLUMN hero_video_url TEXT;
+                    END IF;
                 END IF;
             END $$;
         `);
         console.log("✅ [NEXUS] Database schema integrity verified.");
     } catch (e) {
-        console.error("❌ [NEXUS] Schema integrity check failed:", e.message);
+        if (e.message.includes('relation') && e.message.includes('does not exist')) {
+            console.log("ℹ️ [NEXUS] Base de datos nueva detectada. Saltando verificación de integridad (Tablas aún no creadas).");
+        } else {
+            console.error("❌ [NEXUS] Schema integrity check failed:", e.message);
+        }
     }
 }
 
