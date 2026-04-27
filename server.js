@@ -105,9 +105,6 @@ async function ensureSchemaIntegrity() {
 }
 
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
