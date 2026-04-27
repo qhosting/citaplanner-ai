@@ -86,27 +86,25 @@ async function main() {
 
     console.log(`✅ Admin User created: ${user.name} (${user.phone})`);
     
-    // 4. Create Landing Settings (Initial)
-    await prisma.landingSetting.upsert({
-        where: { organizationId: subdomain },
-        update: {
-            businessName: name,
-            templateId: 'shula_dark',
-            primaryColor: '#D4AF37'
-        },
-        create: {
-            organizationId: subdomain,
-            businessName: name,
-            templateId: 'shula_dark',
-            primaryColor: '#D4AF37',
-            secondaryColor: '#000000',
-            slogan: 'Elegancia en cada detalle',
-            aboutText: 'Expertos en belleza y cuidado personal.',
-            heroImageUrl: 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899'
-        }
-    });
-
-    console.log('✅ Landing Settings initialized.');
+    // 4. Create Landing Settings (Safe)
+    const existingLanding = await prisma.landingSetting.findUnique({ where: { organizationId: subdomain } });
+    if (!existingLanding) {
+        await prisma.landingSetting.create({
+            data: {
+                organizationId: subdomain,
+                businessName: name,
+                templateId: 'shula_dark',
+                primaryColor: '#D4AF37',
+                secondaryColor: '#000000',
+                slogan: 'Elegancia en cada detalle',
+                aboutText: 'Expertos en belleza y cuidado personal.',
+                heroImageUrl: 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899'
+            }
+        });
+        console.log('✅ Landing Settings initialized (New).');
+    } else {
+        console.log('ℹ️ Landing Settings already exist. Skipping initialization to preserve user changes.');
+    }
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

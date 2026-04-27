@@ -15,6 +15,13 @@ async function main() {
         select: { phone: true, role: true, name: true, email: true, organizationId: true }
     });
     console.table(users);
+    
+    console.log('\n--- APPOINTMENTS ---');
+    const appointments = await prisma.appointment.findMany({
+        take: 5,
+        select: { id: true, title: true, clientName: true, organizationId: true }
+    });
+    console.table(appointments);
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

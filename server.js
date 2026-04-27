@@ -2643,39 +2643,39 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
     try {
         const organizationId = req.tenantId;
         const s = req.body;
-
-        // Sanitize: only pass known DB columns and respect varchar limits
         const safeStr = (val, max) => val ? String(val).substring(0, max) : null;
 
+        const existing = await prisma.landingSetting.findUnique({ where: { organizationId } });
+
         const data = {
-            businessName: safeStr(s.businessName, 100),
-            primaryColor: safeStr(s.primaryColor, 20),
-            secondaryColor: safeStr(s.secondaryColor, 20),
-            templateId: safeStr(s.templateId, 20),
-            logoUrl: s.logoUrl || null,
-            slogan: s.slogan || null,
-            aboutText: s.aboutText || null,
-            address: s.address || null,
-            contactPhone: safeStr(s.contactPhone, 20),
-            heroImageUrl: s.heroImageUrl || null,
-            seoTitle: safeStr(s.seoTitle, 100),
-            seoDescription: s.seoDescription || null,
-            seoKeywords: s.seoKeywords || null,
-            latitude: s.latitude ? parseFloat(s.latitude) : null,
-            longitude: s.longitude ? parseFloat(s.longitude) : null,
-            maintenanceMode: !!s.maintenanceMode,
-            whatsappPhone: safeStr(s.whatsappPhone, 20),
-            footerText: s.footerText || null,
-            socialInstagram: safeStr(s.socialInstagram, 255),
-            socialFacebook: safeStr(s.socialFacebook, 255),
-            socialTwitter: safeStr(s.socialTwitter, 255),
-            images: Array.isArray(s.images) ? s.images : [],
-            services: Array.isArray(s.services) ? s.services : [],
-            heroSlides: Array.isArray(s.heroSlides) ? s.heroSlides : [],
-            stats: Array.isArray(s.stats) ? s.stats : [],
-            testimonials: Array.isArray(s.testimonials) ? s.testimonials : [],
-            serviceIds: Array.isArray(s.serviceIds) ? s.serviceIds : [],
-            productIds: Array.isArray(s.productIds) ? s.productIds : []
+            businessName: s.businessName !== undefined ? safeStr(s.businessName, 100) : existing?.businessName,
+            primaryColor: s.primaryColor !== undefined ? safeStr(s.primaryColor, 20) : existing?.primaryColor,
+            secondaryColor: s.secondaryColor !== undefined ? safeStr(s.secondaryColor, 20) : existing?.secondaryColor,
+            templateId: s.templateId !== undefined ? safeStr(s.templateId, 20) : existing?.templateId,
+            logoUrl: s.logoUrl !== undefined ? s.logoUrl : existing?.logoUrl,
+            slogan: s.slogan !== undefined ? s.slogan : existing?.slogan,
+            aboutText: s.aboutText !== undefined ? s.aboutText : existing?.aboutText,
+            address: s.address !== undefined ? s.address : existing?.address,
+            contactPhone: s.contactPhone !== undefined ? safeStr(s.contactPhone, 20) : existing?.contactPhone,
+            heroImageUrl: s.heroImageUrl !== undefined ? s.heroImageUrl : existing?.heroImageUrl,
+            seoTitle: s.seoTitle !== undefined ? safeStr(s.seoTitle, 100) : existing?.seoTitle,
+            seoDescription: s.seoDescription !== undefined ? s.seoDescription : existing?.seoDescription,
+            seoKeywords: s.seoKeywords !== undefined ? s.seoKeywords : existing?.seoKeywords,
+            latitude: s.latitude !== undefined ? parseFloat(s.latitude) : existing?.latitude,
+            longitude: s.longitude !== undefined ? parseFloat(s.longitude) : existing?.longitude,
+            maintenanceMode: s.maintenanceMode !== undefined ? !!s.maintenanceMode : existing?.maintenanceMode,
+            whatsappPhone: s.whatsappPhone !== undefined ? safeStr(s.whatsappPhone, 20) : existing?.whatsappPhone,
+            footerText: s.footerText !== undefined ? s.footerText : existing?.footerText,
+            socialInstagram: s.socialInstagram !== undefined ? safeStr(s.socialInstagram, 255) : existing?.socialInstagram,
+            socialFacebook: s.socialFacebook !== undefined ? safeStr(s.socialFacebook, 255) : existing?.socialFacebook,
+            socialTwitter: s.socialTwitter !== undefined ? safeStr(s.socialTwitter, 255) : existing?.socialTwitter,
+            images: Array.isArray(s.images) ? s.images : existing?.images || [],
+            services: Array.isArray(s.services) ? s.services : existing?.services || [],
+            heroSlides: Array.isArray(s.heroSlides) ? s.heroSlides : existing?.heroSlides || [],
+            stats: Array.isArray(s.stats) ? s.stats : existing?.stats || [],
+            testimonials: Array.isArray(s.testimonials) ? s.testimonials : existing?.testimonials || [],
+            serviceIds: Array.isArray(s.serviceIds) ? s.serviceIds : existing?.serviceIds || [],
+            productIds: Array.isArray(s.productIds) ? s.productIds : existing?.productIds || []
         };
 
         const updated = await prisma.landingSetting.upsert({
