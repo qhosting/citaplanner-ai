@@ -116,21 +116,25 @@ export const BookingPage: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [set, s, p, a] = await Promise.all([
+        const [setRes, s, p, a] = await Promise.all([
           api.getLandingSettings(),
           api.getServices(),
           api.getProfessionals(),
           api.getAppointments()
         ]);
-        setSettings(set);
+        
+        if (setRes.success && setRes.value) {
+          const set = setRes.value;
+          setSettings(set);
+          // Update document title
+          if (set.businessName) {
+            document.title = `Reserva Tu Experiencia | ${set.businessName}`;
+          }
+        }
+        
         setServices(s);
         setProfessionals(p);
         setAppointments(a);
-
-        // Update document title
-        if (set.businessName) {
-          document.title = `Reserva tu Cita | ${set.businessName}`;
-        }
       } catch (error) {
         console.error("Error loading booking data", error);
       } finally {
@@ -513,48 +517,51 @@ export const BookingPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-black pb-32">
-      <nav className="bg-black/80 backdrop-blur-2xl border-b border-white/5 h-24 sticky top-0 z-50 transition-all">
-        <div className="max-w-7xl mx-auto px-8 h-full flex items-center justify-between">
+    <div className="min-h-screen bg-[#050505] pb-32 selection:bg-[#D4AF37] selection:text-black">
+      {/* NAVEGACIÓN PREMIUM */}
+      <nav className="fixed top-0 left-0 w-full z-[100] transition-all duration-500 bg-black/80 backdrop-blur-xl border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
           <div className="flex items-center gap-6">
             {step > 1 && step < 5 && (
               <button
                 onClick={() => setStep(step - 1)}
-                className="p-3 text-zinc-500 hover:text-white hover:bg-white/5 rounded-2xl transition-all"
+                className="p-3 text-zinc-500 hover:text-[#D4AF37] bg-white/5 rounded-2xl transition-all"
               >
-                <ChevronLeft size={28} />
+                <ChevronLeft size={24} />
               </button>
             )}
             <Link to="/" className="flex items-center gap-3">
-              <LogoCitaplanner color={primaryColor} customUrl={settings.logoUrl} businessName={settings.businessName} />
+              <LogoCitaplanner size={32} color={primaryColor} customUrl={settings.logoUrl} businessName={settings.businessName} />
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-12">
+          {/* Stepper Progresivo Desktop */}
+          <div className="hidden lg:flex items-center gap-12">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition-all duration-500 ${step >= i ? 'bg-white border-white text-black' : 'border-white/10 text-zinc-700'
+              <div key={i} className="flex items-center gap-3 group">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-500 ${step >= i ? 'bg-[#D4AF37] border-[#D4AF37] text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'border-white/10 text-zinc-700'
                   }`}>
                   {i}
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${step >= i ? 'text-white' : 'text-zinc-700'}`}>
+                <span className={`text-[9px] font-black uppercase tracking-[0.3em] transition-colors ${step >= i ? 'text-white' : 'text-zinc-700'}`}>
                   {i === 1 && 'Servicio'}
                   {i === 2 && 'Especialista'}
                   {i === 3 && 'Fecha'}
                   {i === 4 && 'Identidad'}
                 </span>
+                {i < 4 && <div className={`w-8 h-px transition-colors duration-500 ${step > i ? 'bg-[#D4AF37]' : 'bg-white/5'}`} />}
               </div>
             ))}
           </div>
 
-          <div className="text-[10px] font-black text-zinc-500 flex items-center gap-3 uppercase tracking-widest">
-            <MapPin size={18} style={{ color: primaryColor }} />
-            <span className="hidden sm:inline">{settings?.address || settings.businessName}</span>
+          <div className="flex items-center gap-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-white/5 px-6 py-3 rounded-full border border-white/5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="hidden sm:inline">Secure Node</span>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-8 pt-20">
+      <main className="max-w-7xl mx-auto px-8 pt-44">
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
@@ -562,17 +569,23 @@ export const BookingPage: React.FC = () => {
         {step === 5 && renderStep5()}
       </main>
 
+      {/* Floating Summary Mobile */}
       {step > 1 && step < 4 && (
-        <div className="md:hidden fixed bottom-10 left-8 right-8 bg-zinc-900 rounded-[2.5rem] p-8 text-white shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] animate-fade-in-up border border-white/5">
+        <div className="lg:hidden fixed bottom-10 left-8 right-8 bg-zinc-900/90 backdrop-blur-xl rounded-[2.5rem] p-8 text-white shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] animate-fade-in-up border border-[#D4AF37]/20 z-50">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-2">Tu Selección Elite</p>
-              <p className="font-black text-lg tracking-tight truncate max-w-[200px]">{selectedService?.name}</p>
-              {selectedPro && <p style={{ color: primaryColor }} className="text-[10px] font-bold uppercase tracking-widest mt-1">{selectedPro.name}</p>}
+              <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest mb-1">Tu Selección</p>
+              <p className="font-black text-lg tracking-tighter truncate max-w-[180px]">{selectedService?.name}</p>
+              {selectedPro && <p className="text-[10px] font-bold text-zinc-400 mt-0.5">{selectedPro.name}</p>}
             </div>
             <div className="text-right">
               <p className="font-black text-2xl tracking-tighter">${selectedService?.price}</p>
-              <p className="text-[9px] text-[#D4AF37] font-black uppercase tracking-widest">{selectedService?.duration} MIN</p>
+              <button 
+                onClick={() => setStep(step + 1)}
+                className="mt-2 text-[9px] font-black uppercase tracking-widest text-[#D4AF37] border-b border-[#D4AF37]/30 pb-0.5"
+              >
+                Continuar →
+              </button>
             </div>
           </div>
         </div>
