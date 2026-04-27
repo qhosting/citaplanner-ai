@@ -23,7 +23,7 @@ import { WhatsAppButton } from '../components/WhatsAppButton';
 import { SYSTEM_VERSION } from '../src/version';
 
 const DEFAULT_SETTINGS: LandingSettings = {
-  businessName: '',
+  businessName: 'CitaPlanner',
   primaryColor: '#C5A028',
   secondaryColor: '#1A1A1A',
   templateId: 'beauty',
@@ -128,7 +128,7 @@ export const LandingPage: React.FC = () => {
 
   // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
-    const pageTitle = settings.seoTitle || `${settings.businessName} — Reservas en Línea`;
+    const pageTitle = settings.seoTitle || (settings.businessName ? `${settings.businessName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
     const pageDescription = settings.seoDescription || `${settings.businessName} — ${settings.slogan || 'Reserva tu cita en línea'}. ${settings.address || ''}`;
     const heroImage = settings.heroImageUrl || settings.logoUrl || '';
 
