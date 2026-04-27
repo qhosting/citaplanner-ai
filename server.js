@@ -2604,7 +2604,7 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
                 satelliteId: 3
             }
         };
-        res.json(normalized);
+        res.json({ success: true, value: normalized });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
