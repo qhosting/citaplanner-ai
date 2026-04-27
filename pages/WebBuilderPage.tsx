@@ -62,11 +62,13 @@ export const WebBuilderPage: React.FC = () => {
     const loadSettings = async () => {
         setLoading(true);
         try {
-            const [data, servicesList, productsList] = await Promise.all([
+            const [settingsRes, servicesList, productsList] = await Promise.all([
                 api.getLandingSettings(),
                 api.getServices(),
                 api.getProducts()
             ]);
+            
+            const data = settingsRes.value;
             
             setSettings({
                 ...data,

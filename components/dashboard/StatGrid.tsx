@@ -13,9 +13,10 @@ interface StatGridProps {
     appointments: Appointment[];
     clients: Client[];
     services: Service[];
+    sales?: any[];
 }
 
-export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients, services }) => {
+export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients, services, sales = [] }) => {
     const today = new Date().toLocaleDateString();
 
     const todayAppointments = appointments.filter(a =>
@@ -24,19 +25,21 @@ export const StatGrid: React.FC<StatGridProps> = ({ appointments, clients, servi
 
     const activeClients = clients.length;
 
-    // Calculate actual revenue from completed appointments or all if simplified
-    const revenue = appointments.reduce((acc, apt) => {
-        const service = services.find(s => s.id === apt.serviceId);
-        return acc + (service?.price || 0);
-    }, 0);
+    // Calculate actual revenue from real sales
+    const revenue = sales.reduce((acc, sale) => acc + (Number(sale.total) || 0), 0);
+
+    // Calculate today's sales
+    const todayRevenue = sales
+        .filter(s => new Date(s.createdAt).toLocaleDateString() === today)
+        .reduce((acc, s) => acc + (Number(s.total) || 0), 0);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             <StatCard
-                title="Ingresos Totales (Est)"
-                value={`$${revenue.toLocaleString()}`}
+                title="Ventas Hoy"
+                value={`$${todayRevenue.toLocaleString()}`}
                 icon={DollarSign}
-                trend="+14% vs mes ant"
+                trend={`Total: $${revenue.toLocaleString()}`}
                 trendPositive={true}
             />
             <StatCard

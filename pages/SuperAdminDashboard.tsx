@@ -35,6 +35,15 @@ export const SuperAdminDashboard: React.FC = () => {
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [planForm, setPlanForm] = useState({ id: '', title: '', price: 0, description: '', currency: 'MXN' });
 
+  const [logFilter, setLogFilter] = useState({ platform: '', organizationId: '', level: '' });
+
+  // Real-time Clock
+  const [now, setNow] = React.useState(new Date());
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // 1. Fetch Global Stats
   const { data: stats } = useQuery({
     queryKey: ['saas-stats'],
@@ -43,7 +52,8 @@ export const SuperAdminDashboard: React.FC = () => {
         headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
       });
       return res.json();
-    }
+    },
+    refetchInterval: 10000 // Real-time metrics every 10s
   });
 
   // 2. Fetch Tenants
@@ -80,11 +90,12 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   });
 
-  // 4. Fetch Real Audit Logs
-  const { data: clusterLogs = [] } = useQuery({
-    queryKey: ['saas-logs'],
+  // 4. Fetch Real Audit Logs with Filtering
+  const { data: clusterLogs = [], refetch: refetchLogs } = useQuery({
+    queryKey: ['saas-logs', logFilter],
     queryFn: async () => {
-      const res = await fetch('/api/saas/logs', {
+      const query = new URLSearchParams(logFilter as any).toString();
+      const res = await fetch(`/api/saas/logs?${query}`, {
         headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem('citaPlannerUser') || '{}').token}` }
       });
       return res.json();
@@ -323,9 +334,13 @@ export const SuperAdminDashboard: React.FC = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 animate-entrance font-sans">
+    <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 animate-entrance font-sans relative overflow-hidden">
+      {/* 🕸️ CYBER GRID BACKGROUND */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,_rgba(212,175,55,0.1),_transparent_70%)] pointer-events-none" />
+
       {/* 🛡️ NEXUS COMMAND HEADER */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8 relative z-10">
         <div className="flex items-center gap-6">
           <div className="relative">
             <div className="p-4 rounded-[2rem] bg-red-600/10 text-red-500 border border-red-500/20 shadow-[0_0_50px_rgba(220,38,38,0.3)] animate-pulse">
@@ -342,7 +357,13 @@ export const SuperAdminDashboard: React.FC = () => {
             <div className="flex items-center gap-3 mt-3">
               <span className="text-red-500 font-bold uppercase tracking-[0.4em] text-[10px]">God Mode Authority (ROOT)</span>
               <div className="h-4 w-px bg-white/10" />
-              <span className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Latency: {stats?.systemHealth?.latency || '--'}</span>
+              <span className="text-slate-400 font-mono text-[10px] uppercase font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5">{now.toLocaleTimeString()}</span>
+              <div className="h-4 w-px bg-white/10" />
+              <span className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Uptime: {stats?.systemHealth?.uptime || '--'}</span>
+              <div className="h-4 w-px bg-white/10" />
+              <span className="text-emerald-500 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1">
+                <Cpu size={10} /> {stats?.systemHealth?.memoryUsage || '--'}
+              </span>
             </div>
           </div>
         </div>
@@ -469,8 +490,11 @@ export const SuperAdminDashboard: React.FC = () => {
                 <div key={t.id} className="glass-card p-12 rounded-[5rem] border-white/5 hover:border-red-500/20 transition-all relative overflow-hidden group bg-gradient-to-br from-white/[0.02] to-transparent">
                   <div className="flex justify-between items-start mb-10">
                     <div className="flex items-start gap-6">
-                      <div className={`p-5 rounded-3xl ${t.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'} border border-current/20`}>
+                      <div className={`p-5 rounded-3xl ${t.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'} border border-current/20 relative`}>
                         <Building2 size={32} />
+                        {(t as any).lastLoginAt && (new Date().getTime() - new Date((t as any).lastLoginAt).getTime() < 3600000) && (
+                           <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#050505] animate-pulse shadow-[0_0_10px_#10b981]" />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
@@ -483,6 +507,12 @@ export const SuperAdminDashboard: React.FC = () => {
                           <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-white/5 border ${t.planType === 'ELITE' ? 'border-[#D4AF37]/30 text-[#D4AF37]' : 'border-slate-800 text-slate-600'}`}>
                             {t.planType}
                           </span>
+                          {(t as any).lastLoginAt && (
+                            <>
+                              <div className="w-1.5 h-1.5 bg-white/10 rounded-full" />
+                              <span className="text-[9px] font-bold text-slate-600 uppercase">Last: {new Date((t as any).lastLoginAt).toLocaleTimeString()}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -748,10 +778,44 @@ export const SuperAdminDashboard: React.FC = () => {
         )}
 
         {view === 'LOGS' && (
-          <div className="bg-black/40 rounded-[3rem] border border-white/5 p-12 font-mono text-sm">
-            <div className="flex items-center gap-3 mb-10 pb-6 border-b border-white/5">
-              <Terminal size={24} className="text-[#D4AF37]" />
-              <h2 className="text-white font-black uppercase text-xl leading-none">Global Infrastructure Audit Trail</h2>
+          <div className="bg-black/40 rounded-[3rem] border border-white/5 p-12 font-mono text-sm relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pb-6 border-b border-white/5 gap-6">
+              <div className="flex items-center gap-3">
+                <Terminal size={24} className="text-[#D4AF37]" />
+                <h2 className="text-white font-black uppercase text-xl leading-none">Global Infrastructure Audit Trail</h2>
+              </div>
+              
+              <div className="flex flex-wrap gap-3">
+                <select 
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-400 outline-none focus:border-[#D4AF37]/40"
+                  value={logFilter.platform}
+                  onChange={(e) => setLogFilter({ ...logFilter, platform: e.target.value })}
+                >
+                  <option value="">Todas las Plataformas</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                  <option value="EMAIL">Email</option>
+                  <option value="OPENPAY">Openpay</option>
+                  <option value="CORE">Nexus Core</option>
+                </select>
+
+                <select 
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase text-slate-400 outline-none focus:border-[#D4AF37]/40"
+                  value={logFilter.organizationId}
+                  onChange={(e) => setLogFilter({ ...logFilter, organizationId: e.target.value })}
+                >
+                  <option value="">Todos los Nodos</option>
+                  {tenants.map((t: any) => (
+                    <option key={t.id} value={t.subdomain}>{t.name}</option>
+                  ))}
+                </select>
+
+                <button 
+                  onClick={() => setLogFilter({ platform: '', organizationId: '', level: '' })}
+                  className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 scrollbar-custom">
               {clusterLogs.length > 0 ? clusterLogs.map((log: any) => (

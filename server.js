@@ -595,6 +595,18 @@ app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req,
 });
 
 
+// --- SALES MANAGEMENT ---
+app.get('/api/sales', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const sales = await prisma.sale.findMany({
+            where: { tenantId: req.tenantUuid || undefined, organizationId: req.organizationId || 'demo' },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+        res.json(sales);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- SAAS TENANT MANAGEMENT (GOD MODE ONLY) ---
 
 app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (req, res) => {
@@ -632,6 +644,10 @@ app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) =
 // --- SAAS GLOBAL ANALYTICS (GOD MODE) ---
 app.get('/api/saas/stats', authenticateToken, checkGodMode, async (req, res) => {
     try {
+        const start = Date.now();
+        await prisma.$queryRaw`SELECT 1`;
+        const dbLatency = Date.now() - start;
+
         const totalTenants = await prisma.tenant.count();
         const activeSubscriptions = await prisma.subscription.count({ where: { status: 'ACTIVE' } });
 
@@ -654,9 +670,10 @@ app.get('/api/saas/stats', authenticateToken, checkGodMode, async (req, res) => 
             mrr,
             totalRevenue: revenueRes._sum.amount || 0,
             systemHealth: {
-                uptime: '99.98%',
-                latency: '12ms',
-                nodes: 1
+                uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
+                latency: `${dbLatency}ms`,
+                nodeVersion: process.version,
+                memoryUsage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
             }
         });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -747,7 +764,14 @@ app.delete('/api/saas/tenants/:id', authenticateToken, checkGodMode, async (req,
 // --- CLUSTER CLOUD LOGS (AUDIT) ---
 app.get('/api/saas/logs', authenticateToken, checkGodMode, async (req, res) => {
     try {
+        const { platform, organizationId, level } = req.query;
+        const where = {};
+        if (platform) where.platform = platform;
+        if (organizationId) where.organizationId = organizationId;
+        if (level) where.status = level;
+
         const logs = await prisma.integrationLog.findMany({
+            where,
             orderBy: { createdAt: 'desc' },
             take: 100
         });

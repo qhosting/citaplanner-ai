@@ -453,6 +453,13 @@ export const api = {
   },
 
   // Sales
+  getSales: async (): Promise<any[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/sales`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
   processSale: async (saleData: any): Promise<{ success: boolean, saleId?: string, date?: string }> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/sales`, {

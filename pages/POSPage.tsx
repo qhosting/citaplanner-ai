@@ -28,7 +28,14 @@ export const POSPage: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | 'MERCADOPAGO'>('CASH');
   const [amountTendered, setAmountTendered] = useState<string>('');
+  
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [clientName, setClientName] = useState('');
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: api.getClients
+  });
 
   const [lastSale, setLastSale] = useState<{ id: string, date: string, items: CartItem[], total: number, paymentMethod: PaymentMethod | 'MERCADOPAGO', change: number, clientName?: string } | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -223,21 +230,41 @@ export const POSPage: React.FC = () => {
             return (
               <button
                 key={item.id} onClick={() => hasStock && addToCart(item)} disabled={!hasStock}
-                className={`flex flex-col justify-between glass-card p-6 rounded-[2rem] md:rounded-[2.5rem] border-main transition-all text-left group relative overflow-hidden ${!hasStock ? 'opacity-30 grayscale cursor-not-allowed text-muted' : 'bg-card-theme hover:border-[#D4AF37]/30 hover:shadow-2xl'}`}
+                className={`flex flex-col glass-card p-0 rounded-[2.5rem] border-main transition-all text-left group relative overflow-hidden h-full ${!hasStock ? 'opacity-30 grayscale cursor-not-allowed text-muted' : 'bg-card-theme hover:border-[#D4AF37]/30 hover:shadow-2xl'}`}
               >
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <span className={`text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${isProduct ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>{isProduct ? 'ACTIVO' : 'RITUAL'}</span>
-                    {'sku' in item && <span className="text-[9px] text-muted font-mono font-bold">{item.sku}</span>}
+                {/* 🖼️ MEDIA CONTAINER */}
+                <div className="h-48 w-full relative overflow-hidden bg-white/[0.03]">
+                  {('imageUrl' in item && item.imageUrl) ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/5 group-hover:text-[#D4AF37]/10 transition-colors">
+                      {isProduct ? <Package size={64} /> : <BriefcaseMedical size={64} />}
+                    </div>
+                  )}
+                  <div className="absolute top-4 left-4">
+                    <span className={`text-[8px] font-black px-4 py-2 rounded-full uppercase tracking-[0.2em] backdrop-blur-md border ${isProduct ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/30'}`}>
+                      {isProduct ? 'Activo Físico' : 'Ritual / Servicio'}
+                    </span>
                   </div>
-                  <h3 className="font-black text-main text-lg leading-tight uppercase tracking-tight group-hover:text-[#D4AF37] transition-colors">{item.name}</h3>
+                  {isProduct && item.stock <= item.minStock && (
+                     <div className="absolute bottom-4 left-4 bg-red-500 text-white text-[8px] font-black uppercase px-3 py-1 rounded-lg animate-pulse">Low Stock</div>
+                  )}
                 </div>
-                <div className="mt-8 flex justify-between items-end">
+
+                <div className="p-8 flex flex-col flex-1 justify-between">
                   <div>
-                    <span className="block text-2xl font-black text-main tracking-tighter">${item.price.toFixed(2)}</span>
-                    {isProduct && <span className={`text-[10px] font-black uppercase tracking-widest ${item.stock <= item.minStock ? 'text-red-500 animate-pulse' : 'text-muted'}`}>Stock: {item.stock}</span>}
+                    {'sku' in item && <span className="text-[9px] text-[#D4AF37] font-mono font-bold tracking-widest block mb-2">{item.sku}</span>}
+                    <h3 className="font-black text-main text-xl leading-tight uppercase tracking-tighter group-hover:text-[#D4AF37] transition-colors">{item.name}</h3>
+                    <p className="text-[10px] text-muted font-bold uppercase tracking-widest mt-2 line-clamp-1">{item.category || 'Sin Categoría'}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-2xl bg-black/5 flex items-center justify-center text-muted group-hover:bg-[#D4AF37] group-hover:text-black transition-all"><Plus size={20} /></div>
+
+                  <div className="mt-10 flex justify-between items-end">
+                    <div>
+                      <span className="block text-3xl font-black text-main tracking-tighter">${item.price.toFixed(2)}</span>
+                      {isProduct && <span className="text-[10px] font-black uppercase tracking-widest text-muted">Disponibles: {item.stock}</span>}
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted group-hover:bg-[#D4AF37] group-hover:text-black transition-all shadow-xl"><Plus size={24} /></div>
+                  </div>
                 </div>
               </button>
             );
@@ -295,7 +322,54 @@ export const POSPage: React.FC = () => {
             <div className="p-10 space-y-8 bg-main">
               <div>
                 <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-3 ml-2">Identidad del Cliente</label>
-                <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Ej: Cliente Mostrador VIP" className="w-full p-5 bg-black/5 dark:bg-black/40 border border-main rounded-2xl text-main font-bold outline-none focus:border-[#D4AF37]" />
+                <div className="relative group">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" value={clientName} 
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        if (selectedClient && e.target.value !== selectedClient.name) {
+                          setSelectedClient(null);
+                        }
+                      }} 
+                      placeholder="Buscar o escribir cliente..." 
+                      className="w-full p-5 bg-black/5 dark:bg-black/40 border border-main rounded-2xl text-main font-bold outline-none focus:border-[#D4AF37] transition-all" 
+                    />
+                    {selectedClient && (
+                      <div className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl flex items-center gap-2 text-[8px] font-black uppercase">
+                        <CheckCircle2 size={12} /> Vinculado
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 🔍 Client Search Dropdown */}
+                  {clientName && !selectedClient && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-black border border-white/10 rounded-2xl p-2 z-[300] shadow-2xl max-h-48 overflow-y-auto scrollbar-custom">
+                      {clients
+                        .filter((c: any) => c.name.toLowerCase().includes(clientName.toLowerCase()) || c.phone?.includes(clientName))
+                        .slice(0, 5)
+                        .map((c: any) => (
+                          <button
+                            key={c.id}
+                            onClick={() => {
+                              setSelectedClient(c);
+                              setClientName(c.name);
+                            }}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-all text-left"
+                          >
+                            <div>
+                              <p className="text-[10px] font-black text-white uppercase">{c.name}</p>
+                              <p className="text-[8px] font-bold text-slate-500 uppercase">{c.phone || 'Sin Teléfono'}</p>
+                            </div>
+                            <Plus size={14} className="text-[#D4AF37]" />
+                          </button>
+                        ))}
+                      <div className="p-3 border-t border-white/5 text-center">
+                        <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest italic">Presione enter para usar como cliente nuevo</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button onClick={() => setPaymentMethod('CASH')} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${paymentMethod === 'CASH' ? 'border-green-500 bg-green-500/10 text-green-600' : 'border-main text-muted hover:border-muted'}`}><Banknote size={24} /><span className="font-bold text-xs">Efectivo</span></button>

@@ -208,6 +208,7 @@ export interface Client {
   notes?: string;
   birthDate?: string;
   treatmentHistory: TreatmentRecord[];
+  createdAt?: string;
 }
 
 export interface InventoryMovement {
