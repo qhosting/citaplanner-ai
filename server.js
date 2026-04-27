@@ -2620,6 +2620,8 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
             heroSlides: data.heroSlides || [],
             stats: data.stats || [],
             testimonials: data.testimonials || [],
+            serviceIds: data.serviceIds || [],
+            productIds: data.productIds || [],
             subdomain: organizationId,
             bridge: tenant ? {
                 enabled: tenant.bridgeEnabled || false,
@@ -2671,7 +2673,9 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
             services: Array.isArray(s.services) ? s.services : [],
             heroSlides: Array.isArray(s.heroSlides) ? s.heroSlides : [],
             stats: Array.isArray(s.stats) ? s.stats : [],
-            testimonials: Array.isArray(s.testimonials) ? s.testimonials : []
+            testimonials: Array.isArray(s.testimonials) ? s.testimonials : [],
+            serviceIds: Array.isArray(s.serviceIds) ? s.serviceIds : [],
+            productIds: Array.isArray(s.productIds) ? s.productIds : []
         };
 
         const updated = await prisma.landingSetting.upsert({
