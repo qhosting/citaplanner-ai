@@ -2385,7 +2385,7 @@ app.delete('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, re
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/professionals', tenantMiddleware, async (req, res) => {
     try {
         const professionals = await prisma.professional.findMany({
             where: { organizationId: req.tenantId || 'demo' },
