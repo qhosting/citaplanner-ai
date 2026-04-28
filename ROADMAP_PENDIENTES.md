@@ -1,98 +1,14 @@
-# 🚨 ROADMAP PENDIENTES - CitaPlanner AI
-## Tareas Críticas, Features Faltantes & Deuda Técnica
+# Roadmap de Pendientes & Mejoras - CitaPlanner AI
 
----
+## Historial de Versiones y Hitos
 
-## 🔴 **PRIORIDAD CRÍTICA (ALTA)**
-
-### **🔐 Seguridad & Compliance**
-- [x] **Implementar rate limiting** en endpoints de autenticación
-- [x] **Encriptar contraseñas con bcrypt/argon2**
-- [x] **Validar y sanitizar inputs del usuario** (Zod Schemas implementados)
-- [ ] **Implementar refresh tokens**
-  - **Motivo**: JWT expiración fija (8h) sin renovación
-  - **Impacto**: UX deficiente (sesiones cortas)
-  - **Estimación**: 6 horas
-
-### **🗄️ Base de Datos**
-- [x] **Migrar de SQL raw a un ORM (Prisma)**
-- [x] **Crear sistema de migraciones versionado** (Aurum Nexus v5.1 integrado)
-- [ ] **Implementar transacciones ACID en operaciones críticas**
-  - **Motivo**: Bookings + Pagos deben ser atómicos
-  - **Impacto**: Inconsistencias en la base de datos
-  - **Estimación**: 4 horas
-
-### **🔧 Infraestructura**
-- [ ] **Completar configuración de Google Cloud**
-  - **Motivo**: Archivo `GOOGLE_CLOUD_SETUP.md` presente pero no validado
-  - **Impacto**: Funcionalidades dependientes de GCP no operativas
-  - **Estimación**: 6 horas + costos de infra
-
-- [ ] **Configurar SSL/TLS en producción**
-  - **Motivo**: No se observa configuración de HTTPS en Dockerfile/Compose
-  - **Impacto**: Datos sensibles expuestos en tránsito
-  - **Estimación**: 3 horas (con reverse proxy)
-
-- [ ] **Implementar monitoreo y logs centralizados**
-  - **Motivo**: No hay sistema de observabilidad (APM, logging)
-  - **Impacto**: Imposible debuggear en producción
-  - **Estimación**: 8 horas (Grafana/Loki stack)
-
----
-
-## 🟠 **PRIORIDAD ALTA (MEDIA)**
-
-### **📱 Features de Producción Faltantes**
-- [x] **Preparar DB para SaaS Multi-tenant (Custom Domains)**
-  - **Motivo**: Requerimiento clave del modelo de negocio (CEO -> Negocios)
-  - **Impacto**: Completado (Web Builder v2: Galería + Servicios dinámicos + Shula Dark Theme)
+### **Fase 1: Estabilización y Core (v5.0)**
+- [x] **Arquitectura Monotenant Global**
+  - **Motivo**: Eliminar complejidad de multi-tenant innecesaria para despliegues dedicados.
+  - **Impacto**: Completado (Single organization model).
   - **Estimación**: Completado
 
-- [x] **Mejoras UX / UI**
-  - **Motivo**: Refinamiento de la experiencia de usuario
-  - **Impacto**: Fix Modal Clientes (Z-Index), Web Builder Preview Real-time
-  - **Estimación**: Completado
-
-- [ ] **Recuperación de contraseña vía email**
-  - **Motivo**: Funcionalidad básica ausente
-  - **Impacto**: UX deficiente
-  - **Estimación**: 4 horas
-
-- [x] **Web Builder: Carga de Datos Default (Shula Studio)**
-  - **Motivo**: Plantilla vacía al iniciar
-  - **Impacto**: Completado (Pre-filled Shula Template)
-  - **Estimación**: Completado
-
-- [x] **Fix: Módulo Configuración**
-  - **Motivo**: Reporte de fallo en carga
-  - **Impacto**: Completado (Resolved Auth & Defaults)
-  - **Estimación**: Completado
-
-- [x] **Public Booking: Contexto Multi-tenant**
-  - **Motivo**: `/book` carga datos genéricos o de demo
-  - **Impacto**: Completado (Dynamic Styling, Logo & Address)
-  - **Estimación**: Completado
-
-- [x] **Clientes: Importación Masiva & Exportación**
-  - **Motivo**: Gestión de bases de datos grandes
-  - **Impacto**: Completado (CSV Import/Export)
-  - **Estimación**: Completado
-
-- [x] **Nexus: Plan Manager & Subscription Override**
-  - **Motivo**: Nexus no tenía UI para crear planes ni gestionar suscripciones manualmente
-  - **Impacto**: Completado (CRUD Plans, Trial Days, Status Override, Billing Log)
-  - **Estimación**: Completado
-
-- [x] **Landing Page: Multi-Tenant Dinámico por Web Builder**
-  - **Motivo**: Todos los tenants mostraban el mismo landing con colores y textos hardcodeados
-  - **Impacto**: Completado (Colores, branding, servicios, galería y contacto dinámicos por tenant)
-  - **Estimación**: Completado
-
-- [x] **Fix: Integridad de Datos, Galería & Auth Nexus**
-  - **Motivo**: Error colisión ID, falta de columnas JSON para galería y fallo login Modo Dios.
-  - **Impacto**: Completado (API v6.0: Soporte total para Galería/Services/Hero, Registro seguro restringido a Master Hub, Auth Fixed)
-  - **Estimación**: Completado
-
+### **Fase 2: Visual & UX Premium (v6.0)**
 - [x] **Branding Dinámico & Eliminación de Flash**
   - **Motivo**: Aparecía "Citaplanner" brevemente antes de cargar settings.
   - **Impacto**: Completado (Inyección dinámica en index.html y React init).
@@ -103,21 +19,41 @@
   - **Impacto**: Completado (Engine v6.2 con soporte @theme y PostCSS 8).
   - **Estimación**: Completado
 
-- [x] **Refactorización a Soporte Monotenant**
-  - **Motivo**: Necesidad de despliegues dedicados simplificados.
-  - **Impacto**: Completado (Soporte para `ORGANIZATION_ID` en entorno).
-  - **Estimación**: Completado
-
-### **Nexus Stability (v6.4)**
-- [x] Gestión de Sesiones WAHA (Master OTP Session)
-- [x] Monitor de Estado de Integraciones (Settings UI)
-- [x] Matriz Maestra de Especialistas (Schedules Matrix)
-- [x] Intelligence Header (Occupancy Analytics)
-
 - [x] **Analytics Hub: Data Bindings & Desktop Optimization**
   - **Motivo**: Analytics usaba mocks y visualización pobre en desktop.
   - **Impacto**: Completado (Live KPIs, Revenue Charts, Top Products & AI DAFO).
   - **Estimación**: Completado
 
-**Última actualización**: 2026-05-15 (v6.4 Nexus Stability)
-**Estado**: 🚀 Sistema inteligente. Analytics Hub operativo con datos reales y optimización desktop premium.
+### **Fase 3: Inteligencia & Integraciones (v6.4)**
+- [x] **Matriz Maestra de Especialistas (Schedules Matrix)**
+  - **Motivo**: Necesidad de una vista densa y profesional para gestionar múltiples agendas simultáneamente.
+  - **Impacto**: Completado (Grid 7-días, Intelligence Header, real-time occupancy).
+  - **Estimación**: Completado
+
+- [x] **WAHA Security & Diagnostics Hub**
+  - **Motivo**: Asegurar la comunicación por WhatsApp y permitir diagnósticos en vivo.
+  - **Impacto**: Completado (API Key Auth, Status Monitor, Live Test Messaging).
+  - **Estimación**: Completado
+
+- [x] **Nexus Stability (v6.4)**
+  - [x] Gestión de Sesiones WAHA (Master OTP Session)
+  - [x] Monitor de Estado de Integraciones (Settings UI)
+  - [x] Prueba de Envío de Mensaje (Live Diagnostics)
+  - [x] Matriz Maestra de Especialistas (Schedules Matrix)
+  - [x] Intelligence Header (Occupancy Analytics)
+
+---
+
+## Próximos Pasos (Backlog)
+
+### **Fase 4: Transacciones & Backend (v7.0)**
+- [ ] **ACID Transactions en Reservas**
+  - **Motivo**: Prevenir sobreventas en entornos de alta concurrencia.
+  - **Impacto**: Alta criticidad para escalabilidad.
+- [ ] **Módulo de Inventarios Avanzado**
+  - **Motivo**: Controlar stock de productos vinculados a servicios (ej. tintes, pestañas).
+- [ ] **IA Predictiva de Cancelaciones**
+  - **Motivo**: Detectar patrones de usuarios que suelen faltar para enviar recordatorios agresivos.
+
+**Última actualización**: 2026-04-28 (v6.4 Nexus Stability)
+**Estado**: 🚀 Sistema inteligente y estable. Analytics Hub operativo con datos reales y optimización desktop premium. WhatsApp Diagnostic Suite activo.

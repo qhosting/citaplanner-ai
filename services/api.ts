@@ -182,6 +182,16 @@ export const api = {
     } catch { return { success: false, status: 'ERROR' }; }
   },
 
+  testWahaMessage: async (phone: string): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/integrations/waha/test`, {
+        method: 'POST',
+        body: JSON.stringify({ phone })
+      });
+      return await res.json();
+    } catch (e: any) { return { success: false, error: e.message }; }
+  },
+
   getIntegrationLogs: async (): Promise<any[]> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/integrations/status`);

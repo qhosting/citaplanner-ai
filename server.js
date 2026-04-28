@@ -1582,6 +1582,19 @@ app.get('/api/integrations/waha/status', async (req, res) => {
     } catch (e) { res.json({ success: false, status: 'ERROR', message: e.message }); }
 });
 
+app.post('/api/integrations/waha/test', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ error: "Teléfono requerido" });
+
+        const testMessage = `🚀 *Nexus Diagnostic:* Tu conexión con WAHA (${WAHA_OTP_SESSION}) es EXITOSA. CitaPlanner está listo para operar.`;
+        
+        await sendWhatsAppMessage(phone, testMessage, null, req.tenantId);
+        
+        res.json({ success: true, message: "Mensaje de prueba enviado exitosamente" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/integrations/status', async (req, res) => {
     try {
         const where = {};

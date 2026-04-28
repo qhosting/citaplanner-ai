@@ -20,10 +20,29 @@ export const SettingsPage: React.FC = () => {
    const [masterIcalToken, setMasterIcalToken] = useState<string>('');
    const [generatingToken, setGeneratingToken] = useState(false);
    const [wahaStatus, setWahaStatus] = useState<any>(null);
+   const [testPhone, setTestPhone] = useState('');
+   const [testingWaha, setTestingWaha] = useState(false);
 
    useEffect(() => {
       loadData();
    }, []);
+
+   const handleTestWaha = async () => {
+      if (!testPhone) return toast.error("Ingresa un número para la prueba");
+      setTestingWaha(true);
+      try {
+         const res = await api.testWahaMessage(testPhone);
+         if (res.success) {
+            toast.success("Mensaje de diagnóstico enviado!");
+         } else {
+            toast.error(res.error || "Falla en el envío");
+         }
+      } catch (e) {
+         toast.error("Error en comunicación con el nodo");
+      } finally {
+         setTestingWaha(false);
+      }
+   };
 
    const loadData = async () => {
       setLoading(true);
@@ -321,6 +340,29 @@ export const SettingsPage: React.FC = () => {
                               >
                                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Estado
                               </button>
+
+                              <div className="pt-6 border-t border-white/5 space-y-4">
+                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Prueba de Envío (Diagnóstico)</p>
+                                 <div className="flex gap-3">
+                                    <input 
+                                       type="text" 
+                                       placeholder="521..." 
+                                       value={testPhone}
+                                       onChange={e => setTestPhone(e.target.value)}
+                                       className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500/50"
+                                    />
+                                    <button 
+                                       onClick={handleTestWaha}
+                                       disabled={testingWaha}
+                                       className="bg-emerald-500 text-black px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"
+                                    >
+                                       {testingWaha ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Probar
+                                    </button>
+                                 </div>
+                                 <p className="text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">
+                                    Asegúrate de incluir código de país (ej. 521 para México).
+                                 </p>
+                              </div>
                            </div>
                         </div>
 
