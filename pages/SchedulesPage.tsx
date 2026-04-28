@@ -583,7 +583,8 @@ export const SchedulesPage: React.FC = () => {
                         })}
                      </div>
                   </div>
-               ) : (
+               </div>
+            ) : (
                   <div className="glass-card rounded-[3.5rem] border-theme p-10 animate-entrance">
                      <div className="mb-12">
                         <h3 className="text-2xl font-black text-main uppercase tracking-tighter">Excepciones y Bloqueos</h3>
