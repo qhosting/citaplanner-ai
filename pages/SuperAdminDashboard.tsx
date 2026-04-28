@@ -32,6 +32,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [showNewAdminForm, setShowNewAdminForm] = useState(false);
 
   // New Plan State
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [planForm, setPlanForm] = useState({ id: '', title: '', price: 0, description: '', currency: 'MXN' });
 
   const [logFilter, setLogFilter] = useState({ platform: '', organizationId: '', level: '' });
@@ -1111,7 +1112,6 @@ export const SuperAdminDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
       )}
     </div>
   );

@@ -11,7 +11,6 @@ import {
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { api } from './services/api';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
