@@ -239,7 +239,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
 const InternalFooter = () => {
   const location = useLocation();
   const { theme } = useTheme();
-  if (location.pathname === '/' || location.pathname === '/login') return null;
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/book') return null;
 
   return (
     <footer className={`w-full border-t pt-16 pb-8 px-6 md:px-10 transition-colors ${theme === 'dark' ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'

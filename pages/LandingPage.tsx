@@ -441,7 +441,8 @@ export const LandingPage: React.FC = () => {
             <Link 
               to="/book" 
               onClick={() => setMobileMenuOpen(false)}
-              className="mt-8 px-10 py-6 rounded-3xl bg-indigo-600 text-white text-center font-black text-xs uppercase tracking-widest shadow-2xl"
+              className="mt-8 px-10 py-6 rounded-3xl text-white text-center font-black text-xs uppercase tracking-widest shadow-2xl"
+              style={{ backgroundColor: accent }}
             >
               Agendar Ahora
             </Link>

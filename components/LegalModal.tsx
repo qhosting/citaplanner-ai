@@ -53,7 +53,11 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose, settings 
           )}
         </div>
         <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end">
-          <button onClick={onClose} className="px-10 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-indigo-500 transition-all shadow-xl">
+          <button 
+            onClick={onClose} 
+            className="px-10 py-4 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all shadow-xl hover:opacity-90"
+            style={{ backgroundColor: settings.primaryColor || '#D4AF37' }}
+          >
             Cerrar Aviso
           </button>
         </div>

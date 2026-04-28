@@ -23,23 +23,26 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'CitaPlanner AI',
-          short_name: 'CitaPlanner',
-          description: 'Gestión de Lujo Simplificada',
+          name: env.BRAND_NAME || 'Luxury Business Suite',
+          short_name: env.BRAND_NAME || 'Luxury Suite',
+          description: `Gestión de ${env.BRAND_NAME || 'Lujo'} Simplificada`,
           theme_color: '#D4AF37',
           background_color: '#050505',
           display: 'standalone',
+          orientation: 'portrait',
           start_url: '/',
           icons: [
             {
               src: 'https://cdn-icons-png.flaticon.com/512/3771/3771518.png',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any maskable'
             },
             {
               src: 'https://cdn-icons-png.flaticon.com/512/3771/3771518.png',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any maskable'
             }
           ]
         }

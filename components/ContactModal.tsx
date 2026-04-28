@@ -14,12 +14,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, set
 
   const whatsappLink = `https://wa.me/${(settings.whatsappPhone || settings.contactPhone || '').replace(/\D/g, '')}`;
 
+  const accent = settings.primaryColor || '#D4AF37';
+
   return (
     <div className="fixed inset-0 z-[800] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6 animate-entrance">
-      <div className="bg-[#0a0a0a] border border-[#D4AF37]/30 w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl shadow-[#D4AF37]/10">
+      <div className="bg-[#0a0a0a] border w-full max-w-lg rounded-[3rem] overflow-hidden shadow-2xl" style={{ borderColor: `${accent}4d`, boxShadow: `0 0 40px ${accent}1a` }}>
         <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
           <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
-            <Phone size={20} className="text-[#D4AF37]" /> Contacto & Horarios
+            <Phone size={20} style={{ color: accent }} /> Contacto & Horarios
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
             <X size={24} />
@@ -29,11 +31,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, set
         <div className="p-10 space-y-10">
           {/* Ubicación */}
           <div className="flex gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center text-[#D4AF37] shrink-0 border border-[#D4AF37]/20">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border" style={{ backgroundColor: `${accent}1a`, color: accent, borderColor: `${accent}33` }}>
               <MapPin size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-2">Visítanos</p>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: accent }}>Visítanos</p>
               <p className="text-white font-medium text-sm leading-relaxed">{settings.address || "Dirección no disponible"}</p>
             </div>
           </div>
@@ -85,7 +87,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, set
         <div className="p-8 bg-black/40 border-t border-white/5">
           <button 
             onClick={onClose}
-            className="w-full py-4 bg-white/5 text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:text-white hover:bg-white/10 transition-all"
+            className="w-full py-4 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:opacity-90 transition-all shadow-xl"
+            style={{ backgroundColor: accent }}
           >
             Cerrar Ventana
           </button>
