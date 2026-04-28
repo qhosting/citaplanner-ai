@@ -270,24 +270,32 @@ export const WebBuilderPage: React.FC = () => {
                                 </div>
                             </section>
 
-                            {/* Hero Section */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
-                                    <Layout size={16} /> Identidad Hero
-                                </h3>
+                            {/* Global Identity (Shared with Console Master) */}
+                            <section className="bg-[#D4AF37]/5 border-l-2 border-[#D4AF37] p-6 rounded-r-3xl space-y-5">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
+                                        <ShieldAlert size={16} /> Identidad del Nodo (Global)
+                                    </h3>
+                                    <button 
+                                        onClick={() => window.location.href = '/settings'}
+                                        className="text-[8px] font-black text-zinc-500 hover:text-[#D4AF37] uppercase tracking-widest transition-all"
+                                    >
+                                        Editar en Consola
+                                    </button>
+                                </div>
                                 <div className="space-y-3">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Nombre del Negocio</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Nombre de Marca</label>
                                         <input
                                             type="text"
                                             value={settings.businessName}
                                             onChange={e => setSettings({ ...settings, businessName: e.target.value })}
                                             placeholder="Ej: Shula Studio"
-                                            className="w-full p-4 bg-input-theme text-main font-black text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
+                                            className="w-full p-4 bg-black/40 text-main font-black text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-white/5 rounded-2xl"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Slogan</label>
+                                        <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-2">Slogan de Marketing</label>
                                         <input
                                             type="text"
                                             value={settings.slogan || ''}
