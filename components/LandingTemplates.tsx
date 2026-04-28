@@ -400,20 +400,42 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {displayServices.map((s, i) => (
-                            <div key={i} className="group flex flex-col items-center text-center p-8 bg-zinc-900/50 rounded-lg border border-white/5 hover:border-[#D4AF37] transition-all duration-300 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-[#D4AF37] opacity-0 group-hover:opacity-5 transition-opacity" />
-                                
-                                <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-zinc-950 border border-white/5 group-hover:border-[#D4AF37]/50 shadow-inner">
-                                    <Sparkles size={24} style={{ color: magenta }} className="group-hover:scale-110 transition-transform" />
+                            <Link 
+                                key={i} 
+                                to={`/book?serviceId=${s.id}`}
+                                className="group flex flex-col bg-[#0d0d0d] rounded-3xl border border-white/5 hover:border-[#D4AF37]/50 transition-all duration-500 overflow-hidden shadow-2xl relative"
+                            >
+                                <div className="aspect-[4/5] overflow-hidden relative">
+                                    <img 
+                                        src={s.imageUrl || 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80'} 
+                                        alt={s.name}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-transparent to-transparent" />
+                                    <div className="absolute bottom-6 left-6 right-6 text-left">
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">{s.category || 'Servicio'}</p>
+                                            <h3 className="text-xl font-playfair font-black text-white leading-tight">{s.name}</h3>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-playfair font-black text-white mb-3 tracking-wide">{s.name}</h3>
-                                <p className="text-sm text-zinc-500 font-light leading-relaxed mb-6 flex-1">{s.description}</p>
                                 
-                                <div className="w-full flex justify-between items-center pt-6 border-t border-white/5">
-                                    <span className="font-black text-lg" style={{ color: magenta }}>${s.price}</span>
-                                    <Link to="/book" className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:underline">Agendar</Link>
+                                <div className="p-6 pt-2 space-y-4 flex flex-col flex-1 text-left">
+                                    <p className="text-xs text-zinc-500 font-light leading-relaxed line-clamp-3">
+                                        {s.description || 'Experiencia exclusiva diseñada para resaltar tu belleza natural con técnicas de vanguardia.'}
+                                    </p>
+                                    
+                                    <div className="mt-auto flex justify-between items-center pt-6 border-t border-white/5">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-1">Inversión</span>
+                                            <span className="font-black text-xl text-white">${s.price}</span>
+                                        </div>
+                                        <div className="px-6 py-3 rounded-xl bg-white/5 group-hover:bg-[#D4AF37] group-hover:text-black text-white text-[10px] font-black uppercase tracking-widest transition-all">
+                                            Agendar
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

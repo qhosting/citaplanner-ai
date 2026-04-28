@@ -6,7 +6,7 @@ import {
   Scissors, Wand2, Star, ShieldCheck, Heart, Phone, Mail, FileText, AlertCircle, ShieldAlert
 } from 'lucide-react';
 import { Professional, Service, Appointment, AppointmentStatus, LandingSettings } from '../types';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
@@ -119,9 +119,9 @@ export const BookingPage: React.FC = () => {
       try {
         const [setRes, s, p, a] = await Promise.all([
           api.getLandingSettings(),
-          api.getServices(),
-          api.getProfessionals(),
-          api.getAppointments()
+          api.getLandingServices(),
+          api.getLandingProfessionals(),
+          api.getLandingAppointments()
         ]);
         
         if (setRes.success && setRes.value && Object.keys(setRes.value).length > 0) {
@@ -144,9 +144,22 @@ export const BookingPage: React.FC = () => {
           } as any);
         }
         
-        setServices(Array.isArray(s) ? s : []);
-        setProfessionals(Array.isArray(p) ? p : []);
-        setAppointments(Array.isArray(a) ? a : []);
+        if (s.success) {
+          const activeServices = Array.isArray(s.value) ? s.value.filter((srv: any) => srv.status === 'ACTIVE') : [];
+          setServices(activeServices);
+          
+          // === AUTO-SELECT SERVICE FROM URL ===
+          const urlServiceId = searchParams.get('serviceId');
+          if (urlServiceId) {
+            const preselected = activeServices.find((srv: any) => srv.id === urlServiceId);
+            if (preselected) {
+              setSelectedService(preselected);
+              setStep(2);
+            }
+          }
+        }
+        setProfessionals(Array.isArray(p.value) ? p.value : []);
+        setAppointments(Array.isArray(a.value) ? a.value : []);
       } catch (error) {
         console.error("Error loading booking data", error);
         // Ensure settings is not null to exit loading state

@@ -359,7 +359,7 @@ const MainLayout = () => {
           const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'Luxury Suite — Reservas');
           
           if (location.pathname !== '/') {
-            document.title = `${baseTitle} | Suite`;
+            document.title = baseTitle;
           }
         }
       } catch (e) {

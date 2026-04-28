@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { X, Phone, MapPin, Clock, MessageCircle, Instagram, Facebook, Twitter } from 'lucide-react';
 import { LandingSettings } from '../types';
 
 interface ContactModalProps {
@@ -13,8 +13,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, set
   if (!isOpen) return null;
 
   const whatsappLink = `https://wa.me/${(settings.whatsappPhone || settings.contactPhone || '').replace(/\D/g, '')}`;
-
   const accent = settings.primaryColor || '#D4AF37';
+
+  // Social Links Normalization
+  const instagram = settings.socialInstagram || settings.socialLinks?.instagram;
+  const facebook = settings.socialFacebook || settings.socialLinks?.facebook;
+  const twitter = settings.socialTwitter || settings.socialLinks?.twitter;
 
   return (
     <div className="fixed inset-0 z-[800] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6 animate-entrance">
@@ -82,6 +86,42 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose, set
               </div>
             </div>
           </div>
+
+          {/* Redes Sociales */}
+          {(instagram || facebook || twitter) && (
+            <div className="pt-6 border-t border-white/5 flex justify-center gap-8">
+              {instagram && (
+                <a 
+                  href={instagram.startsWith('http') ? instagram : `https://instagram.com/${instagram}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-4 rounded-2xl bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                >
+                  <Instagram size={20} />
+                </a>
+              )}
+              {facebook && (
+                <a 
+                  href={facebook.startsWith('http') ? facebook : `https://facebook.com/${facebook}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-4 rounded-2xl bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                >
+                  <Facebook size={20} />
+                </a>
+              )}
+              {twitter && (
+                <a 
+                  href={twitter.startsWith('http') ? twitter : `https://twitter.com/${twitter}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="p-4 rounded-2xl bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                >
+                  <Twitter size={20} />
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="p-8 bg-black/40 border-t border-white/5">
