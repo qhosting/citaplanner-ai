@@ -356,7 +356,7 @@ const MainLayout = () => {
 
           // === MOTOR DE TÍTULO GLOBAL ===
           const bizName = (data.businessName || '').trim();
-          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas en Línea` : 'CitaPlanner — Reservas en Línea');
+          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'Luxury Suite — Reservas');
           
           if (location.pathname !== '/') {
             document.title = `${baseTitle} | Suite`;

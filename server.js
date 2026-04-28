@@ -40,9 +40,10 @@ import { validateRequest } from './middleware/validation.js';
 import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema } from './schemas/index.js';
 
 const prisma = new PrismaClient();
+const BRAND_NAME = process.env.BRAND_NAME || 'CitaPlanner';
 const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 const SYSTEM_VERSION = pkg.version;
-console.log(`\n🚀 [CITAPLANNER] Starting SaaS Engine v${SYSTEM_VERSION}\n`);
+console.log(`\n🚀 [${BRAND_NAME.toUpperCase()}] Starting SaaS Engine v${SYSTEM_VERSION}\n`);
 
 // PERSISTENCIA: Asegurar que la carpeta de uploads exista
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -2601,7 +2602,7 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
         });
 
         const normalized = {
-            businessName: organizationId === 'demo' ? 'CitaPlanner' : (data?.businessName?.trim() || organizationId.toUpperCase() || 'CitaPlanner'),
+            businessName: organizationId === 'demo' ? BRAND_NAME : (data?.businessName?.trim() || organizationId.toUpperCase() || BRAND_NAME),
             primaryColor: data.primaryColor || '#630E14',
             secondaryColor: data.secondaryColor || '#C5A028',
             templateId: data.templateId || 'citaplanner',
