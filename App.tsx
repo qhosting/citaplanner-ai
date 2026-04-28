@@ -27,6 +27,7 @@ const ServicesPage = lazy(() => import('./pages/ServicesPage').then(m => ({ defa
 const BookingPage = lazy(() => import('./pages/BookingPage').then(m => ({ default: (m as any).BookingPage || (m as any).default })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: (m as any).LoginPage || (m as any).default })));
 const ProfessionalDashboard = lazy(() => import('./pages/ProfessionalDashboard').then(m => ({ default: (m as any).ProfessionalDashboard || (m as any).default })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: (m as any).NotFoundPage || (m as any).default })));
 const ClientPortal = lazy(() => import('./pages/ClientPortal').then(m => ({ default: (m as any).ClientPortal || (m as any).default })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: (m as any).ProfilePage || (m as any).default })));
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: (m as any).LandingPage || (m as any).default })));
@@ -257,7 +258,7 @@ const MainLayout = () => {
 
           // === MOTOR DE TÍTULO GLOBAL ===
           const bizName = (data.businessName || '').trim();
-          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'Luxury Suite — Reservas');
+          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'CitaPlanner — Gestión de Reservas');
           
           if (location.pathname !== '/') {
             document.title = baseTitle;
@@ -312,6 +313,7 @@ const MainLayout = () => {
             <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER', 'STUDIO_OWNER', 'GOD_MODE']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/plans-billing" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><PlansPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </div>

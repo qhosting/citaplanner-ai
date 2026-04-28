@@ -26,7 +26,7 @@ import { LegalModal } from '../components/LegalModal';
 import { ContactModal } from '../components/ContactModal';
 
 const DEFAULT_SETTINGS: LandingSettings = {
-  businessName: 'Luxury Business',
+  businessName: '',
   primaryColor: '#C5A028',
   secondaryColor: '#1A1A1A',
   templateId: 'beauty',
@@ -130,11 +130,11 @@ export const LandingPage: React.FC = () => {
   const [legalType, setLegalType] = useState<'PRIVACY' | 'TERMS' | null>(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
 
-  // === FULL SEO/GEO ENGINE ===
+  // === MOTOR DE TÍTULO GLOBAL ===
   useEffect(() => {
-    const cleanBizName = (settings.businessName || '').trim();
-    const pageTitle = settings.seoTitle || (cleanBizName ? `${cleanBizName} — Reservas` : 'Luxury Business — Reservas');
-    const pageDescription = settings.seoDescription || `${settings.businessName} — ${settings.slogan || 'Reserva tu cita en línea'}. ${settings.address || ''}`;
+    const bizName = (settings.businessName || '').trim();
+    const pageTitle = settings.seoTitle || (bizName ? `${bizName} — Reservas` : 'CitaPlanner — Gestión de Reservas');
+    const pageDescription = settings.seoDescription || `${settings.businessName || 'CitaPlanner'} — ${settings.slogan || 'Reserva tu cita en línea'}. ${settings.address || ''}`;
     const heroImage = settings.heroImageUrl || settings.logoUrl || '';
 
     // 1. Title Tag
