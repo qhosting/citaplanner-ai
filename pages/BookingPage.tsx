@@ -11,6 +11,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 import { Footer } from '../components/Footer';
+import { SEO } from '../components/SEO';
 
 // --- HELPERS ---
 const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number, appointments: Appointment[]): string[] => {
@@ -559,6 +560,7 @@ export const BookingPage: React.FC = () => {
 
   return (
     <div className="bg-[#050505] pb-12 selection:bg-[#D4AF37] selection:text-black">
+      <SEO settings={settings} pageTitle={`Reserva Tu Experiencia | ${settings.businessName}`} />
       {/* NAVEGACIÓN PREMIUM */}
       <nav className="fixed top-0 left-0 w-full z-[100] transition-all duration-500 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">

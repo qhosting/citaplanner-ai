@@ -24,13 +24,13 @@
   - **Impacto**: Completado (Live KPIs, Revenue Charts, Top Products & AI DAFO).
   - **Estimación**: Completado
 
-### **Fase 3: Inteligencia & Integraciones (v6.5)**
-- [x] **Marketing Template Engine (Multichannel)**
-  - **Motivo**: Necesidad de estandarizar comunicaciones y reutilizar contenido.
-  - **Impacto**: Completado (Biblioteca de plantillas, placeholders dinámicos y vinculación con campañas).
+### **Fase 3: Inteligencia & Integraciones (v6.6)**
+- [x] **SEO & GEO Advanced Optimization**
+  - **Motivo**: Necesidad de visibilidad en Google y buscadores locales.
+  - **Impacto**: Completado (JSON-LD LocalBusiness, robots.txt, sitemap.xml, GEO tags e inyección dinámica de meta-tags).
   - **Estimación**: Completado
 
-- [x] **Matriz Maestra de Especialistas (Schedules Matrix)**
+- [x] **Marketing Template Engine (Multichannel)**
   - **Motivo**: Necesidad de una vista densa y profesional para gestionar múltiples agendas simultáneamente.
   - **Impacto**: Completado (Grid 7-días, Intelligence Header, real-time occupancy).
   - **Estimación**: Completado

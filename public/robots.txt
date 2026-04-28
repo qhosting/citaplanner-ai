@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /book
+Allow: /servicios
+Disallow: /nexus
+Disallow: /admin
+Disallow: /professional-dashboard
+Disallow: /api
+
+Sitemap: https://citaplanner.com/sitemap.xml

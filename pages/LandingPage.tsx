@@ -182,6 +182,8 @@ export const LandingPage: React.FC = () => {
     setMeta('property', 'og:locale', 'es_MX');
     if (heroImage) setMeta('property', 'og:image', heroImage);
     if (heroImage) setMeta('property', 'og:image:alt', `${settings.businessName} — ${settings.slogan || 'Portada'}`);
+    setMeta('property', 'og:image:width', '1200');
+    setMeta('property', 'og:image:height', '630');
 
     // 5. Twitter Cards
     setMeta('name', 'twitter:card', 'summary_large_image');
@@ -204,6 +206,7 @@ export const LandingPage: React.FC = () => {
     const jsonLdData: any = {
       '@context': 'https://schema.org',
       '@type': 'LocalBusiness',
+      '@id': canonicalUrl,
       name: settings.businessName || 'CitaPlanner',
       description: pageDescription,
       url: canonicalUrl,
@@ -211,16 +214,26 @@ export const LandingPage: React.FC = () => {
       address: settings.address ? {
         '@type': 'PostalAddress',
         streetAddress: settings.address,
+        addressLocality: 'Mexico',
+        addressRegion: 'MX',
         addressCountry: 'MX'
       } : undefined,
       image: heroImage || undefined,
       priceRange: '$$',
-      openingHoursSpecification: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        opens: '09:00',
-        closes: '19:00'
-      }
+      openingHoursSpecification: [
+        {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          opens: '09:00',
+          closes: '20:00'
+        },
+        {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: 'Saturday',
+          opens: '10:00',
+          closes: '18:00'
+        }
+      ]
     };
 
     if (settings.latitude && settings.longitude) {
