@@ -123,20 +123,35 @@ export const BookingPage: React.FC = () => {
           api.getAppointments()
         ]);
         
-        if (setRes.success && setRes.value) {
+        if (setRes.success && setRes.value && Object.keys(setRes.value).length > 0) {
           const set = setRes.value;
           setSettings(set);
           // Update document title
           if (set.businessName) {
             document.title = `Reserva Tu Experiencia | ${set.businessName}`;
           }
+        } else {
+          // Default fallback to prevent infinite loading
+          setSettings({
+            businessName: 'Aurum Studio',
+            primaryColor: '#D4AF37',
+            secondaryColor: '#C5A028',
+            slogan: 'Alta Tecnología en Belleza',
+            aboutText: '',
+            contactPhone: '',
+            maintenanceMode: false
+          } as any);
         }
         
-        setServices(s);
-        setProfessionals(p);
-        setAppointments(a);
+        setServices(Array.isArray(s) ? s : []);
+        setProfessionals(Array.isArray(p) ? p : []);
+        setAppointments(Array.isArray(a) ? a : []);
       } catch (error) {
         console.error("Error loading booking data", error);
+        // Ensure settings is not null to exit loading state
+        if (!settings) {
+          setSettings({ businessName: 'Aurum Studio', primaryColor: '#D4AF37' } as any);
+        }
       } finally {
         setLoading(false);
       }
@@ -146,7 +161,11 @@ export const BookingPage: React.FC = () => {
 
   const availablePros = useMemo(() => {
     if (!selectedService) return [];
-    return professionals.filter(p => p.serviceIds?.includes(selectedService.id) || p.serviceIds?.length === 0);
+    return professionals.filter(p => {
+      // If no serviceIds defined, pro is available for all
+      if (!p.serviceIds || p.serviceIds.trim() === '') return true;
+      return p.serviceIds.includes(selectedService.id);
+    });
   }, [selectedService, professionals]);
 
   const availableSlots = useMemo(() => {
@@ -274,7 +293,13 @@ export const BookingPage: React.FC = () => {
         <p className="text-zinc-400 text-lg">Nuestros especialistas master transformarán tu visión en una realidad.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-        {availablePros.map(pro => (
+        {availablePros.length === 0 ? (
+          <div className="col-span-full text-center py-20 bg-zinc-900/20 rounded-[3.5rem] border border-dashed border-white/10">
+            <User className="mx-auto text-zinc-800 mb-6" size={64} />
+            <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">No hay especialistas vinculados a este servicio</p>
+            <button onClick={() => setStep(1)} className="mt-6 text-[#D4AF37] text-[9px] font-black uppercase tracking-widest hover:underline">Cambiar Servicio</button>
+          </div>
+        ) : availablePros.map(pro => (
           <button
             key={pro.id}
             onClick={() => { setSelectedPro(pro); setStep(3); }}
@@ -593,3 +618,5 @@ export const BookingPage: React.FC = () => {
     </div>
   );
 };
+
+export default BookingPage;

@@ -390,25 +390,6 @@ export const SuperAdminDashboard: React.FC = () => {
         </nav>
       </header>
 
-      {/* 📊 GLOBAL COMMAND METRICS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
-        {[
-          { label: 'Ingresos MRR Est.', value: `$${stats?.mrr || 0}`, icon: TrendingUp, color: 'text-emerald-500', sub: 'Revenue Global' },
-          { label: 'Nodos Activos', value: stats?.activeSubscriptions || 0, icon: Globe, color: 'text-blue-500', sub: `de ${stats?.totalTenants || 0} totales` },
-          { label: 'Uptime Global', value: stats?.systemHealth?.uptime || '99.9%', icon: Activity, color: 'text-[#D4AF37]', sub: 'SLA Status' },
-          { label: 'Cloud Latency', value: stats?.systemHealth?.latency || '--', icon: Cpu, color: 'text-red-500', sub: 'DC Performance' },
-        ].map((s, i) => (
-          <div key={i} className="glass-card p-10 rounded-[3.5rem] border-white/5 relative overflow-hidden group hover:border-red-500/20 transition-all">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-125 transition-all text-white"><s.icon size={64} /></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full ${s.color.replace('text-', 'bg-')}`} /> {s.label}
-            </p>
-            <p className={`text-4xl font-black tracking-tighter ${s.color}`}>{s.value}</p>
-            <p className="text-[9px] font-bold text-slate-600 mt-2 uppercase tracking-tight">{s.sub}</p>
-          </div>
-        ))}
-      </div>
-
       {/* 🖥️ MAIN VIEW AREA */}
       <main className="space-y-12">
         {view === 'DIAGS' && (

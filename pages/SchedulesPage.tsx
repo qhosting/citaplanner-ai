@@ -76,11 +76,17 @@ export const SchedulesPage: React.FC = () => {
    useEffect(() => { loadProfessionals(); }, []);
 
    const loadProfessionals = async () => {
-      setLoading(true);
-      const data = await api.getProfessionals();
-      setProfessionals(data);
-      if (data.length > 0 && !selectedProId) setSelectedProId(data[0].id);
-      setLoading(false);
+      try {
+         setLoading(true);
+         const data = await api.getProfessionals();
+         setProfessionals(data);
+         if (data.length > 0 && !selectedProId) setSelectedProId(data[0].id);
+      } catch (e) {
+         console.error("Error loading professionals:", e);
+         toast.error("Error de sincronización con el nodo de especialistas.");
+      } finally {
+         setLoading(false);
+      }
    };
 
    const selectedPro = professionals.find(p => p.id === selectedProId) || professionals[0];
@@ -189,7 +195,8 @@ export const SchedulesPage: React.FC = () => {
       setSaving(false);
    };
 
-   const isDateBlocked = (date: Date, pro: Professional) => {
+   const isDateBlocked = (date: Date, pro?: Professional) => {
+      if (!pro) return false;
       return pro.exceptions?.some(ex => {
          const start = new Date(ex.startDate);
          const end = new Date(ex.endDate);
@@ -233,7 +240,12 @@ export const SchedulesPage: React.FC = () => {
                   <div className="p-6 bg-input-theme border-b border-theme">
                      <h3 className="text-[10px] font-black text-muted uppercase tracking-widest">Nodos Profesionales</h3>
                   </div>
-                  {professionals.map(pro => (
+                  {professionals.length === 0 ? (
+                     <div className="p-10 text-center">
+                        <User className="mx-auto text-muted/20 mb-4" size={40} />
+                        <p className="text-[9px] font-black text-muted uppercase tracking-widest">No hay nodos activos</p>
+                     </div>
+                  ) : professionals.map(pro => (
                      <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#CE4676]/5 border-[#CE4676]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
                         <div className="flex justify-between items-start">
                            <div>
@@ -255,7 +267,20 @@ export const SchedulesPage: React.FC = () => {
             </div>
 
             <div className="lg:col-span-9">
-               {activeTab === 'MATRIX' ? (
+               {professionals.length === 0 ? (
+                  <div className="glass-card rounded-[3.5rem] border-theme p-20 flex flex-col items-center justify-center text-center animate-entrance">
+                     <div className="w-24 h-24 bg-[#CE4676]/10 rounded-full flex items-center justify-center mb-8">
+                        <Briefcase className="text-[#CE4676]" size={40} />
+                     </div>
+                     <h2 className="text-2xl font-black text-main uppercase tracking-tighter mb-4">Arquitectura Vacía</h2>
+                     <p className="text-xs text-muted font-medium max-w-md mb-10 uppercase tracking-widest leading-loose text-center">
+                        No se han detectado especialistas vinculados a este nodo. Integra tu primer "Nodo Maestro" para comenzar a gestionar horarios y citas.
+                     </p>
+                     <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-12 py-5 rounded-2xl text-[10px] uppercase tracking-widest font-black shadow-2xl">
+                        Integrar Especialista Ahora
+                     </button>
+                  </div>
+               ) : activeTab === 'MATRIX' ? (
                   <div className="glass-card rounded-[3.5rem] border-theme overflow-hidden animate-entrance">
                      <div className="p-8 border-b border-theme bg-input-theme flex justify-between items-center">
                         <div className="flex items-center gap-6">
@@ -642,3 +667,5 @@ export const SchedulesPage: React.FC = () => {
       </div >
    );
 };
+
+export default SchedulesPage;

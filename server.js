@@ -91,6 +91,12 @@ async function ensureSchemaIntegrity() {
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='hero_video_url') THEN
                         ALTER TABLE landing_settings ADD COLUMN hero_video_url TEXT;
                     END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='service_ids') THEN
+                        ALTER TABLE landing_settings ADD COLUMN service_ids JSONB DEFAULT '[]';
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='landing_settings' AND column_name='product_ids') THEN
+                        ALTER TABLE landing_settings ADD COLUMN product_ids JSONB DEFAULT '[]';
+                    END IF;
                 END IF;
             END $$;
         `);
@@ -2427,7 +2433,8 @@ app.get('/api/professionals', tenantMiddleware, async (req, res) => {
                 weeklySchedule: true,
                 exceptions: true,
                 tenantId: true,
-                branchId: true
+                branchId: true,
+                serviceIds: true
             }
         });
         res.json(professionals);
