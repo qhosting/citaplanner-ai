@@ -456,8 +456,7 @@ export const LandingPage: React.FC = () => {
         </div>
       )}
 
-      {/* Universal Footer */}
-      <Footer settings={settings} accent={accent} />
+      {/* Footer handled by App.tsx */}
 
       {/* WhatsApp Floating Button */}
       <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
