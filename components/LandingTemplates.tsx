@@ -22,12 +22,13 @@ interface TemplateProps {
     accent: string;
     currentSlide?: number;
     slides?: any[];
+    onContactClick?: () => void;
 }
 
 // ==========================================
 // 1. TEMPLATE: CITAPLANNER (SaaS Demo)
 // ==========================================
-export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
+export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => {
     const defaultServices = [
         { id: 's1', name: 'Plan Starter', price: 290, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Gestión básica para estudios individuales. Calendario y clientes ilimitados.' },
         { id: 's2', name: 'Plan Professional', price: 950, duration: 30, category: 'SaaS', status: 'ACTIVE' as const, description: 'Para equipos de hasta 5 especialistas. IA de agendamiento incluida.' },
@@ -178,7 +179,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 2. TEMPLATE: MASTER (Ultra-Clean Hub)
 // ==========================================
-export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
+export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => {
     const defaultServices = [
         { id: '1', name: 'Microblading Profesional', price: 2500, duration: 120, category: 'Cejas', status: 'ACTIVE' as const, description: 'Cejas perfectas con técnica de pelo a pelo. Resultados naturales de larga duración.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Nails Art Studio', price: 650, duration: 60, category: 'Uñas', status: 'ACTIVE' as const, description: 'Diseño exclusivo de uñas con materiales premium importados.', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&q=80' },
@@ -196,9 +197,10 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
                 <LogoCitaplanner color="#111" businessName={settings.businessName} customUrl={settings.logoUrl} />
                 <div className="flex items-center gap-8">
                     <div className="hidden md:flex gap-8">
-                        {['Servicios', 'Sucursales', 'Contacto'].map(item => (
+                        {['Servicios', 'Sucursales'].map(item => (
                             <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors">{item}</a>
                         ))}
+                        <button onClick={onContactClick} className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors">Contacto</button>
                     </div>
                     <Link to="/book" className="px-8 py-3 bg-slate-950 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Reservar</Link>
                 </div>
@@ -305,7 +307,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
 // ==========================================
 // 3. TEMPLATE: SHULASTUDIO (Luxury Beauty)
 // ==========================================
-export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => {
+export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => {
     const defaultServices = [
         { id: '1', name: 'Clásicas', price: 950, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Técnica 1 a 1 para un look natural y sofisticado.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Volumen Híbrido', price: 1250, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Mezcla perfecta de clásicas y volumen para mayor densidad.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80' },
@@ -327,9 +329,15 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                     </Link>
                     
                     <div className="hidden md:flex items-center gap-10">
-                        {['Inicio', 'Servicios', 'Galería', 'Contacto'].map(t => (
+                        {['Inicio', 'Servicios', 'Galería'].map(t => (
                             <a key={t} href={`#${t.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 hover:text-[#D4AF37] transition-colors">{t}</a>
                         ))}
+                        <button 
+                            onClick={onContactClick} 
+                            className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 hover:text-[#D4AF37] transition-colors"
+                        >
+                            Contacto
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -485,67 +493,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             ) : null}
 
             {/* 4. Footer */}
-            <footer id="contacto" className="py-20 bg-black border-t border-white/10 px-8">
-                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 text-center md:text-left">
-                    
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-center md:justify-start mb-6">
-                            <LogoCitaplanner size={22} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
-                        </div>
-                        <p className="text-xs text-zinc-500 leading-relaxed font-light">
-                            {settings.aboutText || "Especialistas en la belleza de tu mirada. Usamos productos premium e hipoalergénicos para cuidar la salud de tus pestañas naturales."}
-                        </p>
-                        <div className="flex gap-4 justify-center md:justify-start pt-4">
-                            <a href="#" className="p-2 bg-zinc-900 rounded-full hover:bg-[#CE467B] text-zinc-400 hover:text-white transition-colors"><Instagram size={16} /></a>
-                            <a href="#" className="p-2 bg-zinc-900 rounded-full hover:bg-[#CE467B] text-zinc-400 hover:text-white transition-colors"><Facebook size={16} /></a>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <h4 className="font-playfair font-black text-xl text-white">Contacto</h4>
-                        <ul className="space-y-4 text-xs text-zinc-400 font-light">
-                            <li className="flex items-start justify-center md:justify-start gap-3">
-                                <MapPin size={16} style={{ color: gold }} className="shrink-0" />
-                                <span>{settings.address || "123 Beauty Ave, Suite 100"}</span>
-                            </li>
-                            <li className="flex items-center justify-center md:justify-start gap-3">
-                                <Phone size={16} style={{ color: gold }} className="shrink-0" />
-                                <span>{settings.contactPhone || "+1 (555) 123-4567"}</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div className="space-y-6">
-                        <h4 className="font-playfair font-black text-xl text-white">Horarios</h4>
-                        <ul className="space-y-3 text-xs text-zinc-400 font-light">
-                            <li className="flex justify-between border-b mx-auto md:mx-0 max-w-[200px] border-white/5 pb-2">
-                                <span>Lunes a Viernes</span>
-                                <span className="text-white font-medium">9:00 - 19:00</span>
-                            </li>
-                            <li className="flex justify-between border-b mx-auto md:mx-0 max-w-[200px] border-white/5 pb-2">
-                                <span>Sábados</span>
-                                <span className="text-white font-medium">9:00 - 15:00</span>
-                            </li>
-                            <li className="flex justify-between mx-auto md:mx-0 max-w-[200px] pb-2">
-                                <span>Domingos</span>
-                                <span style={{ color: magenta }}>Cerrado</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div className="max-w-6xl mx-auto mt-20 pt-8 border-t border-white/5 text-center flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold flex items-center gap-4">
-                        <span>© {new Date().getFullYear()} CitaPlanner By Aurum Capital</span>
-                        <span className="opacity-30">|</span>
-                        <span className="opacity-50">v{SYSTEM_VERSION}</span>
-                    </p>
-                    <div className="flex gap-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
-                        <span onClick={() => (window as any).setLegalModal?.('PRIVACY')} className="hover:text-white cursor-pointer transition-colors">Privacidad</span>
-                        <span onClick={() => (window as any).setLegalModal?.('TERMS')} className="hover:text-white cursor-pointer transition-colors">Términos</span>
-                    </div>
-                </div>
-            </footer>
+            {/* Footer delegated to global layout */}
         </div>
     );
 };
@@ -553,7 +501,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
 // ==========================================
 // 4. TEMPLATE: MINIMAL (Aurum Minimal)
 // ==========================================
-export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
+export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => (
     <div className="bg-white text-zinc-950">
         <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
         <nav className="p-8 flex justify-between items-center border-b border-zinc-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
@@ -607,7 +555,7 @@ export const TemplateMinimal: React.FC<TemplateProps> = ({ settings, services, p
 // ==========================================
 // 5. TEMPLATE: LUXURY (Luxury White)
 // ==========================================
-export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides }) => (
+export const TemplateLuxury: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => (
     <div className="bg-[#0a0a0a] text-white">
         <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
         <header className="h-screen relative flex flex-col">
@@ -686,7 +634,8 @@ export const TemplateClassic: React.FC<TemplateProps & {
     whatsappLink: string;
     mobileMenuOpen: boolean;
     setMobileMenuOpen: (o: boolean) => void;
-}> = ({ settings, services, products, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen }) => (
+    onContactClick?: () => void;
+}> = ({ settings, services, products, accent, scrolled, currentSlide, slides, waTarget, whatsappLink, mobileMenuOpen, setMobileMenuOpen, onContactClick }) => (
     <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
         <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 

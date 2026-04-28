@@ -23,6 +23,7 @@ import { WhatsAppButton } from '../components/WhatsAppButton';
 import { SYSTEM_VERSION } from '../src/version';
 import { Footer } from '../components/Footer';
 import { LegalModal } from '../components/LegalModal';
+import { ContactModal } from '../components/ContactModal';
 
 const DEFAULT_SETTINGS: LandingSettings = {
   businessName: 'Luxury Business',
@@ -127,6 +128,7 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   const [legalType, setLegalType] = useState<'PRIVACY' | 'TERMS' | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
@@ -385,6 +387,7 @@ export const LandingPage: React.FC = () => {
           whatsappLink={whatsappLink}
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
+          onContactClick={() => setContactModalOpen(true)}
         />
       );
     }
@@ -392,8 +395,8 @@ export const LandingPage: React.FC = () => {
 
   return (
     <>
-      {/* Legal Modals handled by Footer or inline if needed */}
       <LegalModal type={legalType} onClose={() => setLegalType(null)} settings={settings} />
+      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} settings={settings} />
 
       <div className="min-h-screen bg-[#050505]" style={{ '--accent': accent } as React.CSSProperties}>
       {renderTemplate()}
@@ -409,7 +412,7 @@ export const LandingPage: React.FC = () => {
           </div>
           
           <nav className="flex flex-col gap-8">
-            {['Servicios', 'Nosotros', 'Galería', 'Contacto'].map((item, i) => (
+            {['Servicios', 'Nosotros', 'Galería'].map((item, i) => (
               <a 
                 key={item} 
                 href={`#${item.toLowerCase()}`} 
@@ -420,6 +423,15 @@ export const LandingPage: React.FC = () => {
                 {item}
               </a>
             ))}
+            <button 
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setContactModalOpen(true);
+              }}
+              className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#CE4676] transition-colors text-left"
+            >
+              Contacto
+            </button>
             <Link 
               to="/book" 
               onClick={() => setMobileMenuOpen(false)}
@@ -437,10 +449,8 @@ export const LandingPage: React.FC = () => {
         </div>
       )}
 
-      {/* Common Footer (Enhanced) */}
-      {settings.templateId !== 'shulastudio' && settings.templateId !== 'shula_dark' && (
-        <Footer settings={settings} accent={accent} />
-      )}
+      {/* Universal Footer */}
+      <Footer settings={settings} accent={accent} />
 
       {/* WhatsApp Floating Button */}
       <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
