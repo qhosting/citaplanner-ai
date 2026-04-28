@@ -1595,6 +1595,53 @@ app.post('/api/integrations/waha/test', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// MARKETING TEMPLATES
+app.get('/api/marketing/templates', authenticateToken, async (req, res) => {
+    try {
+        const templates = await prisma.marketingTemplate.findMany({
+            where: { tenantId: req.tenantId },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(templates);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/marketing/templates', authenticateToken, async (req, res) => {
+    try {
+        const { name, content, channel, subject } = req.body;
+        const template = await prisma.marketingTemplate.create({
+            data: {
+                name,
+                content,
+                channel,
+                subject,
+                tenantId: req.tenantId
+            }
+        });
+        res.json(template);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/marketing/templates/:id', authenticateToken, async (req, res) => {
+    try {
+        const { name, content, channel, subject } = req.body;
+        const template = await prisma.marketingTemplate.update({
+            where: { id: req.params.id, tenantId: req.tenantId },
+            data: { name, content, channel, subject }
+        });
+        res.json(template);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/marketing/templates/:id', authenticateToken, async (req, res) => {
+    try {
+        await prisma.marketingTemplate.delete({
+            where: { id: req.params.id, tenantId: req.tenantId }
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/integrations/status', async (req, res) => {
     try {
         const where = {};

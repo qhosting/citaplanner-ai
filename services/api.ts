@@ -199,6 +199,50 @@ export const api = {
     } catch { return []; }
   },
 
+  getCampaigns: async (): Promise<Campaign[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/marketing/campaigns`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createCampaign: async (data: any) => {
+    const res = await fetchWithAuth(`${API_URL}/marketing/campaigns`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  },
+
+  getMarketingTemplates: async (): Promise<any[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/marketing/templates`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createMarketingTemplate: async (data: any) => {
+    const res = await fetchWithAuth(`${API_URL}/marketing/templates`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  },
+
+  deleteMarketingTemplate: async (id: string) => {
+    const res = await fetchWithAuth(`${API_URL}/marketing/templates/${id}`, {
+      method: 'DELETE'
+    });
+    return res.ok;
+  },
+
+  getAutomations: async (): Promise<AutomationRule[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/marketing/automations`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
   updateSubdomain: async (subdomain: string) => {
     const res = await fetchWithAuth(`${API_URL}/settings/subdomain`, {
       method: 'PUT',

@@ -9,7 +9,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export const MarketingPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'CAMPAIGNS' | 'AUTOMATIONS'>('CAMPAIGNS');
+  const [activeTab, setActiveTab] = useState<'CAMPAIGNS' | 'AUTOMATIONS' | 'TEMPLATES'>('CAMPAIGNS');
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ name: '', channel: 'WHATSAPP', content: '', subject: '' });
   
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [newCampaign, setNewCampaign] = useState<Partial<Campaign>>({
@@ -32,6 +34,11 @@ export const MarketingPage: React.FC = () => {
     queryFn: api.getAutomations
   });
 
+  const { data: templates = [], isLoading: loadingTemplates } = useQuery({
+    queryKey: ['marketing-templates'],
+    queryFn: api.getMarketingTemplates
+  });
+
   const createMutation = useMutation({
     mutationFn: api.createCampaign,
     onSuccess: () => {
@@ -39,6 +46,24 @@ export const MarketingPage: React.FC = () => {
       setIsCampaignModalOpen(false);
       setNewCampaign({ name: '', channel: 'EMAIL', targetSegment: 'ALL', content: '', subject: '' });
       toast.success("Campaña creada en borrador");
+    }
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: api.createMarketingTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketing-templates'] });
+      setIsTemplateModalOpen(false);
+      setNewTemplate({ name: '', channel: 'WHATSAPP', content: '', subject: '' });
+      toast.success("Plantilla guardada");
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: api.deleteMarketingTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketing-templates'] });
+      toast.success("Plantilla eliminada");
     }
   });
 
@@ -98,7 +123,7 @@ export const MarketingPage: React.FC = () => {
     }
   };
 
-  if (loadingCampaigns || loadingAutomations) {
+  if (loadingCampaigns || loadingAutomations || loadingTemplates) {
     return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
   }
 
@@ -136,7 +161,17 @@ export const MarketingPage: React.FC = () => {
               : 'border-transparent text-slate-500 hover:text-slate-700'
           }`}
         >
-          <Zap size={18} /> Automatizaciones (Triggers)
+          <Zap size={18} /> Automatizaciones
+        </button>
+        <button
+          onClick={() => setActiveTab('TEMPLATES')}
+          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'TEMPLATES' 
+              ? 'border-indigo-600 text-indigo-600' 
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Plus size={18} /> Plantillas
         </button>
       </div>
 
@@ -203,6 +238,65 @@ export const MarketingPage: React.FC = () => {
            )}
         </div>
       )}
+
+      {activeTab === 'TEMPLATES' && (
+         <div className="animate-fade-in-up">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-bold text-slate-700">Biblioteca de Plantillas</h2>
+              <button 
+                onClick={() => setIsTemplateModalOpen(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <Plus size={18} /> Nueva Plantilla
+              </button>
+            </div>
+
+            {templates.length === 0 ? (
+              <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                <Mail className="mx-auto text-slate-400 mb-4" size={48} />
+                <p className="text-slate-500 font-medium">No hay plantillas guardadas</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {templates.map((template: any) => (
+                   <div key={template.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow">
+                     <div className="flex justify-between items-start mb-3">
+                        <div className={`p-2 rounded-lg ${template.channel === 'WHATSAPP' ? 'bg-green-100 text-green-600' : template.channel === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                          {getChannelIcon(template.channel as MarketingChannel)}
+                        </div>
+                        <button onClick={() => deleteTemplateMutation.mutate(template.id)} className="text-slate-300 hover:text-rose-500 p-2">
+                           <Send size={14} className="rotate-45" /> 
+                        </button>
+                     </div>
+                     
+                     <h3 className="font-bold text-slate-800 mb-1">{template.name}</h3>
+                     {template.subject && <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Asunto: {template.subject}</p>}
+                     
+                     <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-600 mb-4 flex-grow border border-slate-100 line-clamp-4">
+                       {template.content}
+                     </div>
+
+                     <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{template.channel}</span>
+                        <button onClick={() => {
+                           setNewCampaign({
+                              name: `Campaña: ${template.name}`,
+                              channel: template.channel as MarketingChannel,
+                              content: template.content,
+                              subject: template.subject || ''
+                           });
+                           setActiveTab('CAMPAIGNS');
+                           setIsCampaignModalOpen(true);
+                        }} className="text-[10px] font-black text-indigo-600 uppercase hover:underline">
+                           Usar en Campaña
+                        </button>
+                     </div>
+                   </div>
+                 ))}
+              </div>
+            )}
+         </div>
+       )}
 
       {activeTab === 'AUTOMATIONS' && (
         <div className="animate-fade-in-up">
@@ -347,6 +441,98 @@ export const MarketingPage: React.FC = () => {
            </div>
         </div>
       )}
+
+      {isTemplateModalOpen && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-scale-in">
+               <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="font-bold text-slate-800">Nueva Plantilla Maestro</h3>
+                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Play className="rotate-45" size={20}/></button>
+               </div>
+               <form onSubmit={(e) => {
+                  e.preventDefault();
+                  createTemplateMutation.mutate(newTemplate);
+               }} className="p-6 space-y-4">
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Plantilla</label>
+                     <input 
+                       required
+                       className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                       placeholder="Ej: Recordatorio VIP"
+                       value={newTemplate.name}
+                       onChange={e => setNewTemplate({...newTemplate, name: e.target.value})}
+                     />
+                  </div>
+                  
+                  <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Canal de Comunicación</label>
+                      <select 
+                         className="w-full p-2 border border-slate-300 rounded-lg"
+                         value={newTemplate.channel}
+                         onChange={e => setNewTemplate({...newTemplate, channel: e.target.value as any})}
+                      >
+                         <option value="WHATSAPP">WhatsApp</option>
+                         <option value="EMAIL">Email</option>
+                         <option value="SMS">SMS</option>
+                      </select>
+                  </div>
+
+                  {newTemplate.channel === 'EMAIL' && (
+                     <div>
+                         <label className="block text-sm font-medium text-slate-700 mb-1">Asunto Predeterminado</label>
+                         <input 
+                         className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                         placeholder="Asunto del correo..."
+                         value={newTemplate.subject}
+                         onChange={e => setNewTemplate({...newTemplate, subject: e.target.value})}
+                         />
+                     </div>
+                  )}
+
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Cuerpo del Mensaje</label>
+                     <div className="mb-2 flex gap-2">
+                        {['{{NAME}}', '{{DATE}}', '{{BUSINESS}}'].map(tag => (
+                           <button 
+                              key={tag}
+                              type="button"
+                              onClick={() => setNewTemplate({...newTemplate, content: newTemplate.content + ' ' + tag})}
+                              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded border border-slate-200 font-mono"
+                           >
+                              {tag}
+                           </button>
+                        ))}
+                     </div>
+                     <textarea 
+                       required
+                       className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-32 resize-none"
+                       placeholder="Escribe el contenido aquí..."
+                       value={newTemplate.content}
+                       onChange={e => setNewTemplate({...newTemplate, content: e.target.value})}
+                     />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                     <button 
+                       type="button" 
+                       onClick={() => setIsTemplateModalOpen(false)}
+                       className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                     >
+                        Cancelar
+                     </button>
+                     <button 
+                       type="submit"
+                       disabled={createTemplateMutation.isPending}
+                       className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2"
+                     >
+                        {createTemplateMutation.isPending && <Loader2 className="animate-spin" size={14} />}
+                        Guardar Plantilla
+                     </button>
+                  </div>
+               </form>
+            </div>
+         </div>
+       )}
     </div>
   );
 };
