@@ -1,5 +1,5 @@
 # 📋 ROADMAP - CitaPlanner AI
-## Estado Actual del Sistema (Aurum Clean Code)
+## Estado Actual del Sistema (Aurum Nexus v6.2)
 
 ---
 
@@ -9,6 +9,7 @@
 - [x] **React 19.0.0** - Framework principal
 - [x] **TypeScript 5.8.2** - Tipado estático
 - [x] **Vite 6.4.1** - Build tool y dev server
+- [x] **Tailwind CSS 4.2.1** - Motor de estilos (CSS-first)
 - [x] **React Router DOM 6.28.0** - Enrutamiento SPA
 - [x] **React Hook Form 7.54.1** - Gestión de formularios
 - [x] **Zod 3.24.1** - Validación de esquemas
@@ -97,6 +98,8 @@
 - [x] Soporte para múltiples sucursales
 - [x] Caché por sucursal (productos, settings)
 - [x] Aislamiento de datos por branch
+- [x] **Modo Monotenant**: Soporte para despliegue dedicado vía `ORGANIZATION_ID`.
+
 
 ### **Integraciones**
 - [x] Google Cloud (setup documentado en GOOGLE_CLOUD_SETUP.md)
@@ -109,6 +112,9 @@
 - [x] Vite PWA Plugin integrado
 - [x] Service Worker para offline
 - [x] Instalable en dispositivos móviles
+- [x] **Optimización iOS/Android**: Mejoras en la experiencia nativa y splash screens.
+- [x] **Branding Dinámico**: Eliminación de flash "Citaplanner" en carga inicial.
+
 
 ---
 
@@ -128,6 +134,8 @@
 - [x] Sistema de auto-migraciones atómico (Aurum Nexus v5.1)
 - [x] Volumen de uploads: `uploads_data`
 - [x] Puerto expuesto: **3000**
+- [x] **Configuración IDE**: Soporte para `@theme` y reglas personalizadas en VS Code.
+
 
 ---
 
@@ -209,5 +217,5 @@ DOMAIN_URL=https://citaplanner.ai
 
 ---
 
-**Última actualización**: 2026-02-03 (v5.1 Aurum Nexus)  
-**Estado**: ✅ En producción funcional (Seguridad y Base de Datos reforzadas)
+**Última actualización**: 2026-04-28 (v6.2 Aurum Nexus)  
+**Estado**: ✅ En producción funcional (Branding Dinámico & Tailwind v4)

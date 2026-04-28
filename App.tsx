@@ -148,7 +148,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
               </div>
               <div className="flex flex-col">
                 <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{settings?.businessName || 'Plataforma'}</span>
-                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">{user?.role === 'GOD_MODE' ? 'Nexus Infrastructure' : 'Ecosistema Elite'}</span>
+                <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">Ecosistema Elite</span>
               </div>
             </div>
           </Link>

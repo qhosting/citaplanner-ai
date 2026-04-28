@@ -341,32 +341,8 @@ export const SuperAdminDashboard: React.FC = () => {
 
       {/* 🛡️ NEXUS COMMAND HEADER */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8 relative z-10">
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <div className="p-4 rounded-[2rem] bg-red-600/10 text-red-500 border border-red-500/20 shadow-[0_0_50px_rgba(220,38,38,0.3)] animate-pulse">
-              <ShieldAlert size={40} />
-            </div>
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-[#050505] flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full animate-ping" />
-            </div>
-          </div>
-          <div>
-            <h1 className="text-5xl font-black tracking-tighter uppercase leading-none">
-              Nexus <span className="gold-text-gradient font-light italic">Infrastructure</span>
-            </h1>
-            <div className="flex items-center gap-3 mt-3">
-              <span className="text-red-500 font-bold uppercase tracking-[0.4em] text-[10px]">God Mode Authority (ROOT)</span>
-              <div className="h-4 w-px bg-white/10" />
-              <span className="text-slate-400 font-mono text-[10px] uppercase font-bold bg-white/5 px-2 py-0.5 rounded border border-white/5">{now.toLocaleTimeString()}</span>
-              <div className="h-4 w-px bg-white/10" />
-              <span className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Uptime: {stats?.systemHealth?.uptime || '--'}</span>
-              <div className="h-4 w-px bg-white/10" />
-              <span className="text-emerald-500 text-[10px] uppercase tracking-widest font-bold flex items-center gap-1">
-                <Cpu size={10} /> {stats?.systemHealth?.memoryUsage || '--'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <div />
+
 
         <nav className="flex bg-white/5 p-2 rounded-2xl border border-white/5">
           {[

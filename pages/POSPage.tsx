@@ -106,6 +106,10 @@ export const POSPage: React.FC = () => {
     setCart(prev => prev.map(i => i.id === id ? { ...i, discount: Math.min(100, Math.max(0, discount)) } : i));
   };
 
+  const formatPrice = (price: number) => {
+    return price % 1 === 0 ? price.toLocaleString() : price.toFixed(2);
+  };
+
   const { subtotal, totalDiscount, total } = useMemo(() => {
     let sub = 0;
     let disc = 0;
@@ -207,23 +211,25 @@ export const POSPage: React.FC = () => {
     <div className="flex flex-col lg:flex-row h-screen lg:h-[calc(100vh-80px)] overflow-hidden bg-main">
       <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0">
         {/* Search and Filter Section */}
-        <div className="glass-card p-6 md:p-8 rounded-[2.5rem] border-main mb-6">
-          <div className="relative mb-6">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted" size={24} />
-            <input
-              type="text" placeholder="Escanear SKU o buscar por identidad..."
-              className="w-full pl-16 pr-6 py-5 bg-black/5 dark:bg-black/40 border border-main rounded-3xl text-main outline-none focus:border-[#D4AF37]/30 text-lg md:text-xl font-medium transition-all"
-              value={searchTerm} onChange={e => setSearchTerm(e.target.value)} autoFocus
-            />
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button onClick={() => setActiveTab('ALL')} className={`px-6 md:px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === 'ALL' ? 'bg-[#D4AF37] text-black shadow-2xl' : 'bg-white/5 text-muted hover:text-main border border-main'}`}>Todo</button>
-            <button onClick={() => setActiveTab('PRODUCTS')} className={`px-6 md:px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'PRODUCTS' ? 'bg-[#D4AF37] text-black shadow-2xl' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><Package size={14} /> Activos</button>
-            <button onClick={() => setActiveTab('SERVICES')} className={`px-6 md:px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'SERVICES' ? 'bg-[#D4AF37] text-black shadow-2xl' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><BriefcaseMedical size={14} /> Rituales</button>
+        <div className="glass-card p-4 md:p-5 rounded-[2rem] border-main mb-6 bg-card-theme/50 backdrop-blur-md">
+          <div className="flex flex-col xl:flex-row gap-4 items-center">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted" size={20} />
+              <input
+                type="text" placeholder="Escanear SKU o buscar activo..."
+                className="w-full pl-14 pr-6 py-4 bg-black/5 dark:bg-black/20 border border-main rounded-2xl text-main outline-none focus:border-[#D4AF37]/30 text-base md:text-lg font-medium transition-all"
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)} autoFocus
+              />
+            </div>
+            <div className="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
+              <button onClick={() => setActiveTab('ALL')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${activeTab === 'ALL' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}>Todo</button>
+              <button onClick={() => setActiveTab('PRODUCTS')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'PRODUCTS' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><Package size={12} /> Activos</button>
+              <button onClick={() => setActiveTab('SERVICES')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'SERVICES' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><BriefcaseMedical size={12} /> Rituales</button>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-6 pb-24 custom-scrollbar pr-2">
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3 md:gap-4 pb-24 custom-scrollbar pr-2">
           {filteredItems.map(item => {
             const isProduct = 'stock' in item;
             const hasStock = !isProduct || item.stock > 0;
@@ -260,8 +266,8 @@ export const POSPage: React.FC = () => {
 
                   <div className="mt-10 flex justify-between items-end">
                     <div>
-                      <span className="block text-3xl font-black text-main tracking-tighter">${item.price.toFixed(2)}</span>
-                      {isProduct && <span className="text-[10px] font-black uppercase tracking-widest text-muted">Disponibles: {item.stock}</span>}
+                      <span className="block text-2xl font-black text-main tracking-tighter">${formatPrice(item.price)}</span>
+                      {isProduct && <span className="text-[9px] font-black uppercase tracking-widest text-muted">Stock: {item.stock}</span>}
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted group-hover:bg-[#D4AF37] group-hover:text-black transition-all shadow-xl"><Plus size={24} /></div>
                   </div>
@@ -286,8 +292,8 @@ export const POSPage: React.FC = () => {
               <div key={item.id} className="glass-card p-5 rounded-[2rem] border-main group bg-white/[0.01]">
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-4">
-                    <h4 className="font-black text-main text-xs uppercase tracking-tight line-clamp-2 pr-4">{item.name}</h4>
-                    <span className="font-black text-main text-sm tracking-tighter">${(item.price * item.quantity).toFixed(2)}</span>
+                    <h4 className="font-black text-main text-[10px] uppercase tracking-tight line-clamp-2 pr-4">{item.name}</h4>
+                    <span className="font-black text-main text-xs tracking-tighter">${formatPrice(item.price * item.quantity)}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center bg-black/5 dark:bg-black/40 rounded-xl border border-main h-8">
@@ -308,9 +314,9 @@ export const POSPage: React.FC = () => {
         </div>
 
         <div className="p-6 md:p-8 bg-black/5 dark:bg-black border-t border-main space-y-4">
-          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted"><span>Subtotal</span><span className="text-main">${subtotal.toFixed(2)}</span></div>
-          {totalDiscount > 0 && (<div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[#D4AF37]"><span>Descuentos Red</span><span>-${totalDiscount.toFixed(2)}</span></div>)}
-          <div className="flex justify-between text-3xl font-black text-main tracking-tighter pt-4 border-t border-main"><span>Total</span><span>${total.toFixed(2)}</span></div>
+          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted"><span>Subtotal</span><span className="text-main">${formatPrice(subtotal)}</span></div>
+          {totalDiscount > 0 && (<div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[#D4AF37]"><span>Descuentos Red</span><span>-${formatPrice(totalDiscount)}</span></div>)}
+          <div className="flex justify-between text-3xl font-black text-main tracking-tighter pt-4 border-t border-main"><span>Total</span><span>${formatPrice(total)}</span></div>
           <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full gold-btn py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl mt-4 flex items-center justify-center gap-3"><CreditCard size={18} /> Procesar Cobro</button>
         </div>
       </div>
@@ -318,7 +324,7 @@ export const POSPage: React.FC = () => {
       {isPaymentModalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
           <div className="glass-card rounded-[3.5rem] shadow-2xl max-w-md w-full overflow-hidden animate-scale-in border-white/10">
-            <div className="p-10 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-black text-center"><p className="text-[10px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Cobro en Mostrador</p><p className="text-6xl font-black tracking-tighter">${total.toFixed(2)}</p></div>
+            <div className="p-10 bg-gradient-to-tr from-[#D4AF37] to-[#B8860B] text-black text-center"><p className="text-[10px] font-black uppercase tracking-[0.4em] mb-3 opacity-60">Cobro en Mostrador</p><p className="text-6xl font-black tracking-tighter">${formatPrice(total)}</p></div>
             <div className="p-10 space-y-8 bg-main">
               <div>
                 <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-3 ml-2">Identidad del Cliente</label>
@@ -381,7 +387,7 @@ export const POSPage: React.FC = () => {
                 <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
                   <label className="block text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Monto Recibido</label>
                   <div className="relative"><span className="absolute left-5 top-1/2 -translate-y-1/2 text-[#D4AF37] text-2xl font-black">$</span><input type="number" autoFocus className="w-full pl-12 pr-6 py-4 text-3xl font-black bg-black/40 border border-white/10 rounded-2xl text-white outline-none focus:border-emerald-500" value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} /></div>
-                  <div className="mt-4 flex justify-between text-[10px] font-black uppercase tracking-widest"><span className="text-slate-500">Cambio:</span><span className={`text-sm ${Number(amountTendered) - total < 0 ? 'text-red-500' : 'text-emerald-500'}`}>${Math.max(0, Number(amountTendered) - total).toFixed(2)}</span></div>
+                  <div className="mt-4 flex justify-between text-[10px] font-black uppercase tracking-widest"><span className="text-slate-500">Cambio:</span><span className={`text-sm ${Number(amountTendered) - total < 0 ? 'text-red-500' : 'text-emerald-500'}`}>${formatPrice(Math.max(0, Number(amountTendered) - total))}</span></div>
                 </div>
               )}
             </div>
@@ -408,13 +414,13 @@ export const POSPage: React.FC = () => {
             </div>
             <div className="space-y-4 mb-8">
               {lastSale.items.map((it, idx) => (
-                <div key={idx} className="flex justify-between"><span className="font-bold">{it.quantity}X {it.name.substring(0, 20)}</span><span>${(it.price * it.quantity).toFixed(2)}</span></div>
+                <div key={idx} className="flex justify-between"><span className="font-bold">{it.quantity}X {it.name.substring(0, 20)}</span><span>${formatPrice(it.price * it.quantity)}</span></div>
               ))}
             </div>
             <div className="border-t-2 border-dashed border-black pt-6 space-y-2">
-              <div className="flex justify-between font-black text-lg"><span>TOTAL</span><span>${lastSale.total.toFixed(2)}</span></div>
+              <div className="flex justify-between font-black text-lg"><span>TOTAL</span><span>${formatPrice(lastSale.total)}</span></div>
               <div className="flex justify-between opacity-60"><span>MÉTODO</span><span>{lastSale.paymentMethod}</span></div>
-              {lastSale.paymentMethod === 'CASH' && <div className="flex justify-between opacity-60"><span>CAMBIO</span><span>${lastSale.change.toFixed(2)}</span></div>}
+              {lastSale.paymentMethod === 'CASH' && <div className="flex justify-between opacity-60"><span>CAMBIO</span><span>${formatPrice(lastSale.change)}</span></div>}
             </div>
             <div className="mt-10 text-center border-t border-black/10 pt-10">
               <p className="font-black tracking-widest text-[9px] mb-4">GRACIAS POR SU PREFERENCIA</p>
