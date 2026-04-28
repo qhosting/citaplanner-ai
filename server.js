@@ -2759,7 +2759,7 @@ app.post('/api/ai/visual-improve', authenticateToken, async (req, res) => {
         const { title, category } = req.body;
         if (!title) return res.status(400).json({ error: "Título requerido" });
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         const promptForPrompt = `Genera un prompt de generación de imagen ULTRA-PROFESIONAL en INGLÉS para un servicio de belleza llamado "${title}".
         El estilo debe ser: Fotografía editorial de alta gama, iluminación cinematográfica, primer plano, estilo minimalista y lujoso, 8k, ultra-realista.
@@ -2788,7 +2788,7 @@ app.post('/api/ai/service-suggestion', authenticateToken, async (req, res) => {
         const { title, category } = req.body;
         if (!title) return res.status(400).json({ error: "Título requerido" });
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         const prompt = `Actúa como un experto Copywriter de lujo para estudios de belleza de clase mundial (tipo Shula Studio). 
         Genera una descripción seductora y profesional para un servicio llamado "${title}" en la categoría "${category || 'General'}".
