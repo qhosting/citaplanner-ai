@@ -23,6 +23,7 @@ interface TemplateProps {
     currentSlide?: number;
     slides?: any[];
     onContactClick?: () => void;
+    setMobileMenuOpen?: (o: boolean) => void;
 }
 
 // ==========================================
@@ -45,6 +46,7 @@ export const TemplateCitaPlanner: React.FC<TemplateProps> = ({ settings, service
                         {['Plataforma', 'Funciones', 'Precios'].map(item => (
                             <a key={item} href={`#${item.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-colors">{item}</a>
                         ))}
+                        <button onClick={onContactClick} className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-colors">Contacto</button>
                         <Link to="/book" className="px-8 py-3 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20">Probar Demo</Link>
                     </div>
                 </div>
@@ -307,7 +309,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
 // ==========================================
 // 3. TEMPLATE: SHULASTUDIO (Luxury Beauty)
 // ==========================================
-export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick }) => {
+export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, services, products, accent, currentSlide, slides, onContactClick, setMobileMenuOpen }) => {
     const defaultServices = [
         { id: '1', name: 'Clásicas', price: 950, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Técnica 1 a 1 para un look natural y sofisticado.', imageUrl: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&q=80' },
         { id: '2', name: 'Volumen Híbrido', price: 1250, duration: 120, category: 'Pestañas', status: 'ACTIVE' as const, description: 'Mezcla perfecta de clásicas y volumen para mayor densidad.', imageUrl: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?auto=format&fit=crop&q=80' },
@@ -345,7 +347,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                             Agendar Cita
                         </Link>
                         <button 
-                            onClick={() => (window as any).setMobileMenuOpen?.(true)}
+                            onClick={() => setMobileMenuOpen?.(true)}
                             className="md:hidden text-white p-2 hover:bg-white/5 rounded-xl transition-colors"
                         >
                             <Menu size={28} />
@@ -646,6 +648,7 @@ export const TemplateClassic: React.FC<TemplateProps & {
                     {['Servicios', 'Nosotros', 'Galería'].map(item => (
                         <a key={item} href={`#${item.toLowerCase()}`} className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">{item}</a>
                     ))}
+                    <button onClick={onContactClick} className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Contacto</button>
                     <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 text-white" style={{ backgroundColor: accent }}>
                         Mi Cita <ArrowRight size={14} />
                     </Link>

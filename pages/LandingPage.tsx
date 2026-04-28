@@ -119,7 +119,7 @@ export const LandingPage: React.FC = () => {
 
     window.addEventListener('message', handleMessage);
     (window as any).setMobileMenuOpen = setMobileMenuOpen;
-    (window as any).setLegalModal = (val: any) => setLegalModal(val);
+    (window as any).setLegalModal = (val: any) => setLegalType(val);
     return () => {
       window.removeEventListener('message', handleMessage);
       delete (window as any).setMobileMenuOpen;
@@ -369,7 +369,16 @@ export const LandingPage: React.FC = () => {
   }
 
   const renderTemplate = () => {
-    const props = { settings, services: landingServices, products: landingProducts, accent, currentSlide, slides };
+    const props = { 
+      settings, 
+      services: landingServices, 
+      products: landingProducts, 
+      accent, 
+      currentSlide, 
+      slides,
+      onContactClick: () => setContactModalOpen(true),
+      setMobileMenuOpen
+    };
 
     switch (settings.templateId) {
       case 'citaplanner': return <TemplateCitaPlanner {...props} />;
@@ -382,12 +391,9 @@ export const LandingPage: React.FC = () => {
         <TemplateClassic
           {...props}
           scrolled={scrolled}
-          slides={slides}
           waTarget={waTarget}
           whatsappLink={whatsappLink}
           mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
-          onContactClick={() => setContactModalOpen(true)}
         />
       );
     }
