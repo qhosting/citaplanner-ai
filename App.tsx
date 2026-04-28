@@ -11,11 +11,13 @@ import {
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Role } from './types';
+import { Navbar } from './components/Navbar';
+import { Footer } from './components/Footer';
 import { api } from './services/api';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { LogoCitaplanner } from './components/LogoCitaplanner';
+import { Role } from './types';
 
 // --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: (m as any).Dashboard || (m as any).default })));
@@ -115,27 +117,16 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   return <>{children}</>;
 };
 
-const ThemeToggle = () => {
-  const { theme, toggleTheme } = useTheme();
-  return (
-    <button
-      onClick={toggleTheme}
-      className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/40 transition-all text-zinc-400 hover:text-[#D4AF37]"
-    >
-      {theme === 'dark' ? <Sparkles size={18} /> : <div className="w-4.5 h-4.5 rounded-full border-2 border-current" />}
-    </button>
-  );
-};
-
 const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, settings?: any }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
 
-  if (location.pathname === '/' || location.pathname === '/book' || location.pathname === '/login') return null;
+  const normalizedPath = location.pathname.replace(/\/+/g, '/');
+  if (normalizedPath === '/' || normalizedPath === '/book' || normalizedPath === '/login') return null;
   if (maintenanceMode && !user) return null;
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => normalizedPath === path;
 
   const NavLink = ({ to, children }: { to: string, children?: React.ReactNode }) => (
     <Link to={to} className={`relative px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] transition-all flex items-center gap-2 ${isActive(to) ? 'text-[#D4AF37]' : 'text-zinc-300 hover:text-white hover:bg-white/5'
@@ -236,105 +227,15 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
   );
 };
 
-const InternalFooter = () => {
-  const location = useLocation();
-  const { theme } = useTheme();
-  const normalizedPath = location.pathname.replace(/\/+/g, '/');
-  if (normalizedPath === '/' || normalizedPath === '/login' || normalizedPath === '/book' || normalizedPath === '/nexus') return null;
-
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = useTheme();
   return (
-    <footer className={`w-full border-t pt-16 pb-8 px-6 md:px-10 transition-colors ${theme === 'dark' ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'
-      }`}>
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-        {/* Brand Column */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[#D4AF37]/10 border border-[#D4AF37]/20">
-              <Sparkles className="text-[#D4AF37]" size={18} />
-            </div>
-            <span className={`font-black text-lg tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>CitaPlanner Suite</span>
-          </div>
-          <p className="text-[11px] text-zinc-500 font-medium leading-relaxed max-w-[240px]">
-            Infraestructura de nueva generación para la gestión inteligente de estudios de belleza y bienestar. Impulsado por Aurum Capital.
-          </p>
-          <div className="flex items-center gap-4">
-            <a href="#" className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all"><Instagram size={14} /></a>
-            <a href="#" className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all"><Facebook size={14} /></a>
-            <a href="#" className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-[#D4AF37] hover:border-[#D4AF37]/30 transition-all"><Twitter size={14} /></a>
-          </div>
-        </div>
-
-        {/* Console Navigation */}
-        <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Navegación</h4>
-          <div className="flex flex-col gap-3">
-            <Link to="/admin" className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest">Panel de Control</Link>
-            <Link to="/pos" className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest">Punto de Venta</Link>
-            <Link to="/marketing" className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest">Marketing Hub</Link>
-            <Link to="/analytics" className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest">Business Intelligence</Link>
-          </div>
-        </div>
-
-        {/* Infrastructure Status */}
-        <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D4AF37]">Infraestructura Nexus</h4>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Cpu size={12} className="text-zinc-600" />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase">Motor SaaS v5.2</span>
-              </div>
-              <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-full">Operativo</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Cloud size={12} className="text-zinc-600" />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase">Instancia Regional</span>
-              </div>
-              <span className="text-[8px] font-black text-[#D4AF37] uppercase tracking-widest bg-[#D4AF37]/10 px-2 py-0.5 rounded-full">Sincronizado</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={12} className="text-zinc-600" />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase">Cifrado Cuántico</span>
-              </div>
-              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Activo</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Support & Legal */}
-        <div className="space-y-6">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Central de Soporte</h4>
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-white/5 to-transparent border border-white/5 space-y-4">
-            <div className="flex items-center gap-3">
-              <Activity size={14} className="text-[#D4AF37] animate-pulse" />
-              <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Soporte Prioritario On-Air</span>
-            </div>
-            <p className="text-[10px] font-bold text-white uppercase tracking-tight">+52 442 506 0999</p>
-            <div className="pt-2">
-              <p className="text-[8px] font-black text-zinc-600 uppercase tracking-widest italic">Aurum Enterprise Support</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p className="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-700">© 2026 CitaPlanner Global Infrastructure • Product of Aurum Capital</p>
-        
-        <div className="flex items-center gap-8">
-          <a href="https://aurumcapital.mx" target="_blank" className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-[#D4AF37] transition-all group">
-            <span>Powered by</span>
-            <span className="text-zinc-500 group-hover:text-white">Aurum Capital</span>
-          </a>
-          <div className="w-1 h-1 rounded-full bg-white/10" />
-          <a href="https://qhosting.com.mx" target="_blank" className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-all group">
-            <span>Core Infra</span>
-            <span className="text-zinc-500 group-hover:text-white">QHosting Cloud</span>
-          </a>
-        </div>
-      </div>
-    </footer>
+    <button
+      onClick={toggleTheme}
+      className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/40 transition-all text-zinc-400 hover:text-[#D4AF37]"
+    >
+      {theme === 'dark' ? <Sparkles size={18} /> : <div className="w-4.5 h-4.5 rounded-full border-2 border-current" />}
+    </button>
   );
 };
 
@@ -415,7 +316,7 @@ const MainLayout = () => {
           </Routes>
         </Suspense>
       </div>
-      <InternalFooter />
+      {settings && !isLoginPage && <Footer settings={settings} accent={settings.primaryColor} />}
     </div>
   );
 };

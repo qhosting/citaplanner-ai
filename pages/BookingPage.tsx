@@ -632,7 +632,6 @@ export const BookingPage: React.FC = () => {
         </div>
       )}
       
-      {settings && <Footer settings={settings} accent={settings.primaryColor} />}
     </div>
   );
 };
