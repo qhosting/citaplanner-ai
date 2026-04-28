@@ -20,7 +20,7 @@ export const Footer: React.FC<FooterProps> = ({ settings, accent = '#D4AF37' }) 
 
   return (
     <>
-      <footer className="bg-[#050505] py-12 border-t border-white/5 px-8">
+      <footer className="bg-[#050505] py-8 border-t border-white/5 px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 pt-4">
             {/* Left: Copyright & Version */}

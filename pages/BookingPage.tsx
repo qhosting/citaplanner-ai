@@ -558,7 +558,7 @@ export const BookingPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-32 selection:bg-[#D4AF37] selection:text-black">
+    <div className="bg-[#050505] pb-12 selection:bg-[#D4AF37] selection:text-black">
       {/* NAVEGACIÓN PREMIUM */}
       <nav className="fixed top-0 left-0 w-full z-[100] transition-all duration-500 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
