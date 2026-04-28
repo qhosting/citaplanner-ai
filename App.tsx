@@ -239,7 +239,8 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
 const InternalFooter = () => {
   const location = useLocation();
   const { theme } = useTheme();
-  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/book' || location.pathname === '/nexus') return null;
+  const normalizedPath = location.pathname.replace(/\/+/g, '/');
+  if (normalizedPath === '/' || normalizedPath === '/login' || normalizedPath === '/book' || normalizedPath === '/nexus') return null;
 
   return (
     <footer className={`w-full border-t pt-16 pb-8 px-6 md:px-10 transition-colors ${theme === 'dark' ? 'bg-black border-white/5' : 'bg-slate-50 border-slate-200'
@@ -374,7 +375,9 @@ const MainLayout = () => {
   if (appLoading) return <LoadingScreen />;
 
   const isStaff = user && ['ADMIN', 'STUDIO_OWNER', 'GOD_MODE', 'STAFF'].includes(user.role);
-  const isLoginPage = location.pathname === '/login';
+  const normalizedPath = location.pathname.replace(/\/+/g, '/');
+  const isLoginPage = normalizedPath === '/login';
+  const isLandingPage = normalizedPath === '/';
 
   if (maintenanceMode && !isStaff && !isLoginPage) {
     return <MaintenanceScreen contactPhone={settings?.contactPhone} brandName={settings?.businessName} />;
@@ -383,7 +386,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col transition-colors">
       <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
-      {!isLoginPage && location.pathname !== '/' && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
+      {!isLoginPage && !isLandingPage && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
       <div className="flex-grow">
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
