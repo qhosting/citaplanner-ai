@@ -232,7 +232,7 @@ export const TemplateMaster: React.FC<TemplateProps> = ({ settings, services, pr
                         </div>
                     </div>
                     <div className="lg:col-span-6 relative">
-                        <div className="aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
+                        <div className="aspect-[4/3] md:aspect-square rounded-[3rem] overflow-hidden shadow-2xl">
                             <img src={slides?.[currentSlide || 0]?.image || settings.heroImageUrl || "/templates/master_hero.png"} className="w-full h-full object-cover hover:scale-103 transition-transform duration-700" alt="Master Beauty Hub" />
                         </div>
                         <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-[2rem] shadow-2xl border border-slate-100">
@@ -357,7 +357,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             </nav>
 
             {/* 2. Hero Slider Pantalla Completa */}
-            <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#050505]">
+            <header id="inicio" className="relative h-[75vh] md:h-screen flex items-center justify-center overflow-hidden bg-[#050505]">
                 {settings.heroVideoUrl ? (
                     <video 
                         src={settings.heroVideoUrl} 
@@ -679,7 +679,7 @@ export const TemplateClassic: React.FC<TemplateProps & {
             </div>
         </nav>
 
-        <section className="relative h-screen min-h-[750px] w-full bg-black overflow-hidden">
+        <section className="relative h-[70vh] md:h-screen md:min-h-[750px] w-full bg-black overflow-hidden">
             {slides.map((slide, index) => (
                 <div key={index} className={`absolute inset-0 transition-all duration-[2500ms] ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}>
                     <div className="absolute inset-0 bg-black/60 z-10" />
