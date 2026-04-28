@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { Tenant, TenantFeatures } from '../types';
+import { Tenant, TenantFeatures, LandingSettings } from '../types';
+import { api } from '../services/api';
+import { Footer } from '../components/Footer';
 
 export const SuperAdminDashboard: React.FC = () => {
   const ROOT_DOMAIN = window.location.hostname.split('.').slice(-2).join('.');
@@ -34,6 +36,15 @@ export const SuperAdminDashboard: React.FC = () => {
   // New Plan State
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [planForm, setPlanForm] = useState({ id: '', title: '', price: 0, description: '', currency: 'MXN' });
+
+  // 5. Fetch Landing Settings for Footer
+  const { data: landingSettings } = useQuery({
+    queryKey: ['landing-settings'],
+    queryFn: async () => {
+      const res = await api.getLandingSettings();
+      return res.success ? res.value : null;
+    }
+  });
 
   const [logFilter, setLogFilter] = useState({ platform: '', organizationId: '', level: '' });
 
@@ -1111,6 +1122,12 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {landingSettings && (
+        <div className="mt-20">
+          <Footer settings={landingSettings} accent="#D4AF37" />
         </div>
       )}
     </div>
