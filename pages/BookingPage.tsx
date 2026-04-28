@@ -113,15 +113,17 @@ export const BookingPage: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
+  const [searchParams] = useSearchParams();
+
   // Init Data
   useEffect(() => {
     const loadData = async () => {
       try {
         const [setRes, s, p, a] = await Promise.all([
           api.getLandingSettings(),
-          api.getLandingServices(),
-          api.getLandingProfessionals(),
-          api.getLandingAppointments()
+          api.getServices(),
+          api.getProfessionals(),
+          api.getAppointments()
         ]);
         
         if (setRes.success && setRes.value && Object.keys(setRes.value).length > 0) {
@@ -144,8 +146,8 @@ export const BookingPage: React.FC = () => {
           } as any);
         }
         
-        if (s.success) {
-          const activeServices = Array.isArray(s.value) ? s.value.filter((srv: any) => srv.status === 'ACTIVE') : [];
+        if (Array.isArray(s)) {
+          const activeServices = s.filter((srv: any) => srv.status === 'ACTIVE');
           setServices(activeServices);
           
           // === AUTO-SELECT SERVICE FROM URL ===
@@ -158,8 +160,8 @@ export const BookingPage: React.FC = () => {
             }
           }
         }
-        setProfessionals(Array.isArray(p.value) ? p.value : []);
-        setAppointments(Array.isArray(a.value) ? a.value : []);
+        if (Array.isArray(p)) setProfessionals(p);
+        if (Array.isArray(a)) setAppointments(a);
       } catch (error) {
         console.error("Error loading booking data", error);
         // Ensure settings is not null to exit loading state
