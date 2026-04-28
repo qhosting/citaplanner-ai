@@ -328,6 +328,7 @@ model Tenant {
   subscriptions      Subscription[]
   taskAssignments    TaskAssignment[]
   users              User[]
+  leads              Lead[]
 
   @@map("tenants")
 }
@@ -413,8 +414,10 @@ model Lead {
   interestLevel    String?   @default("MEDIUM") @map("interest_level") @db.VarChar(20)
   preferredContact String?   @default("WHATSAPP") @map("preferred_contact") @db.VarChar(50)
   organizationId   String?   @default("demo") @map("organization_id") @db.VarChar(50)
+  tenantId         String?   @map("tenant_id") @db.Uuid
   createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
+  tenant           Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("leads")
 }

@@ -24,11 +24,13 @@
   - **Impacto**: Completado (Live KPIs, Revenue Charts, Top Products & AI DAFO).
   - **Estimación**: Completado
 
-### **Fase 3: Inteligencia & Integraciones (v6.6)**
-- [x] **SEO & GEO Advanced Optimization**
-  - **Motivo**: Necesidad de visibilidad en Google y buscadores locales.
-  - **Impacto**: Completado (JSON-LD LocalBusiness, robots.txt, sitemap.xml, GEO tags e inyección dinámica de meta-tags).
+### **Fase 3: Inteligencia & Integraciones (v6.7)**
+- [x] **WAHA Lead Auto-Capture Webhook**
+  - **Motivo**: Capturar automáticamente clientes potenciales que escriben por WhatsApp.
+  - **Impacto**: Completado (Validación contra directorio y auto-inserción en /leads).
   - **Estimación**: Completado
+
+- [x] **SEO & GEO Advanced Optimization**
 
 - [x] **Marketing Template Engine (Multichannel)**
   - **Motivo**: Necesidad de una vista densa y profesional para gestionar múltiples agendas simultáneamente.

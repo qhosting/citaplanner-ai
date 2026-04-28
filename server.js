@@ -1642,6 +1642,70 @@ app.delete('/api/marketing/templates/:id', authenticateToken, async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// WAHA WEBHOOK: LEAD CAPTURE ENGINE
+app.post('/api/webhooks/waha', async (req, res) => {
+    try {
+        // WAHA payloads can come in different shapes depending on version/config
+        // Usually: { "event": "message", "payload": { ... } }
+        const { event, payload } = req.body;
+        
+        if (!event || !payload) {
+            console.log("⚠️ [WAHA WEBHOOK] Invalid payload structure");
+            return res.status(200).json({ status: 'ignored' });
+        }
+
+        // Only process incoming messages from individual contacts
+        if (!event.startsWith('message')) return res.status(200).json({ status: 'ignored' });
+        if (payload.from && payload.from.includes('@g.us')) return res.status(200).json({ status: 'ignored' });
+
+        const phone = payload.from.replace(/[^0-9]/g, '');
+        if (!phone) return res.status(200).json({ status: 'ignored' });
+
+        // Identify Tenant (Defaulting to the first active tenant for shared-instance mode)
+        // In a production multi-tenant setup, we'd map req.body.session to a Tenant
+        const tenant = await prisma.tenant.findFirst({
+            where: { status: 'ACTIVE' },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        if (!tenant) {
+            console.error("❌ [WAHA WEBHOOK] No active tenant found to assign lead");
+            return res.status(200).json({ status: 'error', message: 'No active tenant' });
+        }
+
+        const tenantId = tenant.id;
+
+        // Diagnostic Check: Directory Validation
+        const [userExists, clientExists, leadExists] = await Promise.all([
+            prisma.user.findFirst({ where: { phone: { contains: phone }, tenantId, role: 'CLIENT' } }),
+            prisma.client.findFirst({ where: { phone: { contains: phone }, tenantId } }),
+            prisma.lead.findFirst({ where: { phone: { contains: phone }, tenantId } })
+        ]);
+
+        if (!userExists && !clientExists && !leadExists) {
+            // Intelligent Lead Insertion
+            const newLead = await prisma.lead.create({
+                data: {
+                    name: payload.pushName || 'Contacto WhatsApp',
+                    phone: phone,
+                    source: 'WHATSAPP',
+                    status: 'NEW',
+                    tenantId: tenantId,
+                    notes: `Mensaje inicial: "${payload.body || 'Contenido multimedia'}"`
+                }
+            });
+            console.log(`✨ [WAHA WEBHOOK] New Lead Captured: ${phone} -> ${newLead.name}`);
+        } else {
+            console.log(`ℹ️ [WAHA WEBHOOK] Returning contact detected: ${phone}`);
+        }
+
+        res.json({ success: true, action: 'processed' });
+    } catch (e) {
+        console.error("🚨 [WAHA WEBHOOK ERROR]:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/integrations/status', async (req, res) => {
     try {
         const where = {};
