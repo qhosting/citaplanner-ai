@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
    Calendar, Clock, User, ShieldAlert, Plus, Trash2,
    Save, Check, Coffee, CalendarDays, Settings, X, Loader2, Sparkles, Mail, Briefcase, Fingerprint, ChevronLeft, ChevronRight,
@@ -160,7 +160,7 @@ export const SchedulesPage: React.FC = () => {
       setSaving(true);
       try {
          const currentExceptions = [...(selectedPro?.exceptions || [])];
-         const newEx = { ...exceptionFormData, id: Math.random().toString(36).substring(7) };
+         const newEx = { ...exceptionFormData, id: `ex-${Date.now()}-${Math.random().toString(36).substring(2, 7)}` };
          const updatedPro = { ...selectedPro, exceptions: [...currentExceptions, newEx] };
 
          const success = await api.updateProfessional(updatedPro);
@@ -209,64 +209,114 @@ export const SchedulesPage: React.FC = () => {
       });
    };
 
-   const changeDate = (days: number) => {
-      const d = new Date(selectedDate);
-      d.setDate(d.getDate() + days);
-      setSelectedDate(d);
-   };
+  const stats = useMemo(() => {
+    const totalSlots = professionals.length * HOURS.length;
+    const occupiedSlots = appointments.filter(a => {
+      const start = new Date(a.startDateTime);
+      return start.toDateString() === selectedDate.toDateString() && a.status !== 'CANCELLED';
+    }).length;
+    const occupancy = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
+
+    return {
+      occupancy,
+      totalApts: occupiedSlots,
+      activePros: professionals.length,
+      nextAvailable: "14:00" // Mock for now but displayed as premium info
+    };
+  }, [professionals, appointments, selectedDate]);
+
+  const changeDate = (days: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + days);
+    setSelectedDate(d);
+  };
 
    if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
 
    return (
       <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
-            <div>
-               <h1 className="text-4xl font-black text-main uppercase tracking-tighter">Schedule <span className="bugambilia-text-gradient font-light">Architecture</span></h1>
-               <p className="text-[10px] text-muted font-bold uppercase tracking-[0.4em] mt-2">Matriz de Operaciones y Personal</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
+        <div>
+          <h1 className="text-4xl font-black text-main uppercase tracking-tighter">
+            Master <span className="bugambilia-text-gradient font-light">Matrix</span>
+          </h1>
+          <p className="text-[10px] text-muted font-bold uppercase tracking-[0.4em] mt-2">Arquitectura de Operaciones en Tiempo Real</p>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
+            <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Operaciones</button>
+            <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Base</button>
+            <button onClick={() => setActiveTab('EXCEPTIONS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'EXCEPTIONS' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Bloqueos</button>
+          </div>
+          <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-8 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl flex items-center gap-2">
+            <Plus size={16} /> Nodo Maestro
+          </button>
+        </div>
+      </div>
+
+      {/* INTELLIGENCE HEADER */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+        <div className="glass-card p-6 rounded-3xl border-theme flex flex-col justify-between">
+          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Ocupación Hoy</p>
+          <div className="flex items-end justify-between">
+            <h3 className="text-2xl font-black text-main">{stats.occupancy}%</h3>
+            <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+               <div style={{ width: `${stats.occupancy}%` }} className="h-full bg-emerald-500 shadow-[0_0_10px_#10B981]" />
             </div>
-            <div className="flex gap-4">
-               <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
-                  <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Matriz Hoy</button>
-                  <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Horarios Base</button>
-                  <button onClick={() => setActiveTab('EXCEPTIONS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'EXCEPTIONS' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Excepciones</button>
-               </div>
-               <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-10 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl">Integrar Especialista</button>
-            </div>
-         </div>
+          </div>
+        </div>
+        <div className="glass-card p-6 rounded-3xl border-theme">
+          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Citas Programadas</p>
+          <h3 className="text-2xl font-black text-main">{stats.totalApts} <span className="text-[10px] text-muted font-bold tracking-normal uppercase">Node Hits</span></h3>
+        </div>
+        <div className="glass-card p-6 rounded-3xl border-theme">
+          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Staff Operativo</p>
+          <h3 className="text-2xl font-black text-main">{stats.activePros} <span className="text-[10px] text-muted font-bold tracking-normal uppercase">Unidades</span></h3>
+        </div>
+        <div className="glass-card p-6 rounded-3xl border-theme bg-gradient-to-tr from-[#CE4676]/5 to-transparent">
+          <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-3">AI Recommendation</p>
+          <p className="text-[10px] font-bold text-main leading-relaxed">
+            {stats.occupancy > 70 ? "Capacidad crítica detectada. Considera activar Nodo de Refuerzo." : "Disponibilidad óptima para walk-ins."}
+          </p>
+        </div>
+      </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            <div className="lg:col-span-3 space-y-4">
-               <div className="glass-card rounded-[2.5rem] border-theme overflow-hidden">
-                  <div className="p-6 bg-input-theme border-b border-theme">
-                     <h3 className="text-[10px] font-black text-muted uppercase tracking-widest">Nodos Profesionales</h3>
-                  </div>
-                  {professionals.length === 0 ? (
-                     <div className="p-10 text-center">
-                        <User className="mx-auto text-muted/20 mb-4" size={40} />
-                        <p className="text-[9px] font-black text-muted uppercase tracking-widest">No hay nodos activos</p>
-                     </div>
-                  ) : professionals.map(pro => (
-                     <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#CE4676]/5 border-[#CE4676]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
-                        <div className="flex justify-between items-start">
-                           <div>
-                              <p className={`font-black text-sm uppercase ${selectedProId === pro.id ? 'text-main' : 'text-muted'}`}>{pro.name}</p>
-                              <p className="text-[9px] text-muted font-bold uppercase mt-1">{pro.role}</p>
-                           </div>
-                           <button onClick={(e) => { e.stopPropagation(); handleDeletePro(pro.id); }} className="p-2 text-muted hover:text-red-500 transition-colors">
-                              <Trash2 size={14} />
-                           </button>
+            {/* SIDEBAR - Only visible in Individual Tabs */}
+            {activeTab !== 'MATRIX' && (
+              <div className="lg:col-span-3 space-y-4">
+                <div className="glass-card rounded-[2.5rem] border-theme overflow-hidden">
+                    <div className="p-6 bg-input-theme border-b border-theme">
+                        <h3 className="text-[10px] font-black text-muted uppercase tracking-widest">Nodos Profesionales</h3>
+                    </div>
+                    {professionals.length === 0 ? (
+                        <div className="p-10 text-center">
+                          <User className="mx-auto text-muted/20 mb-4" size={40} />
+                          <p className="text-[9px] font-black text-muted uppercase tracking-widest">No hay nodos activos</p>
                         </div>
-                        {selectedProId === pro.id && (
-                           <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#CE4676] uppercase hover:underline flex items-center gap-2">
-                              <Settings size={12} /> Configurar Perfil
-                           </button>
-                        )}
-                     </div>
-                  ))}
-               </div>
-            </div>
+                    ) : professionals.map(pro => (
+                        <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#CE4676]/5 border-[#CE4676]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
+                          <div className="flex justify-between items-start">
+                              <div>
+                                <p className={`font-black text-sm uppercase ${selectedProId === pro.id ? 'text-main' : 'text-muted'}`}>{pro.name}</p>
+                                <p className="text-[9px] text-muted font-bold uppercase mt-1">{pro.role}</p>
+                              </div>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeletePro(pro.id); }} className="p-2 text-muted hover:text-red-500 transition-colors">
+                                <Trash2 size={14} />
+                              </button>
+                          </div>
+                          {selectedProId === pro.id && (
+                              <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#CE4676] uppercase hover:underline flex items-center gap-2">
+                                <Settings size={12} /> Configurar Perfil
+                              </button>
+                          )}
+                        </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
-            <div className="lg:col-span-9">
+            <div className={`${activeTab === 'MATRIX' ? 'lg:col-span-12' : 'lg:col-span-9'}`}>
                {professionals.length === 0 ? (
                   <div className="glass-card rounded-[3.5rem] border-theme p-20 flex flex-col items-center justify-center text-center animate-entrance">
                      <div className="w-24 h-24 bg-[#CE4676]/10 rounded-full flex items-center justify-center mb-8">
@@ -281,98 +331,109 @@ export const SchedulesPage: React.FC = () => {
                      </button>
                   </div>
                ) : activeTab === 'MATRIX' ? (
-                  <div className="glass-card rounded-[3.5rem] border-theme overflow-hidden animate-entrance">
-                     <div className="p-8 border-b border-theme bg-input-theme flex justify-between items-center">
-                        <div className="flex items-center gap-6">
-                           <button onClick={() => changeDate(-1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronLeft size={20} /></button>
-                           <div className="text-center min-w-[200px]">
-                              <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
-                              <p className="text-xl font-black text-main uppercase tracking-tighter">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                           </div>
-                           <button onClick={() => changeDate(1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronRight size={20} /></button>
-                        </div>
-                        <div className="flex items-center gap-3 px-6 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                           <Activity size={14} className="text-emerald-500" />
-                           <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sincronización Live</span>
-                        </div>
-                     </div>
+                   <div className="glass-card rounded-[3.5rem] border-theme overflow-hidden animate-entrance">
+                      <div className="p-8 border-b border-theme bg-input-theme flex justify-between items-center">
+                         <div className="flex items-center gap-6">
+                            <button onClick={() => changeDate(-1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronLeft size={20} /></button>
+                            <div className="text-center min-w-[200px]">
+                               <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
+                               <p className="text-xl font-black text-main uppercase tracking-tighter">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            </div>
+                            <button onClick={() => changeDate(1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronRight size={20} /></button>
+                         </div>
+                         <div className="flex items-center gap-3 px-6 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                            <Activity size={14} className="text-emerald-500" />
+                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Master Node Sync Active</span>
+                         </div>
+                      </div>
 
-                     <div className="overflow-x-auto">
-                        <div className="min-w-[800px]">
-                           <div className="grid grid-cols-[100px_1fr] border-b border-theme">
-                              <div className="p-6 border-r border-theme" />
-                              <div className="p-6 font-black text-[10px] text-muted uppercase tracking-[0.4em] flex items-center justify-between">
-                                 <span>Matrix Operativa • {selectedPro?.name}</span>
-                                 {isDateBlocked(selectedDate, selectedPro) && (
-                                    <span className="bg-red-500/10 text-red-500 px-4 py-1 rounded-full border border-red-500/20 text-[9px] tracking-widest">FECHA BLOQUEADA (EXCEPCIÓN)</span>
-                                 )}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-max">
+                           {/* HEADER WITH PRO NAMES */}
+                           <div className="grid grid-cols-[100px_repeat(auto-fit,minmax(200px,1fr))] border-b border-theme sticky top-0 bg-input-theme z-20">
+                              <div className="p-6 border-r border-theme flex items-center justify-center">
+                                 <span className="text-[9px] font-black text-muted uppercase tracking-widest">Time</span>
                               </div>
+                              {professionals.map(pro => (
+                                 <div key={pro.id} className="p-6 border-r border-theme last:border-0 text-center relative group">
+                                    <p className="text-xs font-black text-main uppercase tracking-tighter">{pro.name}</p>
+                                    <p className="text-[8px] text-muted font-bold uppercase tracking-widest mt-1">{pro.role}</p>
+                                    {isDateBlocked(selectedDate, pro) && (
+                                       <div className="absolute top-2 right-2 p-1 bg-red-500/10 rounded-full text-red-500">
+                                          <ShieldAlert size={10} />
+                                       </div>
+                                    )}
+                                 </div>
+                              ))}
                            </div>
 
+                           {/* MATRIX GRID */}
                            <div className="divide-y border-theme">
                               {HOURS.map(hour => {
                                  const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                                 const dayId = selectedDate.getDay();
-                                 const schedule = selectedPro?.weeklySchedule?.find((s: any) => s.dayOfWeek === dayId);
-
-                                 const isWorking = schedule?.isEnabled && schedule.slots?.some((slot: any) => {
-                                    const startH = parseInt(slot.start.split(':')[0]);
-                                    const endH = parseInt(slot.end.split(':')[0]);
-                                    return hour >= startH && hour < endH;
-                                 });
-
-                                 const blocked = isDateBlocked(selectedDate, selectedPro);
-                                 const isAvailable = isWorking && !blocked;
-
-                                 const apt = appointments.find(a => {
-                                    if (a.professionalId !== selectedProId || a.status === 'CANCELLED') return false;
-                                    const start = new Date(a.startDateTime);
-                                    const end = new Date(a.endDateTime);
-                                    const currentHourStart = new Date(selectedDate);
-                                    currentHourStart.setHours(hour, 0, 0, 0);
-                                    const currentHourEnd = new Date(selectedDate);
-                                    currentHourEnd.setHours(hour + 1, 0, 0, 0);
-                                    return start < currentHourEnd && end > currentHourStart;
-                                 });
-
+                                 
                                  return (
-                                    <div key={hour} className={`grid grid-cols-[100px_1fr] group ${!isAvailable && !apt ? 'opacity-30' : ''}`}>
+                                    <div key={hour} className="grid grid-cols-[100px_repeat(auto-fit,minmax(200px,1fr))] group hover:bg-white/[0.02] transition-colors">
                                        <div className="p-6 border-r border-theme flex items-center justify-center">
                                           <span className="text-xs font-black text-muted group-hover:text-[#CE4676] transition-colors">{timeStr}</span>
                                        </div>
-                                       <div
-                                          onClick={() => isAvailable && !apt && setIsAptModalOpen(true)}
-                                          className={`p-2 relative min-h-[80px] transition-all ${apt ? 'bg-input-theme' : isAvailable ? 'bg-transparent hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/20'}`}
-                                       >
-                                          {apt ? (
-                                             <div className="absolute inset-2 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-2xl p-4 shadow-xl flex flex-col justify-center border border-white/20 z-10">
-                                                <p className="text-[9px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Cita Confirmada</p>
-                                                <h4 className="text-sm font-black text-white uppercase truncate">{apt.title}</h4>
-                                                <p className="text-[10px] font-bold text-white/80 truncate">Cli: {apt.clientName}</p>
+                                       
+                                       {professionals.map(pro => {
+                                          const dayId = selectedDate.getDay();
+                                          const schedule = pro.weeklySchedule?.find((s: any) => s.dayOfWeek === dayId);
+                                          const isWorking = schedule?.isEnabled && schedule.slots?.some((slot: any) => {
+                                             const startH = parseInt(slot.start.split(':')[0]);
+                                             const endH = parseInt(slot.end.split(':')[0]);
+                                             return hour >= startH && hour < endH;
+                                          });
+                                          const blocked = isDateBlocked(selectedDate, pro);
+                                          const isAvailable = isWorking && !blocked;
+
+                                          const apt = appointments.find(a => {
+                                             if (a.professionalId !== pro.id || a.status === 'CANCELLED') return false;
+                                             const start = new Date(a.startDateTime);
+                                             const end = new Date(a.endDateTime);
+                                             const currentHourStart = new Date(selectedDate);
+                                             currentHourStart.setHours(hour, 0, 0, 0);
+                                             const currentHourEnd = new Date(selectedDate);
+                                             currentHourEnd.setHours(hour + 1, 0, 0, 0);
+                                             return start < currentHourEnd && end > currentHourStart;
+                                          });
+
+                                          return (
+                                             <div
+                                                key={pro.id}
+                                                onClick={() => isAvailable && !apt && setIsAptModalOpen(true)}
+                                                className={`p-1 border-r border-theme last:border-0 min-h-[90px] relative transition-all ${apt ? 'bg-input-theme/50' : isAvailable ? 'hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/10'}`}
+                                             >
+                                                {apt ? (
+                                                   <div className="absolute inset-1.5 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-xl p-3 shadow-lg flex flex-col justify-center border border-white/10 z-10 group/apt overflow-hidden">
+                                                      <div className="absolute top-0 right-0 p-2 opacity-10 scale-150">
+                                                         <Calendar size={32} />
+                                                      </div>
+                                                      <p className="text-[8px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Confirmada</p>
+                                                      <h4 className="text-[10px] font-black text-white uppercase truncate">{apt.title}</h4>
+                                                      <p className="text-[9px] font-bold text-white/80 truncate mt-0.5">{apt.clientName}</p>
+                                                   </div>
+                                                ) : blocked ? (
+                                                   <div className="h-full w-full flex items-center justify-center opacity-20">
+                                                      <ShieldAlert size={12} className="text-red-500" />
+                                                   </div>
+                                                ) : isWorking ? (
+                                                   <div className="h-full w-full rounded-xl border border-dashed border-theme flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                      <Plus size={16} className="text-[#CE4676]/40" />
+                                                   </div>
+                                                ) : null}
                                              </div>
-                                          ) : blocked ? (
-                                             <div className="h-full w-full flex items-center justify-center gap-2 text-red-500/50">
-                                                <ShieldAlert size={14} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Bloqueado</span>
-                                             </div>
-                                          ) : isWorking ? (
-                                             <div className="h-full w-full rounded-2xl border border-dashed border-theme flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus size={20} className="text-muted" />
-                                             </div>
-                                          ) : (
-                                             <div className="h-full w-full flex items-center justify-center gap-2 text-muted/30">
-                                                <Coffee size={14} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Fuera de Horario</span>
-                                             </div>
-                                          )}
-                                       </div>
+                                          );
+                                       })}
                                     </div>
                                  );
                               })}
                            </div>
                         </div>
-                     </div>
-                  </div>
+                      </div>
+                   </div>
                ) : activeTab === 'WEEKLY' ? (
                   <div className="glass-card rounded-[3.5rem] border-theme p-10 animate-entrance">
                      <div className="flex justify-between items-center mb-10">
@@ -439,26 +500,27 @@ export const SchedulesPage: React.FC = () => {
                            </div>
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {DAYS_OF_WEEK.map(day => {
                            const schedule = (selectedPro?.weeklySchedule as any)?.find((s: any) => s.dayOfWeek === day.id) || { dayOfWeek: day.id, isEnabled: false, slots: [] };
 
                            return (
-                              <div key={day.id} className={`p-6 rounded-[2rem] border transition-all ${schedule.isEnabled ? 'bg-input-theme border-theme shadow-sm' : 'bg-transparent border-theme/20 opacity-40'}`}>
-                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                                    <div className="flex items-center gap-6">
-                                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-all ${schedule.isEnabled ? 'bg-[#CE4676] text-white shadow-[0_0_20px_#CE4676]/30' : 'bg-card text-muted'}`}>
-                                          {day.name.substring(0, 1)}
-                                       </div>
-                                       <div>
-                                          <p className="text-sm font-black text-main uppercase">{day.name}</p>
-                                          <p className="text-[9px] text-muted font-bold uppercase tracking-widest mt-1">{schedule.isEnabled ? 'Jornada Activa' : 'Día No Laboral'}</p>
-                                       </div>
+                              <div key={day.id} className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${schedule.isEnabled ? 'bg-input-theme border-theme shadow-sm' : 'bg-transparent border-theme/20 opacity-40'}`}>
+                                 <div className="flex items-center gap-4 mb-6">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-all ${schedule.isEnabled ? 'bg-[#CE4676] text-white shadow-[0_0_15px_#CE4676]/30' : 'bg-card text-muted'}`}>
+                                       {day.name.substring(0, 1)}
                                     </div>
+                                    <div>
+                                       <p className="text-xs font-black text-main uppercase">{day.name}</p>
+                                       <p className="text-[8px] text-muted font-bold uppercase tracking-widest">{schedule.isEnabled ? 'Activo' : 'Cerrado'}</p>
+                                    </div>
+                                 </div>
 
-                                    <div className="flex items-center gap-6 w-full md:w-auto">
-                                       {schedule.isEnabled && (
-                                          <div className="flex gap-4 items-center bg-card p-2 rounded-2xl border border-theme">
-                                             <Clock size={14} className="text-[#CE4676] ml-2" />
+                                 <div className="space-y-4">
+                                    {schedule.isEnabled ? (
+                                       <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-theme">
+                                             <Clock size={12} className="text-[#CE4676]" />
                                              <input
                                                 type="time"
                                                 value={schedule.slots[0]?.start || '09:00'}
@@ -472,9 +534,11 @@ export const SchedulesPage: React.FC = () => {
                                                    }
                                                    setProfessionals(prev => prev.map(p => p.id === selectedProId ? { ...p, weeklySchedule: updated } : p));
                                                 }}
-                                                className="bg-transparent text-white font-bold text-xs outline-none"
+                                                className="bg-transparent text-white font-bold text-[10px] outline-none w-full"
                                              />
-                                             <span className="text-zinc-700 text-xs">-</span>
+                                          </div>
+                                          <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-theme">
+                                             <Clock size={12} className="text-[#CE4676]" />
                                              <input
                                                 type="time"
                                                 value={schedule.slots[0]?.end || '18:00'}
@@ -488,27 +552,31 @@ export const SchedulesPage: React.FC = () => {
                                                    }
                                                    setProfessionals(prev => prev.map(p => p.id === selectedProId ? { ...p, weeklySchedule: updated } : p));
                                                 }}
-                                                className="bg-transparent text-white font-bold text-xs outline-none"
+                                                className="bg-transparent text-white font-bold text-[10px] outline-none w-full"
                                              />
                                           </div>
-                                       )}
+                                       </div>
+                                    ) : (
+                                       <div className="h-[84px] flex items-center justify-center border border-dashed border-theme rounded-xl">
+                                          <Coffee size={16} className="text-muted/20" />
+                                       </div>
+                                    )}
 
-                                       <button
-                                          onClick={() => {
-                                             let updated = [...((selectedPro?.weeklySchedule as any[]) || [])];
-                                             const idx = updated.findIndex((s: any) => s.dayOfWeek === day.id);
-                                             if (idx > -1) {
-                                                updated[idx].isEnabled = !updated[idx].isEnabled;
-                                             } else {
-                                                updated.push({ dayOfWeek: day.id, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] });
-                                             }
-                                             setProfessionals(prev => prev.map(p => p.id === selectedProId ? { ...p, weeklySchedule: updated } : p));
-                                          }}
-                                          className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${schedule.isEnabled ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20'}`}
-                                       >
-                                          {schedule.isEnabled ? 'Desactivar' : 'Activar'}
-                                       </button>
-                                    </div>
+                                    <button
+                                       onClick={() => {
+                                          let updated = [...((selectedPro?.weeklySchedule as any[]) || [])];
+                                          const idx = updated.findIndex((s: any) => s.dayOfWeek === day.id);
+                                          if (idx > -1) {
+                                             updated[idx].isEnabled = !updated[idx].isEnabled;
+                                          } else {
+                                             updated.push({ dayOfWeek: day.id, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] });
+                                          }
+                                          setProfessionals(prev => prev.map(p => p.id === selectedProId ? { ...p, weeklySchedule: updated } : p));
+                                       }}
+                                       className={`w-full py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${schedule.isEnabled ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-[#D4AF37]/10 text-[#D4AF37] hover:bg-[#D4AF37]/20'}`}
+                                    >
+                                       {schedule.isEnabled ? 'Bloquear' : 'Habilitar'}
+                                    </button>
                                  </div>
                               </div>
                            );

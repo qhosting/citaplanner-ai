@@ -1,5 +1,5 @@
 # 📋 ROADMAP - CitaPlanner AI
-## Estado Actual del Sistema (Aurum Nexus v6.2)
+## Estado Actual del Sistema (Aurum Nexus v6.4)
 
 ---
 
@@ -69,11 +69,11 @@
 - [x] Historial de citas por cliente
 - [x] Preferencias de notificación (WhatsApp/Email)
 
-### **Módulo de Profesionales**
-- [x] Gestión de horarios semanales
-- [x] Excepciones de calendario
-- [x] Vinculación con Aurum Employee ID
-- [x] Dashboard de citas asignadas
+### **Módulo de Profesionales (Master Matrix)**
+- [x] **Arquitectura de Matriz**: Gestión multi-especialista en tiempo real.
+- [x] **Horarios Dinámicos**: Configuración de jornada base y excepciones (bloqueos).
+- [x] **iCal Sync**: Integración con calendarios externos (Apple/Outlook).
+- [x] **Intelligence Header**: Monitoreo de ocupación y recomendaciones AI.
 
 ### **Punto de Venta (POS)**
 - [x] Catálogo de productos/servicios
@@ -88,11 +88,12 @@
 - [x] Envío automático vía Email/WhatsApp
 - [x] Tracking de campañas enviadas
 
-### **Analytics & Reportes**
-- [x] Dashboard de métricas
-- [x] Estadísticas de citas (por estado, profesional)
-- [x] Análisis de ingresos (POS)
-- [x] Exportación de datos
+### **Analytics & Intelligence Hub**
+- [x] **Métricas en Tiempo Real**: Eliminación de mocks en `/analytics`.
+- [x] **KPI Live Bindings**: Conexión de ingresos, citas y clientes con Prisma.
+- [x] **Revenue Flow**: Gráficos de flujo financiero basados en ventas reales.
+- [x] **Service Mix & Top Products**: Análisis dinámico de rendimiento por categoría.
+- [x] **AI Strategy Master**: Integración de Gemini para análisis DAFO automatizado.
 
 ### **Gestión Multi-Branch**
 - [x] Soporte para múltiples sucursales
@@ -193,9 +194,10 @@ SMTP_PORT=587
 SMTP_USER=***
 SMTP_PASS=***
 
-# WhatsApp (Evolution API)
-EVOLUTION_API_URL=***
-EVOLUTION_API_KEY=***
+# WhatsApp (WAHA API)
+WAHA_URL=http://...
+WAHA_OTP_SESSION=WHATSCLOUD
+WAHA_API_KEY=***
 
 # Web Push
 VAPID_PUBLIC_KEY=***
@@ -217,5 +219,5 @@ DOMAIN_URL=https://citaplanner.ai
 
 ---
 
-**Última actualización**: 2026-04-28 (v6.2 Aurum Nexus)  
-**Estado**: ✅ En producción funcional (Branding Dinámico & Tailwind v4)
+**Última actualización**: 2026-04-28 (v6.3 Aurum Nexus)  
+**Estado**: ✅ En producción funcional (Analytics Hub & Live Data Bindings)

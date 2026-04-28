@@ -10,7 +10,7 @@ import { api } from '../services/api';
 import { LandingSettings, BridgeSettings } from '../types';
 
 export const SettingsPage: React.FC = () => {
-   const [activeTab, setActiveTab] = useState<'GENERAL' | 'BRIDGE' | 'SECURITY' | 'BILLING'>('GENERAL');
+   const [activeTab, setActiveTab] = useState<'GENERAL' | 'BRIDGE' | 'SECURITY' | 'BILLING' | 'INTEGRATIONS'>('GENERAL');
    const [loading, setLoading] = useState(true);
    const [testing, setTesting] = useState(false);
    const [showKey, setShowKey] = useState(false);
@@ -19,6 +19,7 @@ export const SettingsPage: React.FC = () => {
    const [integrationLogs, setIntegrationLogs] = useState<any[]>([]);
    const [masterIcalToken, setMasterIcalToken] = useState<string>('');
    const [generatingToken, setGeneratingToken] = useState(false);
+   const [wahaStatus, setWahaStatus] = useState<any>(null);
 
    useEffect(() => {
       loadData();
@@ -35,6 +36,9 @@ export const SettingsPage: React.FC = () => {
 
          const { icalToken } = await api.getTenantCalendarLink();
          setMasterIcalToken(icalToken);
+
+         const wStatus = await api.getWahaStatus();
+         setWahaStatus(wStatus);
       } catch (e) {
          toast.error("Falla en sincronización de consola.");
       } finally {
@@ -126,6 +130,7 @@ export const SettingsPage: React.FC = () => {
             <div className="w-full md:w-80 bg-black/40 border-r border-white/5 p-8 space-y-3">
                {[
                   { id: 'GENERAL', label: 'General', icon: Globe },
+                  { id: 'INTEGRATIONS', label: 'Integraciones', icon: LinkIcon },
                   { id: 'BILLING', label: 'Facturación', icon: Zap },
                   { id: 'BRIDGE', label: 'Aurum Bridge', icon: Server },
                   { id: 'SECURITY', label: 'Seguridad', icon: Key },
@@ -264,6 +269,76 @@ export const SettingsPage: React.FC = () => {
                            </table>
                         </div>
                      </section>
+                  </div>
+               )}
+
+               {activeTab === 'INTEGRATIONS' && (
+                  <div className="space-y-12 animate-entrance">
+                     <div>
+                        <h3 className="text-3xl font-black text-white tracking-tighter uppercase">Nexus <span className="gold-text-gradient italic">Integrations</span></h3>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-2">Gestión de Enlaces y Protocolos de Comunicación</p>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                              <Wifi size={120} />
+                           </div>
+                           <div className="flex items-center gap-6 mb-10">
+                              <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-3xl border border-emerald-500/20">
+                                 <LinkIcon size={32} />
+                              </div>
+                              <div>
+                                 <h4 className="text-xl font-black text-white uppercase tracking-tight">WhatsApp Node (WAHA)</h4>
+                                 <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Motor de Mensajería y OTPs</p>
+                              </div>
+                           </div>
+
+                           <div className="space-y-6">
+                              <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
+                                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Sesión Activa</span>
+                                 <span className="text-sm font-mono font-black text-white">{wahaStatus?.sessionName || '---'}</span>
+                              </div>
+                              <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
+                                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Estado del Nodo</span>
+                                 <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${wahaStatus?.status === 'CONNECTED' ? 'bg-emerald-500 shadow-[0_0_10px_#10B981]' : 'bg-rose-500 shadow-[0_0_10px_#F43F5E]'}`} />
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${wahaStatus?.status === 'CONNECTED' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                       {wahaStatus?.status || 'OFFLINE'}
+                                    </span>
+                                 </div>
+                              </div>
+                              {wahaStatus?.details && (
+                                 <div className="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                                    <p className="text-[9px] text-emerald-500/70 font-bold uppercase leading-relaxed">
+                                       El nodo está operando correctamente bajo la sesión maestra. Todos los triggers de agenda están vinculados.
+                                    </p>
+                                 </div>
+                              )}
+                              <button 
+                                 onClick={loadData}
+                                 className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3"
+                              >
+                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Estado
+                              </button>
+                           </div>
+                        </div>
+
+                        <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 opacity-40 grayscale pointer-events-none">
+                           <div className="flex items-center gap-6 mb-10">
+                              <div className="p-4 bg-zinc-800 text-zinc-500 rounded-3xl">
+                                 <Building2 size={32} />
+                              </div>
+                              <div>
+                                 <h4 className="text-xl font-black text-white uppercase tracking-tight">Email SMTP (Direct)</h4>
+                                 <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Próximamente</p>
+                              </div>
+                           </div>
+                           <p className="text-[10px] text-zinc-600 font-bold uppercase leading-relaxed">
+                              La integración nativa de SMTP permitirá el envío de newsletters y recibos digitales sin dependencias externas.
+                           </p>
+                        </div>
+                     </div>
                   </div>
                )}
 

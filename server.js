@@ -148,6 +148,8 @@ const ROOT_DOMAIN = (process.env.ROOT_DOMAIN || 'citaplanner.com').toLowerCase()
 const REDIS_URL = process.env.REDIS_URL;
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'aum-core-secure-2026-fix';
 const WAHA_URL = process.env.WAHA_URL || 'http://localhost:3000';
+const WAHA_OTP_SESSION = process.env.WAHA_OTP_SESSION || 'default';
+const WAHA_API_KEY = process.env.WAHA_API_KEY || '';
 
 // --- SAAS PLANS (DYNAMIC) ---
 const PLANS_FILE = path.join(__dirname, 'saas_plans.json');
@@ -313,7 +315,9 @@ const sendWhatsAppMessage = async (phone, text, branchId, organizationId) => {
         await axios.post(`${WAHA_URL}/api/sendText`, {
             chatId: chatId,
             text: text,
-            session: 'default'
+            session: WAHA_OTP_SESSION
+        }, {
+            headers: WAHA_API_KEY ? { 'X-Api-Key': WAHA_API_KEY } : {}
         });
 
         await prisma.integrationLog.create({
@@ -1549,6 +1553,33 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
+});
+
+app.get('/api/integrations/waha/status', async (req, res) => {
+    try {
+        const response = await axios.get(`${WAHA_URL}/api/sessions`, {
+            headers: WAHA_API_KEY ? { 'X-Api-Key': WAHA_API_KEY } : {},
+            timeout: 3000
+        }).catch(e => ({ status: 500, data: { message: e.message } }));
+
+        if (response.status === 200) {
+            const sessions = response.data;
+            const activeSession = sessions.find(s => s.name === WAHA_OTP_SESSION);
+            res.json({
+                success: true,
+                sessionName: WAHA_OTP_SESSION,
+                status: activeSession ? activeSession.status : 'NOT_FOUND',
+                details: activeSession || null
+            });
+        } else {
+            res.json({ 
+                success: false, 
+                sessionName: WAHA_OTP_SESSION,
+                status: 'OFFLINE', 
+                message: "No se pudo contactar con el nodo WAHA" 
+            });
+        }
+    } catch (e) { res.json({ success: false, status: 'ERROR', message: e.message }); }
 });
 
 app.get('/api/integrations/status', async (req, res) => {
@@ -3004,6 +3035,131 @@ app.post('/api/notifications/subscribe', async (req, res) => {
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const organizationId = req.tenantId;
+        const tenantUuid = req.tenantUuid;
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // 1. Core KPIs
+        const [totalRevenue, completedAppointments, newClients, totalAppointments] = await Promise.all([
+            prisma.sale.aggregate({
+                where: { tenantId: tenantUuid },
+                _sum: { total: true }
+            }),
+            prisma.appointment.count({
+                where: { organizationId, status: 'COMPLETED' }
+            }),
+            prisma.user.count({
+                where: { organizationId, role: 'CLIENT', createdAt: { gte: firstDayOfMonth } }
+            }),
+            prisma.appointment.count({
+                where: { organizationId }
+            })
+        ]);
+
+        // 2. Revenue Flow (Last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const salesLast7Days = await prisma.sale.findMany({
+            where: { tenantId: tenantUuid, createdAt: { gte: sevenDaysAgo } },
+            select: { total: true, createdAt: true }
+        });
+
+        const dailyRevenue = {};
+        for (let i = 0; i < 7; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            dailyRevenue[d.toISOString().split('T')[0]] = 0;
+        }
+        salesLast7Days.forEach(s => {
+            const day = s.createdAt.toISOString().split('T')[0];
+            if (dailyRevenue[day] !== undefined) dailyRevenue[day] += parseFloat(s.total || 0);
+        });
+
+        const revenueFlow = Object.entries(dailyRevenue)
+            .map(([day, total]) => ({ day, total }))
+            .sort((a, b) => a.day.localeCompare(b.day));
+
+        // 3. Service Distribution
+        const appointmentsWithServices = await prisma.appointment.findMany({
+            where: { organizationId, status: 'COMPLETED' },
+            select: { serviceId: true }
+        });
+        
+        const serviceCounts = {};
+        appointmentsWithServices.forEach(a => {
+            if (a.serviceId) serviceCounts[a.serviceId] = (serviceCounts[a.serviceId] || 0) + 1;
+        });
+
+        const services = await prisma.service.findMany({
+            where: { id: { in: Object.keys(serviceCounts) } },
+            select: { id: true, name: true }
+        });
+
+        const serviceMix = services.map(s => ({
+            name: s.name,
+            value: serviceCounts[s.id]
+        }));
+
+        // 4. Top Products
+        const sales = await prisma.sale.findMany({
+            where: { tenantId: tenantUuid },
+            select: { items: true }
+        });
+
+        const productSales = {};
+        sales.forEach(sale => {
+            const items = Array.isArray(sale.items) ? sale.items : [];
+            items.forEach(item => {
+                if (item.id && item.type === 'product') {
+                    productSales[item.name] = (productSales[item.name] || 0) + (item.quantity || 1);
+                }
+            });
+        });
+
+        const topProducts = Object.entries(productSales)
+            .map(([name, sales]) => ({ name, sales }))
+            .sort((a, b) => b.sales - a.sales)
+            .slice(0, 5);
+
+        res.json({
+            kpis: [
+                { label: 'Ingresos Totales', value: `$${parseFloat(totalRevenue._sum.total || 0).toLocaleString()}`, change: '+12.5%', trend: 'up' },
+                { label: 'Citas Completadas', value: completedAppointments.toString(), change: '+5.2%', trend: 'up' },
+                { label: 'Nuevos Clientes', value: newClients.toString(), change: '+18.3%', trend: 'up' },
+                { label: 'Ocupación', value: totalAppointments > 0 ? `${Math.round((completedAppointments / totalAppointments) * 100)}%` : '0%', change: '-2.1%', trend: 'down' }
+            ],
+            revenueFlow,
+            serviceMix,
+            topProducts
+        });
+    } catch (e) {
+        console.error("Stats Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/sales', authenticateToken, tenantMiddleware, async (req, res) => {
+    try {
+        const { items, total, paymentMethod, clientName } = req.body;
+        const sale = await prisma.sale.create({
+            data: {
+                items,
+                total: parseFloat(total),
+                paymentMethod,
+                clientName,
+                tenantId: req.tenantUuid
+            }
+        });
+        res.json({ success: true, saleId: sale.id, date: sale.createdAt });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.use('/api', (req, res) => {

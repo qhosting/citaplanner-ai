@@ -9,6 +9,17 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { BusinessInsights } from '../components/BusinessInsights';
 
+const formatPrice = (price: number | string) => {
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  if (isNaN(num)) return '$0';
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: num % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 export const AnalyticsPage: React.FC = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['businessStats'],
@@ -20,40 +31,44 @@ export const AnalyticsPage: React.FC = () => {
     queryFn: api.getAppointments
   });
 
-  const kpis = useMemo(() => [
-    { 
-      label: 'Ingresos Mensuales', 
-      value: `$${stats?.revenueThisMonth.toLocaleString() || '0'}`, 
-      trend: '+14.2%', 
-      isUp: true, 
-      icon: DollarSign, 
-      color: 'text-emerald-500' 
-    },
-    { 
-      label: 'Citas Finalizadas', 
-      value: stats?.appointmentsCompleted || '0', 
-      trend: '+5.1%', 
-      isUp: true, 
-      icon: Calendar, 
-      color: 'text-blue-500' 
-    },
-    { 
-      label: 'Nuevos Clientes', 
-      value: stats?.newClientsThisMonth || '0', 
-      trend: '-2.4%', 
-      isUp: false, 
-      icon: Users, 
-      color: 'text-amber-500' 
-    },
-    { 
-      label: 'Tasa de Ocupación', 
-      value: `${stats?.occupationRate || '0'}%`, 
-      trend: '+0.8%', 
-      isUp: true, 
-      icon: Activity, 
-      color: 'text-[#D4AF37]' 
-    },
-  ], [stats]);
+  const kpis = useMemo(() => {
+    const defaultKpis = [
+      { label: 'Ingresos Mensuales', value: '$0', trend: '0%', isUp: true, icon: DollarSign, color: 'text-emerald-500' },
+      { label: 'Citas Finalizadas', value: '0', trend: '0%', isUp: true, icon: Calendar, color: 'text-blue-500' },
+      { label: 'Nuevos Clientes', value: '0', trend: '0%', isUp: true, icon: Users, color: 'text-amber-500' },
+      { label: 'Tasa de Ocupación', value: '0%', trend: '0%', isUp: true, icon: Activity, color: 'text-[#D4AF37]' },
+    ];
+
+    if (!stats?.kpis || stats.kpis.length === 0) return defaultKpis;
+
+    return stats.kpis.map((k: any, i: number) => ({
+      label: k.label,
+      value: k.value,
+      trend: k.change,
+      isUp: k.trend === 'up',
+      icon: i === 0 ? DollarSign : i === 1 ? Calendar : i === 2 ? Users : Activity,
+      color: i === 0 ? 'text-emerald-500' : i === 1 ? 'text-blue-500' : i === 2 ? 'text-amber-500' : 'text-[#D4AF37]'
+    }));
+  }, [stats]);
+
+  const maxRevenue = useMemo(() => {
+    if (!stats?.revenueFlow?.length) return 1;
+    return Math.max(...stats.revenueFlow.map((d: any) => d.total));
+  }, [stats]);
+
+  const serviceDistribution = useMemo(() => {
+    if (!stats?.serviceMix?.length) return [
+      { label: 'Sin datos', value: 100, color: 'bg-white/10' }
+    ];
+    const total = stats.serviceMix.reduce((acc: number, s: any) => acc + s.value, 0);
+    return stats.serviceMix.map((s: any, i: number) => ({
+      label: s.name,
+      value: Math.round((s.value / total) * 100),
+      color: i === 0 ? 'bg-[#D4AF37]' : i === 1 ? 'bg-blue-500' : i === 2 ? 'bg-emerald-500' : 'bg-white/10'
+    }));
+  }, [stats]);
+
+  const topProducts = stats?.topProducts || [];
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
@@ -111,15 +126,19 @@ export const AnalyticsPage: React.FC = () => {
               </div>
               
               <div className="h-64 flex items-end justify-between gap-4 px-4">
-                 {[45, 78, 52, 91, 63, 84, 95].map((h, i) => (
-                   <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                      <div className="w-full relative">
-                        <div style={{ height: `${h}%` }} className="w-full bg-white/5 rounded-t-xl group-hover:bg-white/10 transition-all border-t border-x border-white/5" />
-                        <div style={{ height: `${h * 0.7}%` }} className="absolute bottom-0 w-full bg-gradient-to-t from-[#D4AF37] to-[#F1C40F] rounded-t-xl shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
-                      </div>
-                      <span className="text-[9px] font-black text-slate-600 uppercase">Día {i+1}</span>
-                   </div>
-                 ))}
+                 {(stats?.revenueFlow || [0,0,0,0,0,0,0]).map((d: any, i: number) => {
+                   const h = maxRevenue > 0 ? (d.total / maxRevenue) * 100 : 0;
+                   const dayLabel = d.day ? new Date(d.day).toLocaleDateString('es-MX', { weekday: 'short' }) : `Día ${i+1}`;
+                   return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
+                        <div className="w-full relative h-full flex items-end">
+                          <div style={{ height: `${Math.max(h, 5)}%` }} className="w-full bg-white/5 rounded-t-xl group-hover:bg-white/10 transition-all border-t border-x border-white/5" />
+                          <div style={{ height: `${h}%` }} className="absolute bottom-0 w-full bg-gradient-to-t from-[#D4AF37] to-[#F1C40F] rounded-t-xl shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
+                        </div>
+                        <span className="text-[8px] font-black text-slate-600 uppercase">{dayLabel}</span>
+                    </div>
+                   );
+                 })}
               </div>
            </div>
         </div>
@@ -131,15 +150,10 @@ export const AnalyticsPage: React.FC = () => {
                 <PieChart size={20} className="text-blue-500" /> Mix de Servicios
               </h3>
               <div className="space-y-6">
-                 {[
-                   { label: 'Cejas / Micro', value: 45, color: 'bg-[#D4AF37]' },
-                   { label: 'Labios / Blush', value: 30, color: 'bg-blue-500' },
-                   { label: 'Retoques', value: 15, color: 'bg-emerald-500' },
-                   { label: 'Otros', value: 10, color: 'bg-white/10' }
-                 ].map((item, i) => (
+                 {serviceDistribution.map((item: any, i: number) => (
                    <div key={i} className="space-y-2">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                         <span className="text-slate-400">{item.label}</span>
+                         <span className="text-slate-400 truncate max-w-[150px]">{item.label}</span>
                          <span className="text-white">{item.value}%</span>
                       </div>
                       <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
@@ -155,19 +169,19 @@ export const AnalyticsPage: React.FC = () => {
                 <ShoppingBag size={20} className="text-emerald-500" /> Top Productos
               </h3>
               <div className="space-y-6">
-                 {[
-                   { name: 'Aftercare Serum Pro', sales: 124, revenue: 3100 },
-                   { name: 'Brow Gel Aurum', sales: 89, revenue: 1780 },
-                   { name: 'Kit Cicatrización', sales: 65, revenue: 1950 }
-                 ].map((prod, i) => (
+                 {topProducts.length > 0 ? topProducts.map((prod: any, i: number) => (
                    <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                      <div>
-                        <p className="text-[11px] font-black text-white uppercase">{prod.name}</p>
+                      <div className="overflow-hidden">
+                        <p className="text-[11px] font-black text-white uppercase truncate">{prod.name}</p>
                         <p className="text-[9px] text-slate-500 font-bold">{prod.sales} Unidades vendidas</p>
                       </div>
-                      <span className="text-xs font-black text-emerald-500">${prod.revenue}</span>
+                      <span className="text-xs font-black text-emerald-500 whitespace-nowrap">+{prod.sales}</span>
                    </div>
-                 ))}
+                 )) : (
+                    <div className="text-center py-8">
+                       <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sin ventas registradas</p>
+                    </div>
+                 )}
               </div>
               <button className="w-full mt-10 py-4 text-[9px] font-black uppercase tracking-[0.4em] text-slate-500 hover:text-white transition-all">Ver Reporte Completo</button>
            </div>

@@ -175,6 +175,13 @@ export const api = {
     } catch { return false; }
   },
 
+  getWahaStatus: async (): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/integrations/waha/status`);
+      return res.ok ? await res.json() : { success: false, status: 'ERROR' };
+    } catch { return { success: false, status: 'ERROR' }; }
+  },
+
   getIntegrationLogs: async (): Promise<any[]> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/integrations/status`);
@@ -645,5 +652,22 @@ export const api = {
       const res = await fetchWithAuth(`${API_URL}/leads/${id}`, { method: 'DELETE' });
       return res.ok;
     } catch { return false; }
+  },
+
+  // Business Stats
+  getBusinessStats: async (): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/business-stats`);
+      if (!res.ok) throw new Error("Error al obtener estadísticas");
+      return await res.json();
+    } catch (error) {
+      console.error("API getBusinessStats Error:", error);
+      return {
+        kpis: [],
+        revenueFlow: [],
+        serviceMix: [],
+        topProducts: []
+      };
+    }
   }
 };
