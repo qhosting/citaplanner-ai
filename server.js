@@ -1731,6 +1731,41 @@ app.get('/api/integrations/status', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// MAINTENANCE PROTOCOLS
+app.get('/api/maintenance/tasks', authenticateToken, async (req, res) => {
+    try {
+        const tasks = await prisma.maintenanceTask.findMany({
+            where: { tenantId: req.tenantId },
+            orderBy: [{ dayOfWeek: 'asc' }, { priority: 'asc' }]
+        });
+        res.json(tasks);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/maintenance/tasks', authenticateToken, async (req, res) => {
+    try {
+        const { dayOfWeek, taskName, priority } = req.body;
+        const task = await prisma.maintenanceTask.create({
+            data: {
+                dayOfWeek,
+                taskName,
+                priority: priority || 1,
+                tenantId: req.tenantId
+            }
+        });
+        res.json(task);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/maintenance/tasks/:id', authenticateToken, async (req, res) => {
+    try {
+        await prisma.maintenanceTask.delete({
+            where: { id: req.params.id, tenantId: req.tenantId }
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- CALENDAR INTEGRATION ENDPOINTS ---
 
 app.get('/api/professionals/:id/calendar/link', authenticateToken, async (req, res) => {

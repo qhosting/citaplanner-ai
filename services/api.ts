@@ -723,5 +723,30 @@ export const api = {
         topProducts: []
       };
     }
+  },
+  
+  // Maintenance Tasks
+  getMaintenanceTasks: async (): Promise<any[]> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/maintenance/tasks`);
+      return res.ok ? await res.json() : [];
+    } catch { return []; }
+  },
+
+  createMaintenanceTask: async (task: any): Promise<any | null> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/maintenance/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(task)
+      });
+      return res.ok ? await res.json() : null;
+    } catch { return null; }
+  },
+
+  deleteMaintenanceTask: async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/maintenance/tasks/${id}`, { method: 'DELETE' });
+      return res.ok;
+    } catch { return false; }
   }
 };

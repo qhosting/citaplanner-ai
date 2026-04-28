@@ -24,11 +24,13 @@
   - **Impacto**: Completado (Live KPIs, Revenue Charts, Top Products & AI DAFO).
   - **Estimación**: Completado
 
-### **Fase 3: Inteligencia & Integraciones (v6.7)**
-- [x] **WAHA Lead Auto-Capture Webhook**
-  - **Motivo**: Capturar automáticamente clientes potenciales que escriben por WhatsApp.
-  - **Impacto**: Completado (Validación contra directorio y auto-inserción en /leads).
+### **Fase 3: Inteligencia & Integraciones (v6.8)**
+- [x] **Protocolos de Mantenimiento & Limpieza**
+  - **Motivo**: Error en carga por falta de endpoints en el servidor.
+  - **Impacto**: Completado (API CRUD, Refactorización de servicios y UI activa).
   - **Estimación**: Completado
+
+- [x] **WAHA Lead Auto-Capture Webhook**
 
 - [x] **SEO & GEO Advanced Optimization**
 

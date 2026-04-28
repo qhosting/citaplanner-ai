@@ -6,6 +6,7 @@ import {
     ShieldCheck, ArrowRight, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '../services/api';
 
 interface MaintenanceTask {
     id: string;
@@ -31,10 +32,7 @@ export const MaintenancePage: React.FC = () => {
 
     const fetchTasks = async () => {
         try {
-            const response = await fetch('/api/maintenance/tasks', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            const data = await response.json();
+            const data = await api.getMaintenanceTasks();
             setTasks(data);
         } catch (e) {
             toast.error("Error al cargar el plan de mantenimiento.");
@@ -47,22 +45,18 @@ export const MaintenancePage: React.FC = () => {
         if (!newTaskName.trim()) return;
         setIsAdding(true);
         try {
-            const response = await fetch('/api/maintenance/tasks', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    dayOfWeek: selectedDay,
-                    taskName: newTaskName,
-                    priority: tasks.filter(t => t.dayOfWeek === selectedDay).length + 1
-                })
+            const newTask = await api.createMaintenanceTask({
+                dayOfWeek: selectedDay,
+                taskName: newTaskName,
+                priority: tasks.filter(t => t.dayOfWeek === selectedDay).length + 1
             });
-            const newTask = await response.json();
-            setTasks(prev => [...prev, newTask]);
-            setNewTaskName('');
-            toast.success("Tarea integrada al protocolo maestro.");
+            if (newTask) {
+                setTasks(prev => [...prev, newTask]);
+                setNewTaskName('');
+                toast.success("Tarea integrada al protocolo maestro.");
+            } else {
+                throw new Error("Failed to create task");
+            }
         } catch (e) {
             toast.error("Error al guardar tarea.");
         } finally {
@@ -72,12 +66,13 @@ export const MaintenancePage: React.FC = () => {
 
     const deleteTask = async (id: string) => {
         try {
-            await fetch(`/api/maintenance/tasks/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            setTasks(prev => prev.filter(t => t.id !== id));
-            toast.success("Tarea eliminada del protocolo.");
+            const success = await api.deleteMaintenanceTask(id);
+            if (success) {
+                setTasks(prev => prev.filter(t => t.id !== id));
+                toast.success("Tarea eliminada del protocolo.");
+            } else {
+                throw new Error("Failed to delete");
+            }
         } catch (e) {
             toast.error("Error al eliminar.");
         }
