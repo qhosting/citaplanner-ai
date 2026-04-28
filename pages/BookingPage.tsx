@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
+import { Footer } from '../components/Footer';
 
 // --- HELPERS ---
 const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number, appointments: Appointment[]): string[] => {
@@ -615,6 +616,8 @@ export const BookingPage: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {settings && <Footer settings={settings} accent={settings.primaryColor} />}
     </div>
   );
 };

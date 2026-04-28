@@ -21,6 +21,8 @@ import {
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 import { WhatsAppButton } from '../components/WhatsAppButton';
 import { SYSTEM_VERSION } from '../src/version';
+import { Footer } from '../components/Footer';
+import { LegalModal } from '../components/LegalModal';
 
 const DEFAULT_SETTINGS: LandingSettings = {
   businessName: 'Luxury Business',
@@ -124,7 +126,7 @@ export const LandingPage: React.FC = () => {
     };
   }, []);
 
-  const [legalModal, setLegalModal] = useState<'PRIVACY' | 'TERMS' | null>(null);
+  const [legalType, setLegalType] = useState<'PRIVACY' | 'TERMS' | null>(null);
 
   // === FULL SEO/GEO ENGINE ===
   useEffect(() => {
@@ -390,55 +392,8 @@ export const LandingPage: React.FC = () => {
 
   return (
     <>
-      {/* Legal Modals */}
-      {legalModal && (
-        <div className="fixed inset-0 z-[700] bg-black/60 backdrop-blur-md flex items-center justify-center p-6 animate-entrance">
-          <div className="bg-[#0a0a0a] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-              <h2 className="text-xl font-black text-white uppercase tracking-tighter">
-                {legalModal === 'PRIVACY' ? 'Aviso de Privacidad' : 'Términos y Condiciones'}
-              </h2>
-              <button onClick={() => setLegalModal(null)} className="p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-10 max-h-[60vh] overflow-y-auto custom-scrollbar text-zinc-400 text-sm leading-relaxed space-y-6 bg-black/20">
-              {legalModal === 'PRIVACY' ? (
-                <>
-                  <div className="space-y-2">
-                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Responsable del Tratamiento</p>
-                    <p>En cumplimiento con la <strong>Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP)</strong> de México, se informa que <strong>{settings.businessName || 'El Establecimiento'}</strong> es el responsable del tratamiento de sus datos personales.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Finalidades</p>
-                    <p>Sus datos (nombre, teléfono y preferencias de servicio) serán utilizados exclusivamente para la gestión de su cita, confirmaciones vía WhatsApp y facturación.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Derechos ARCO</p>
-                    <p>Para ejercer sus derechos de Acceso, Rectificación, Cancelación u Oposición, favor de contactarnos directamente a través de los canales oficiales publicados en este sitio.</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Uso del Servicio</p>
-                    <p>Al reservar una cita a través de esta plataforma, usted acepta las políticas de operación, puntualidad y cancelación de <strong>{settings.businessName || 'El Establecimiento'}</strong>.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-black text-white uppercase tracking-[0.2em] text-[9px]">Políticas de Cancelación</p>
-                    <p>Conforme a la <strong>Ley Federal de Protección al Consumidor</strong>, las cancelaciones deben realizarse con el tiempo de anticipación estipulado por el estudio para evitar cargos administrativos o pérdida de anticipos.</p>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end">
-              <button onClick={() => setLegalModal(null)} className="px-10 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-indigo-500 transition-all shadow-xl">
-                Cerrar Aviso
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Legal Modals handled by Footer or inline if needed */}
+      <LegalModal type={legalType} onClose={() => setLegalType(null)} settings={settings} />
 
       <div className="min-h-screen bg-[#050505]" style={{ '--accent': accent } as React.CSSProperties}>
       {renderTemplate()}
@@ -484,53 +439,7 @@ export const LandingPage: React.FC = () => {
 
       {/* Common Footer (Enhanced) */}
       {settings.templateId !== 'shulastudio' && settings.templateId !== 'shula_dark' && (
-        <footer className="bg-[#050505] pt-32 pb-12 border-t border-white/5 px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-20 mb-20">
-              <div className="space-y-6">
-                <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
-                <p className="text-zinc-500 text-xs leading-relaxed">{settings.footerText || "Experiencia de salud y bienestar diseñada para tu estilo de vida."}</p>
-              </div>
-              <div>
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Encuéntranos</h4>
-                <p className="text-zinc-500 text-xs leading-relaxed">{settings.address || "Visita nuestro estudio"}</p>
-                <p className="text-zinc-300 font-bold mt-4 text-sm">{settings.contactPhone}</p>
-              </div>
-              <div>
-                <h4 className="text-[10px] font-black text-white uppercase tracking-widest mb-6 border-l-2 pl-4" style={{ borderColor: accent }}>Síguenos</h4>
-                <div className="flex gap-4">
-                  {settings.socialInstagram && <a href={settings.socialInstagram} className="text-zinc-600 hover:text-white transition-colors"><Instagram size={20} /></a>}
-                  {settings.socialFacebook && <a href={settings.socialFacebook} className="text-zinc-600 hover:text-white transition-colors"><Facebook size={20} /></a>}
-                  {settings.socialTwitter && <a href={settings.socialTwitter} className="text-zinc-600 hover:text-white transition-colors"><Twitter size={20} /></a>}
-                </div>
-              </div>
-              <div className="bg-white/[0.02] p-8 rounded-3xl border border-white/5">
-                <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Servidor en Línea
-                </p>
-                                <p className="text-zinc-500 text-[10px] leading-relaxed">Infraestructura Aurum Nexus v5.0 segura con cifrado de grado militar.</p>
-              </div>
-            </div>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 pt-12">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-4">
-                <span>© {new Date().getFullYear()} CitaPlanner By Aurum Capital</span>
-                <span className="opacity-30">|</span>
-                <span className="opacity-50">v{SYSTEM_VERSION}</span>
-              </p>
-              <div className="flex gap-10">
-                {['Privacidad', 'Términos'].map((item) => (
-                  <span 
-                    key={item} 
-                    onClick={() => setLegalModal(item === 'Privacidad' ? 'PRIVACY' : 'TERMS')}
-                    className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all cursor-pointer"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </footer>
+        <Footer settings={settings} accent={accent} />
       )}
 
       {/* WhatsApp Floating Button */}
