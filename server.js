@@ -2754,6 +2754,69 @@ app.post('/api/settings/bridge/test', authenticateToken, tenantMiddleware, async
 });
 
 
+app.post('/api/ai/visual-improve', authenticateToken, async (req, res) => {
+    try {
+        const { title, category } = req.body;
+        if (!title) return res.status(400).json({ error: "Título requerido" });
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const promptForPrompt = `Genera un prompt de generación de imagen ULTRA-PROFESIONAL en INGLÉS para un servicio de belleza llamado "${title}".
+        El estilo debe ser: Fotografía editorial de alta gama, iluminación cinematográfica, primer plano, estilo minimalista y lujoso, 8k, ultra-realista.
+        Responde ÚNICAMENTE con el prompt en inglés, sin explicaciones.`;
+
+        const result = await model.generateContent(promptForPrompt);
+        const aiPrompt = result.response.text().trim();
+
+        // NanoBanana Engine (Simulado con Pollinations.ai para demostración inmediata y funcional)
+        const seed = Math.floor(Math.random() * 1000000);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(aiPrompt)}?width=1080&height=1350&nologo=true&seed=${seed}`;
+
+        res.json({ 
+            success: true, 
+            imageUrl,
+            prompt: aiPrompt 
+        });
+    } catch (e) {
+        console.error("NanoBanana Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/ai/service-suggestion', authenticateToken, async (req, res) => {
+    try {
+        const { title, category } = req.body;
+        if (!title) return res.status(400).json({ error: "Título requerido" });
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const prompt = `Actúa como un experto Copywriter de lujo para estudios de belleza de clase mundial (tipo Shula Studio). 
+        Genera una descripción seductora y profesional para un servicio llamado "${title}" en la categoría "${category || 'General'}".
+        También genera instrucciones de cuidado post-cita (aftercare) breves y claras que la IA enviará al cliente.
+
+        Responde ÚNICAMENTE con un objeto JSON válido con este formato:
+        {
+          "description": "Una narrativa de 3-4 líneas que resalte los beneficios, el lujo y la técnica.",
+          "careInstructions": "3-4 puntos clave de cuidado post-servicio."
+        }`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        
+        // Sanitize JSON response (Gemini sometimes adds ```json blocks)
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            res.json({ success: true, data });
+        } else {
+            res.status(500).json({ error: "No se pudo generar el formato JSON" });
+        }
+    } catch (e) {
+        console.error("AI Suggestion Error:", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/ai/concierge', async (req, res) => {
     try {
         const { message, context } = req.body;

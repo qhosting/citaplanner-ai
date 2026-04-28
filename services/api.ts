@@ -471,6 +471,35 @@ export const api = {
     } catch { return { success: false }; }
   },
 
+  // AI & Automation
+  getServiceSuggestion: async (title: string, category: string): Promise<{ description: string, careInstructions: string } | null> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/ai/service-suggestion`, {
+        method: 'POST',
+        body: JSON.stringify({ title, category })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        return result.data;
+      }
+      return null;
+    } catch { return null; }
+  },
+
+  improveImage: async (title: string, category: string): Promise<{ imageUrl: string } | null> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/ai/visual-improve`, {
+        method: 'POST',
+        body: JSON.stringify({ title, category })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        return result;
+      }
+      return null;
+    } catch { return null; }
+  },
+
   // SaaS / Billing
   getSaasPlans: async (): Promise<SaasPlan[]> => {
     try {
