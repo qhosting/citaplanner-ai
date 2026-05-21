@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { SmartScheduler } from '../components/SmartScheduler';
 import { AppointmentModal } from '../components/AppointmentModal';
 import { VoiceAssistant } from '../components/VoiceAssistant';
 import { Skeleton } from '../components/Skeleton';
@@ -24,16 +23,6 @@ export const Dashboard: React.FC = () => {
   const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments,
-  });
-
-  const { data: services = [] } = useQuery({
-    queryKey: ['services'],
-    queryFn: api.getServices,
-  });
-
-  const { data: professionals = [] } = useQuery({
-    queryKey: ['professionals'],
-    queryFn: api.getProfessionals,
   });
 
   const createMutation = useMutation({
@@ -108,31 +97,17 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* 📅 CALENDAR AND AGENDA SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-        {/* Left Side: Dynamic Calendar */}
-        <div className="lg:col-span-2">
-          <div className="glass-card p-1.5 rounded-[3.5rem] border-[#CE4676]/5">
-            <SmartScheduler
-              onAddAppointment={(apt) => createMutation.mutate(apt)}
-              services={services}
-              professionals={professionals}
-            />
+      {/* 📅 AGENDA DE OPERACIONES ELITE */}
+      <div className="max-w-4xl mx-auto">
+        {isLoadingAppointments ? (
+          <div className="space-y-6">
+            <Skeleton className="h-32 w-full rounded-[3rem]" />
+            <Skeleton className="h-32 w-full rounded-[3rem]" />
+            <Skeleton className="h-32 w-full rounded-[3rem]" />
           </div>
-        </div>
-
-        {/* Right Side: Day Agenda */}
-        <div className="lg:col-span-1">
-          {isLoadingAppointments ? (
-            <div className="space-y-6">
-              <Skeleton className="h-32 w-full rounded-[3rem]" />
-              <Skeleton className="h-32 w-full rounded-[3rem]" />
-              <Skeleton className="h-32 w-full rounded-[3rem]" />
-            </div>
-          ) : (
-            <OperationsAgenda appointments={filteredAppointments} />
-          )}
-        </div>
+        ) : (
+          <OperationsAgenda appointments={filteredAppointments} />
+        )}
       </div>
 
       <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={(apt) => createMutation.mutate(apt)} />
