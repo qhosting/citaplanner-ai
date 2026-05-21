@@ -132,6 +132,72 @@
 - Suite E2E interactiva Playwright en `/tests/e2e/booking.spec.ts` validando SEO tags reales y endpoints de salud desde un navegador headless Chromium real.
 
 ---
+## 🔍 **ANÁLISIS DETALLADO DE MÓDULOS Y PÁGINAS (FRONTEND)**
+
+A continuación se detalla cada una de las **21 Páginas SPA** y **23 Componentes/Widgets Premium** que forman el ecosistema de cliente y de administración de CitaPlanner AI. Todos los módulos están plenamente conectados a base de datos real a través de Prisma ORM y Express, sin depender de datos simulados (mocks).
+
+### 🎛️ **Matriz de Páginas SPA (`pages/`)**
+
+| # | Archivo de Página | Propósito de Negocio & Operación | Conectividad & Estado |
+|---|---|---|---|
+| 1 | **[SchedulesPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/SchedulesPage.tsx)** | **Matriz Maestra de Agendas**: Vista densa e interactiva de 7 días para visualización simultánea de profesionales en paralelo. | `100% Real` • Conectado a base de datos PostgreSQL, soporte de excepciones, bloqueos y feed iCal. |
+| 2 | **[WebBuilderPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/WebBuilderPage.tsx)** | **Constructor de Sitios / Landing**: Herramienta visual para editar la web del salón, ajustar colores, tipografías e inyectar Schema.org. | `100% Real` • Conexión con `AIDesignCoach` (Gemini) y plantillas en tiempo real. |
+| 3 | **[BookingPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/BookingPage.tsx)** | **Portal de Reservas Público**: Flujo interactivo autogestionado de cliente para reservar sedes, profesionales y horas. | `100% Real` • Notificaciones Web Push PWA, asistente por voz `VoiceAssistant` y chat `AIConciergeWidget`. |
+| 4 | **[POSPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/POSPage.tsx)** | **Punto de Venta Integrado**: Carrito unificado para facturar tratamientos estéticos y productos retail físicos. | `100% Real` • Pasarela Mercado Pago / OpenPay y devaluación transaccional (`prisma.$transaction`) de stock. |
+| 5 | **[InventoryPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/InventoryPage.tsx)** | **Gestión de Stock e Insumos**: Inventarios con trazabilidad de movimientos (`IN`/`OUT`) y alertas por debajo del mínimo. | `100% Real` • Envío automatizado de pedidos de compra a proveedores mediante Nodemailer SMTP y WAHA. |
+| 6 | **[ClientPortal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/ClientPortal.tsx)** | **Área Privada de Clientes**: Historial personal de citas, ficha clínica estética y consentimiento firmado digitalmente. | `100% Real` • Módulo de firma en pantalla integrado, guardado en base de datos. |
+| 7 | **[LeadsPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/LeadsPage.tsx)** | **Pipeline de Prospectos WhatsApp**: Captura automática de chats desconocidos desde WAHA. | `100% Real` • Webhook activo, conversión a clientes CRM a un solo clic sin perder notas. |
+| 8 | **[AnalyticsPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/AnalyticsPage.tsx)** | **Analytics Hub Financiero**: Panel de KPI del negocio. Ingresos reales, tasa de ocupación, mix de servicios y top ventas. | `100% Real` • Consultas directas agregadas mediante Prisma ORM en tiempo real. |
+| 9 | **[ClientsPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/ClientsPage.tsx)** | **CRM Avanzado del Salón**: Directorio unificado de clientes con alertas médicas, etiquetas y acceso a `ClientDossier`. | `100% Real` • Consultas con paginación, filtros de búsqueda y exportación. |
+| 10 | **[MaintenancePage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/MaintenancePage.tsx)** | **Protocolos y Tareas Operativas**: Panel de control de higiene y tareas de mantenimiento diarias de las sedes. | `100% Real` • Distribución Round-Robin automatizada y notificaciones WAHA automáticas al personal. |
+| 11 | **[MarketingPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/MarketingPage.tsx)** | **Campaign & Template Engine**: Gestor CRUD de campañas multicanal automatizadas por eventos de cron. | `100% Real` • Envío de recordatorios masivos, post-cuidado y cumpleaños vía WhatsApp y Email. |
+| 12 | **[ProfessionalDashboard.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/ProfessionalDashboard.tsx)** | **Dashboard de Estilistas**: Agenda personal filtrada por rol, tareas operativas diarias y KPIs de productividad. | `100% Real` • Acceso seguro restringido por jerarquía de roles (STAFF). |
+| 13 | **[ServicesPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/ServicesPage.tsx)** | **Catálogo de Servicios**: Configuración de tratamientos, duraciones, precios e idoneidad del personal técnico. | `100% Real` • Operaciones CRUD atómicas conectadas. |
+| 14 | **[BranchesPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/BranchesPage.tsx)** | **Gestión de Sedes (Sucuarsales)**: Registro físico de sucursales con mapeo GPS (coordenadas reales). | `100% Real` • Inyección geolocalizada en el portal de reserva público. |
+| 15 | **[InsightsPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/InsightsPage.tsx)** | **IA Hub Predictivo**: Visualizador de riesgo de inasistencia calculado por Gemini 1.5 Flash. | `100% Real` • Recomendaciones de optimización e historial de alertas predictivas. |
+| 16 | **[Dashboard.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/Dashboard.tsx)** | **Dashboard General de Admin**: Tarjetas de accesos rápidos, alertas en vivo de Socket.io y resumen de agenda diaria. | `100% Real` • Conexión en tiempo real activa. |
+| 17 | **[SettingsPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/SettingsPage.tsx)** | **Configuración y Diagnósticos**: Estado de conexión de WAHA, pasarelas de pago y tokens de Google Calendar. | `100% Real` • Envío directo de mensajes de prueba y renovación de watches de Google. |
+| 18 | **[ProfilePage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/ProfilePage.tsx)** | **Ajustes de Perfil**: Edición de datos personales, avatar y restablecimiento seguro de contraseña. | `100% Real` • Encriptación con Bcrypt en servidor. |
+| 19 | **[LoginPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/LoginPage.tsx)** | **Pantalla de Autenticación**: Login estético con protección de fuerza bruta y cookies HTTP-only. | `100% Real` • Rotación automática de refresh token de 7 días. |
+| 20 | **[NotFoundPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/NotFoundPage.tsx)** | **Página 404 Estética**: Redireccionador responsivo e interactivo para rutas no existentes. | `100% Real` • Integración visual limpia. |
+| 21 | **[LandingPage.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/pages/LandingPage.tsx)** | **Landing Web Pública**: Plantilla base comercial de CitaPlanner optimizada con inyector dinámico SEO. | `100% Real` • Estilos CSS responsivos y visuales fluidos. |
+
+---
+
+### 🧩 **Componentes y Widgets Críticos (`components/`)**
+
+*   **`Inteligencia Artificial y Voz`**
+    *   **[AIConciergeWidget.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/AIConciergeWidget.tsx)**: Chatbot flotante interactivo de reservas autogestionadas con Gemini. Resuelve dudas y agenda en vivo.
+    *   **[AIDesignCoach.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/AIDesignCoach.tsx)**: Entrenador de diseño integrado en WebBuilder que asesora en contraste cromático e inyección SEO.
+    *   **[VoiceAssistant.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/VoiceAssistant.tsx)**: Asistente interactivo de control de agenda mediante reconocimiento de voz por Web Audio API.
+    *   **[BusinessInsights.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/BusinessInsights.tsx)**: Tarjeta dinámica que expone justificaciones predictivas de cancelación y planes de contingencia por IA.
+    *   **[SmartScheduler.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/SmartScheduler.tsx)**: Módulo de recomendación rápida de horarios libres para agendamiento optimizado.
+
+*   **`CRM y Fichas Clínicas`**
+    *   **[ClientDossier.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/ClientDossier.tsx)**: Ficha CRM 360° interactiva con historial médico, firmas de consentimiento, notas dinámicas e historial de citas.
+    *   **[ConsentModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/ConsentModal.tsx)**: Lienzo de firma táctil y con cursor para firmas digitales vinculadas a los consentimientos estéticos.
+    *   **[ClientModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/ClientModal.tsx)**: Modal de alta y actualización de datos demográficos de clientes.
+    *   **[LeadModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/LeadModal.tsx)**: Drawer de revisión y conversión directa de leads de WhatsApp en clientes CRM.
+
+*   **`Flujo de Agenda y Operación`**
+    *   **[AppointmentModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/AppointmentModal.tsx)**: Modal de creación de reservas con soporte de personal técnico asignado, precios y estados.
+    *   **[BranchModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/BranchModal.tsx)**: Modal interactivo para dar de alta sedes o sucursales físicas.
+    *   **[ServiceModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/ServiceModal.tsx)**: Gestor avanzado de servicios, categorías y profesionales capacitados.
+    *   **[InventoryModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/InventoryModal.tsx)**: Modal para ajuste rápido de stock, ingresos o retiros operacionales.
+
+*   **`Optimización y SEO`**
+    *   **[SEO.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/SEO.tsx)**: Componente inyector de metaetiquetas dynamic open-graph y formato Schema.org LocalBusiness (JSON-LD).
+    *   **[LandingTemplates.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/LandingTemplates.tsx)**: Biblioteca de plantillas para la autogeneración del portal público.
+
+*   **`Componentes de Utilidad`**
+    *   **[WhatsAppButton.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/WhatsAppButton.tsx)**: Botón de redirección interactiva directa hacia la línea de WhatsApp del salón.
+    *   **[EnergyMonitor.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/EnergyMonitor.tsx)**: Indicador visual de consumo del servidor.
+    *   **[MaintenanceScreen.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/MaintenanceScreen.tsx)**: Protector de pantalla durante las actualizaciones.
+    *   **[LogoCitaplanner.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/LogoCitaplanner.tsx)**: SVG nativo responsivo del imagotipo del sistema.
+    *   **[Skeleton.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/Skeleton.tsx)**: Estructura base animada para transiciones de carga asíncronas.
+    *   **[Footer.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/Footer.tsx)**, **[ContactModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/ContactModal.tsx)**, **[LegalModal.tsx](file:///c:/Users/Administrator/Documents/PROYECTOS/citaplanner-ai/components/LegalModal.tsx)**: Estructuras auxiliares.
+
+---
 
 ## 🐳 **CONTENEDORES DOCKER**
 
@@ -150,7 +216,7 @@
 
 ```
 citaplanner-ai/
-├── pages/              # 24 Páginas SPA React totalmente conectadas (POS, Analytics, Leads, etc.)
+├── pages/              # 21 Páginas SPA React totalmente conectadas (POS, Analytics, Leads, etc.)
 ├── components/         # 23 Componentes interactivos reutilizables (SEO, Dossier, Widgets, etc.)
 ├── services/           # 7 Servicios avanzados (API Axios, Socket, Gemini, Cloudflare, etc.)
 ├── context/            # AuthContext (JWT) y ThemeContext (Light/Dark Mode)
@@ -163,5 +229,6 @@ citaplanner-ai/
 
 ---
 
-**Última actualización**: 2026-05-20 (v7.0 QA, Sincronización y Automatización)  
+**Última actualización**: 2026-05-21 (v7.0 QA, Sincronización y Automatización)  
 **Estado**: 🚀 Totalmente operativo y desplegado. Base de datos robusta, API de producción, integraciones activas, PWA instalable y suite completa de automatizaciones de negocio en tiempo real. Sin dependencias de datos simulados (mocks) en flujos de producción.
+
