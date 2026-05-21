@@ -37,9 +37,6 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const BranchesPage = lazy(() => import('./pages/BranchesPage').then(m => ({ default: (m as any).BranchesPage || (m as any).default })));
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: (m as any).InsightsPage || (m as any).default })));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: (m as any).AnalyticsPage || (m as any).default })));
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(m => ({ default: (m as any).SuperAdminDashboard || (m as any).default })));
-const SuperAdminPage = lazy(() => import('./pages/SuperAdminPage').then(m => ({ default: (m as any).SuperAdminPage || (m as any).default })));
-const PlansPage = lazy(() => import('./pages/PlansPage').then(m => ({ default: (m as any).PlansPage || (m as any).default })));
 const WebBuilderPage = lazy(() => import('./pages/WebBuilderPage').then(m => ({ default: (m as any).WebBuilderPage || (m as any).default })));
 const LeadsPage = lazy(() => import('./pages/LeadsPage').then(m => ({ default: (m as any).LeadsPage || (m as any).default })));
 const MaintenancePage = lazy(() => import('./pages/MaintenancePage').then(m => ({ default: (m as any).MaintenancePage || (m as any).default })));
@@ -94,13 +91,13 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
         // Redirección inteligente basada en rol para evitar que se quede atrapado
         if (user.role === 'GOD_MODE' && location.pathname !== '/nexus') {
           navigate('/nexus', { replace: true });
-        } else if (['ADMIN', 'STUDIO_OWNER'].includes(user.role) && location.pathname !== '/admin') {
+        } else if (['ADMIN'].includes(user.role) && location.pathname !== '/admin') {
           navigate('/admin', { replace: true });
         } else if (['STAFF', 'PROFESSIONAL'].includes(user.role) && location.pathname !== '/professional-dashboard') {
           navigate('/professional-dashboard', { replace: true });
-        } else if (['MEMBER', 'CLIENT'].includes(user.role) && location.pathname !== '/client-portal') {
+        } else if (['CLIENT'].includes(user.role) && location.pathname !== '/client-portal') {
           navigate('/client-portal', { replace: true });
-        } else if (!['/nexus', '/admin', '/professional-dashboard', '/client-portal'].includes(location.pathname)) {
+        } else if (!['/admin', '/professional-dashboard', '/client-portal'].includes(location.pathname)) {
           navigate('/', { replace: true });
         }
       }
@@ -141,7 +138,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
       }`}>
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to={user?.role === 'GOD_MODE' ? '/nexus' : user?.role === 'MEMBER' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : '/admin'}>
+          <Link to={user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : '/admin'}>
             <div className="flex items-center gap-3 group">
               <div className="p-2.5 rounded-xl bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30 group-hover:border-[#D4AF37]/60 transition-all shadow-lg">
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
@@ -153,9 +150,9 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
             </div>
           </Link>
 
-          {user && (user.role === 'ADMIN' || user.role === 'STUDIO_OWNER' || user.role === 'GOD_MODE') && (
+          {user && (user.role === 'ADMIN') && (
             <div className="hidden xl:flex items-center gap-1">
-              {user.role === 'GOD_MODE' && <NavLink to="/nexus"><ShieldAlert size={14} className="text-red-500" /> Nexus God Mode</NavLink>}
+              {}
               <NavLink to="/admin">Consola</NavLink>
               <NavLink to="/pos">Ventas & POS</NavLink>
               <NavLink to="/analytics">Reportes</NavLink>
@@ -275,7 +272,7 @@ const MainLayout = () => {
 
   if (appLoading) return <LoadingScreen />;
 
-  const isStaff = user && ['ADMIN', 'STUDIO_OWNER', 'GOD_MODE', 'STAFF'].includes(user.role);
+  const isStaff = user && ['ADMIN', 'STAFF'].includes(user.role);
   const normalizedPath = location.pathname.replace(/\/+/g, '/');
   const isLoginPage = normalizedPath === '/login';
   const isLandingPage = normalizedPath === '/';
@@ -294,25 +291,25 @@ const MainLayout = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/book" element={<BookingPage />} />
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
             <Route path="/nexus" element={<ProtectedRoute allowedRoles={['GOD_MODE']}><SuperAdminDashboard /></ProtectedRoute>} />
-            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
-            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
-            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
-            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
-            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
-            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
-            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
-            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
-            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
-            <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF', 'STUDIO_OWNER', 'GOD_MODE']}><ProfessionalDashboard /></ProtectedRoute>} />
-            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER', 'STUDIO_OWNER', 'GOD_MODE']}><ClientPortal /></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
+            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN']}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN']}><ServicesPage /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><InventoryPage /></ProtectedRoute>} />
+            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN']}><SchedulesPage /></ProtectedRoute>} />
+            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN']}><WebBuilderPage /></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN']}><InsightsPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN']}><LeadsPage /></ProtectedRoute>} />
+            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaintenancePage /></ProtectedRoute>} />
+            <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
+            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/plans-billing" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDIO_OWNER', 'GOD_MODE']}><PlansPage /></ProtectedRoute>} />
+            <Route path="/plans-billing" element={<ProtectedRoute allowedRoles={['ADMIN']}><PlansPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

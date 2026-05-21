@@ -38,6 +38,8 @@ const oauth2Client = new google.auth.OAuth2(
 );
 import { validateRequest } from './middleware/validation.js';
 import { loginSchema, appointmentSchema, professionalSchema, saasRegisterSchema } from './schemas/index.js';
+import { checkAndAlertInventoryThreshold } from './services/inventoryAlertService.js';
+import { predictNoShowRisk } from './services/geminiPredictionService.js';
 
 const prisma = new PrismaClient();
 const BRAND_NAME = process.env.BRAND_NAME || 'CitaPlanner';
@@ -58,8 +60,8 @@ async function ensureSchemaIntegrity() {
     const { execSync } = await import('child_process');
 
     try {
-        // Verificar si la tabla fundamental existe
-        await prisma.tenant.findFirst().catch(async (err) => {
+        // Verificar si una tabla fundamental existe (usando appointments en lugar de tenant)
+        await prisma.appointment.findFirst().catch(async (err) => {
             if (err.code === 'P2021') {
                 console.log("⚠️ [NEXUS] Tablas no encontradas. Iniciando sincronización automática...");
                 execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
@@ -122,8 +124,8 @@ const io = new Server(httpServer, {
 io.on('connection', (socket) => {
     socket.on('join-tenant', (tenantId) => {
         if (tenantId) {
-            socket.join(tenantId);
-            console.log(`📡 Socket: Client joined room [${tenantId}]`);
+            socket.join("global");
+            console.log(`📡 Socket: Client joined room [global]`);
         }
     });
 
@@ -132,10 +134,10 @@ io.on('connection', (socket) => {
     });
 });
 
-const emitTenantEvent = (tenantId, event, data) => {
+const emitTenantEvent = ( event, data) => {
     if (tenantId) {
         io.to(tenantId).emit(event, data);
-        console.log(`📤 Socket Emit: [${event}] -> Room [${tenantId}]`);
+        console.log(`📤 Socket Emit: [${event}] -> Room [global]`);
     }
 };
 
@@ -214,7 +216,20 @@ const initRedis = async () => {
     }
 
     try {
-        redisClient = createClient({ url: redisUrl });
+        redisClient = createClient({
+            url: redisUrl,
+            socket: {
+                reconnectStrategy: (retries) => {
+                    if (retries > 3) {
+                        console.warn("⚠️ Redis reconnect retries exceeded. Disabling Redis.");
+                        redisClient = null;
+                        return new Error("Redis connection failed");
+                    }
+                    return Math.min(retries * 50, 500);
+                },
+                connectTimeout: 2000
+            }
+        });
 
         redisClient.on('error', (err) => {
             console.error('⚠️ Redis Client Error:', err.message);
@@ -278,7 +293,7 @@ webPush.setVapidDetails(
 
 const getCached = async (key, fetchFn, ttl = 300) => {
     // Check if Redis is available and connected
-    if (!redisClient || !redisClient.isOpen) {
+    if (!redisClient || !redisClient.isReady) {
         return fetchFn();
     }
 
@@ -465,66 +480,13 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
 
 const tenantMiddleware = async (req, res, next) => {
-    try {
-        const fullHost = (req.headers.host || '').toLowerCase();
-        const host = fullHost.split(':')[0];
-        let subdomain = 'demo';
-
-        if (req.path.includes('/api/settings/landing')) {
-            console.log(`[TENANT DEBUG] Host: ${host} | ROOT_DOMAIN: ${ROOT_DOMAIN}`);
-        }
-
-        // 0. Single-Tenant Override (If ORGANIZATION_ID is set in .env)
-        const SYSTEM_ORG_ID = process.env.ORGANIZATION_ID || 'demo';
-        
-        if (process.env.ORGANIZATION_ID) {
-            subdomain = SYSTEM_ORG_ID;
-        } 
-        // 1. Master Hub Detection
-        else if (host === `master.${ROOT_DOMAIN}`) {
-            subdomain = 'master';
-        }
-        // 2. Subdomain Detection (e.g., shula.citaplanner.com)
-        else if (host.endsWith(ROOT_DOMAIN) && host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}`) {
-            subdomain = host.replace(`.${ROOT_DOMAIN}`, '').replace('www.', '');
-        }
-        // 3. Custom Domain Detection (e.g., shulastudio.com)
-        else if (host !== ROOT_DOMAIN && host !== `www.${ROOT_DOMAIN}` && host !== 'localhost' && !host.includes('127.0.0.1') && !host.includes('easypanel')) {
-            const cleanHost = host.replace('www.', '');
-            const tenant = await getCached(`domain:${cleanHost}`, () => prisma.tenant.findFirst({
-                where: { OR: [{ customDomain: host }, { customDomain: cleanHost }] },
-                select: { subdomain: true }
-            }), 3600);
-
-            if (tenant) {
-                subdomain = tenant.subdomain;
-            } else {
-                subdomain = req.headers['x-tenant-id'] || SYSTEM_ORG_ID;
-            }
-        } else {
-            subdomain = req.headers['x-tenant-id'] || SYSTEM_ORG_ID;
-        }
-
-        // Resolve Tenant UUID and Object
-        const tenant = await getCached(`tenant_obj:${subdomain}`, () => prisma.tenant.findUnique({
-            where: { subdomain }
-        }), 600);
-
-        req.tenant = tenant;
-        req.tenantId = subdomain; // Legacy slug
-        req.tenantUuid = tenant?.id; // Actual DB UUID
-        req.organizationId = subdomain; // Legacy slug for queries
-        req.branchId = req.headers['x-branch-id'];
-
-        next();
-    } catch (e) {
-        console.error("Middleware Error:", e);
-        next();
-    }
+    // Single-tenant mode: no tenant resolution needed
+    req.branchId = req.headers['x-branch-id'];
+    next();
 };
 
-
 app.use(tenantMiddleware);
+
 
 const checkGodMode = (req, res, next) => {
     if (req.user?.role !== 'GOD_MODE') return res.status(403).json({ error: "Privilegios insuficientes" });
@@ -560,7 +522,7 @@ app.get('/api/integrations/aurum/status', async (req, res) => {
     });
 });
 
-app.get('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/branches', authenticateToken, async (req, res) => {
     try {
         const branches = await prisma.branch.findMany({
             where: { organizationId: req.organizationId || 'demo' },
@@ -570,7 +532,7 @@ app.get('/api/branches', authenticateToken, tenantMiddleware, async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/branches', authenticateToken, async (req, res) => {
     try {
         const { name, address, phone, manager } = req.body;
         const branch = await prisma.branch.create({
@@ -587,7 +549,7 @@ app.post('/api/branches', authenticateToken, tenantMiddleware, async (req, res) 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/branches/:id', authenticateToken, async (req, res) => {
     try {
         const { name, address, phone, manager, status } = req.body;
         const branch = await prisma.branch.update({
@@ -598,7 +560,7 @@ app.put('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, re
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/branches/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.branch.delete({ where: { id: req.params.id } });
         res.json({ success: true });
@@ -607,7 +569,7 @@ app.delete('/api/branches/:id', authenticateToken, tenantMiddleware, async (req,
 
 
 // --- SALES MANAGEMENT ---
-app.get('/api/sales', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/sales', authenticateToken, async (req, res) => {
     try {
         const sales = await prisma.sale.findMany({
             where: { tenantId: req.tenantUuid || undefined, organizationId: req.organizationId || 'demo' },
@@ -619,698 +581,6 @@ app.get('/api/sales', authenticateToken, tenantMiddleware, async (req, res) => {
 });
 
 // --- SAAS TENANT MANAGEMENT (GOD MODE ONLY) ---
-
-app.get('/api/saas/tenants/debug-raw', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const tenants = await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
-        res.json({ count: tenants.length, rows: tenants });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        console.log(`[MASTER] Global Tenant List requested by: ${req.user.phone} (${req.user.id})`);
-        // We include subscriptions but use a try-catch for safety during migrations
-        const tenants = await prisma.tenant.findMany({
-            include: {
-                subscriptions: true
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        console.log(`[MASTER] Found ${tenants.length} tenants in database.`);
-        res.json(tenants);
-    } catch (e) {
-        console.error(`[MASTER ERROR] Failed to fetch tenants: `, e);
-        // Fallback: try without relations if schema is in flux
-        try {
-            const basicTenants = await prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
-            return res.json(basicTenants);
-        } catch (e2) {
-            res.status(500).json({ error: e.message });
-        }
-    }
-});
-
-// --- SAAS GLOBAL ANALYTICS (GOD MODE) ---
-app.get('/api/saas/stats', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const start = Date.now();
-        await prisma.$queryRaw`SELECT 1`;
-        const dbLatency = Date.now() - start;
-
-        const totalTenants = await prisma.tenant.count();
-        const activeSubscriptions = await prisma.subscription.count({ where: { status: 'ACTIVE' } });
-
-        // Sum revenue from billing logs
-        const revenueRes = await prisma.billingLog.aggregate({
-            _sum: { amount: true },
-            where: { status: 'SUCCESS' }
-        });
-
-        // MRR Estimate from active plans
-        const activeSubs = await prisma.subscription.findMany({ where: { status: 'ACTIVE' } });
-        const mrr = activeSubs.reduce((acc, s) => {
-            const plan = SAAS_PLANS.find(p => p.id === s.planId);
-            return acc + (Number(plan?.price) || 0);
-        }, 0);
-
-        res.json({
-            totalTenants,
-            activeSubscriptions,
-            mrr,
-            totalRevenue: revenueRes._sum.amount || 0,
-            systemHealth: {
-                uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
-                latency: `${dbLatency}ms`,
-                nodeVersion: process.version,
-                memoryUsage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
-            }
-        });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- BILLING LOGS (GOD MODE) ---
-app.get('/api/saas/billing/logs', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const logs = await prisma.billingLog.findMany({
-            include: { tenant: true },
-            orderBy: { createdAt: 'desc' },
-            take: 50
-        });
-        res.json(logs);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- TENANT LIFECYCLE (GOD MODE) ---
-app.post('/api/saas/tenants/:id/status', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body; // ACTIVE, SUSPENDED
-
-        const updated = await prisma.tenant.update({
-            where: { id },
-            data: {
-                status,
-                suspendedAt: status === 'SUSPENDED' ? new Date() : null
-            }
-        });
-
-        res.json(updated);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/saas/tenants', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { name, subdomain, planType, customDomain } = req.body;
-
-        const existing = await prisma.tenant.findUnique({ where: { subdomain } });
-        if (existing) return res.status(400).json({ error: "Subdominio ya en uso" });
-
-        const planRef = SAAS_PLANS.find(p => p.id === planType) || SAAS_PLANS[0];
-
-        const newTenant = await prisma.tenant.create({
-            data: {
-                name,
-                subdomain,
-                planType,
-                features: planRef.features,
-                status: 'ACTIVE',
-                organizationId: subdomain,
-                customDomain: customDomain || null
-            }
-        });
-
-
-        res.json(newTenant);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/saas/tenants/:id/features', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { features } = req.body;
-
-        const updated = await prisma.tenant.update({
-            where: { id },
-            data: { features }
-        });
-
-        res.json(updated);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/saas/tenants/:id', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        // Basic protection: don't delete 'master' via API easily if logic requires it
-        const tenant = await prisma.tenant.findUnique({ where: { id } });
-        if (tenant?.subdomain === 'master') return res.status(403).json({ error: "No se puede destruir el nodo Nexus Core" });
-
-        await prisma.tenant.delete({ where: { id } });
-        res.json({ success: true, message: "Nodo destruido de la infraestructura" });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- CLUSTER CLOUD LOGS (AUDIT) ---
-app.get('/api/saas/logs', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { platform, organizationId, level } = req.query;
-        const where = {};
-        if (platform) where.platform = platform;
-        if (organizationId) where.organizationId = organizationId;
-        if (level) where.status = level;
-
-        const logs = await prisma.integrationLog.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            take: 100
-        });
-        res.json(logs);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- DEEP SYSTEM HEALTH ---
-app.get('/api/saas/health/deep', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const start = Date.now();
-        await prisma.$queryRaw`SELECT 1`;
-        const dbLatency = Date.now() - start;
-
-        const tenantCount = await prisma.tenant.count();
-
-        res.json({
-            status: 'HEALTHY',
-            database: {
-                connected: true,
-                latency: `${dbLatency} ms`,
-                tenants: tenantCount
-            },
-            engine: {
-                version: 'Aurum Nexus v5.3',
-                uptime: process.uptime()
-            }
-        });
-    } catch (e) { res.status(500).json({ status: 'DEGRADED', error: e.message }); }
-});
-
-// --- OPENPAY INFRASTRUCTURE MONITOR ---
-app.get('/api/saas/openpay/plans', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        openpay.plans.list({}, (error, list) => {
-            if (error) return res.status(500).json({ error: error.description });
-            res.json(list);
-        });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-
-
-// --- NEXUS IMPERSONATION (SUPPORT BYPASS) ---
-app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const tenant = await prisma.tenant.findUnique({ where: { id } });
-        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
-
-        // Cascade: find the best available user for this tenant
-        let owner = await prisma.user.findFirst({
-            where: { organizationId: tenant.subdomain, role: 'STUDIO_OWNER' }
-        });
-        if (!owner) {
-            owner = await prisma.user.findFirst({
-                where: { organizationId: tenant.subdomain, role: 'GOD_MODE' }
-            });
-        }
-        if (!owner) {
-            owner = await prisma.user.findFirst({
-                where: { organizationId: tenant.subdomain, role: 'ADMIN' }
-            });
-        }
-        if (!owner) {
-            // Last resort: grab any user in this tenant
-            owner = await prisma.user.findFirst({
-                where: { organizationId: tenant.subdomain }
-            });
-        }
-
-        if (!owner) return res.status(404).json({ error: `No se encontraron usuarios registrados en el nodo '${tenant.subdomain}'.Crea un administrador primero.` });
-
-        console.log(`[MASTER] Impersonating ${owner.phone} (role: ${owner.role}) for tenant ${tenant.subdomain}`);
-
-        const token = jwt.sign({
-            id: owner.id,
-            role: owner.role,
-            tenantId: tenant.subdomain,
-            branchId: owner.branchId,
-            isImpersonated: true,
-            masterAdminId: req.user.id
-        }, JWT_SECRET, { expiresIn: '2h' });
-
-        res.json({ success: true, token, user: owner });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- TENANT ADMIN MANAGEMENT (GOD MODE) ---
-app.get('/api/saas/tenants/:id/admins', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const tenant = await prisma.tenant.findUnique({ where: { id } });
-        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
-
-        const users = await prisma.user.findMany({
-            where: { organizationId: tenant.subdomain },
-            select: { id: true, name: true, phone: true, email: true, role: true, branchId: true },
-            orderBy: { role: 'asc' }
-        });
-        res.json(users);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/saas/tenants/:id/admins', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const tenant = await prisma.tenant.findUnique({ where: { id } });
-        if (!tenant) return res.status(404).json({ error: "Nodo no encontrado" });
-
-        const { name, phone, email, password, role } = req.body;
-        if (!name || !phone || !password) return res.status(400).json({ error: "Nombre, teléfono y contraseña son requeridos" });
-
-        // Find or create default branch for this tenant
-        let branch = await prisma.branch.findFirst({ where: { organizationId: tenant.subdomain } });
-        if (!branch) {
-            branch = await prisma.branch.create({
-                data: { name: "Sucursal Principal", tenantId: tenant.id, organizationId: tenant.subdomain }
-            });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await prisma.user.create({
-            data: {
-                name,
-                phone,
-                email: email || null,
-                password: hashedPassword,
-                role: role || 'STUDIO_OWNER',
-                branchId: branch.id,
-                tenantId: tenant.id,
-                organizationId: tenant.subdomain
-            }
-        });
-
-        res.json({ success: true, user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role } });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { name, phone, email, role, password } = req.body;
-
-        const updateData = {};
-        if (name) updateData.name = name;
-        if (phone) updateData.phone = phone;
-        if (email) updateData.email = email;
-        if (role) updateData.role = role;
-        if (password) updateData.password = await bcrypt.hash(password, 10);
-
-        const updated = await prisma.user.update({
-            where: { id: userId },
-            data: updateData,
-            select: { id: true, name: true, phone: true, email: true, role: true }
-        });
-
-        res.json(updated);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/saas/tenants/:id/admins/:userId', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { userId } = req.params;
-        await prisma.user.delete({ where: { id: userId } });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-
-// --- SAAS PLANS MANAGEMENT (DYNAMIC) ---
-
-app.get('/api/saas/plans', (req, res) => {
-    res.json(SAAS_PLANS);
-});
-
-app.post('/api/saas/plans', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id, title, price, currency, description, features } = req.body;
-        if (!id || !title || !price) return res.status(400).json({ error: "Datos incompletos" });
-
-        const exists = SAAS_PLANS.find(p => p.id === id);
-        if (exists) return res.status(400).json({ error: "ID de plan ya existe" });
-
-        const newPlan = { id, title, price, currency: currency || 'MXN', description, features: features || {} };
-        SAAS_PLANS.push(newPlan);
-        savePlans();
-
-        res.json({ success: true, plan: newPlan });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/saas/plans/:id', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updates = req.body;
-        const index = SAAS_PLANS.findIndex(p => p.id === id);
-
-        if (index === -1) return res.status(404).json({ error: "Plan no encontrado" });
-
-        SAAS_PLANS[index] = { ...SAAS_PLANS[index], ...updates, id }; // Keep ID or allow rename if handled carefully
-        savePlans();
-
-        res.json({ success: true, plan: SAAS_PLANS[index] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/saas/plans/:id', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const initialLength = SAAS_PLANS.length;
-        SAAS_PLANS = SAAS_PLANS.filter(p => p.id !== id);
-
-        if (SAAS_PLANS.length === initialLength) return res.status(404).json({ error: "Plan no encontrado" });
-
-        savePlans();
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// --- TENANT SUBSCRIPTION MANAGEMENT (MANUAL OVERRIDE) ---
-app.put('/api/saas/tenants/:id/subscription', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { planId, status, trialDays } = req.body;
-
-        const updateData = {};
-        const plan = SAAS_PLANS.find(p => p.id === planId);
-
-        if (planId) {
-            if (!plan) return res.status(400).json({ error: "Plan inválido" });
-            updateData.planType = planId;
-            updateData.features = plan.features;
-        }
-
-        if (status) updateData.status = status;
-
-        if (trialDays !== undefined) {
-            const endDate = new Date();
-            endDate.setDate(endDate.getDate() + parseInt(trialDays));
-            updateData.trialEndsAt = endDate;
-            updateData.status = 'TRIAL'; // Force status to TRIAL if adding days
-        }
-
-        const tenant = await prisma.tenant.update({
-            where: { id },
-            data: updateData
-        });
-
-        // Log manual intervention
-        await prisma.billingLog.create({
-            data: {
-                tenantId: id,
-                amount: 0,
-                status: 'SUCCESS',
-                provider: 'MANUAL_ADMIN',
-                description: `Ajuste manual: Plan ${planId || '-'} | Status ${status || '-'} | Trial ${trialDays || 0} d`
-            }
-        });
-
-        res.json({ success: true, tenant });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-
-app.post('/api/saas/register', authenticateToken, checkGodMode, validateRequest(saasRegisterSchema), async (req, res) => {
-    try {
-        if (req.tenantId !== 'master') {
-            return res.status(403).json({ error: "Creación de tenants solo permitida desde el HUB Master" });
-        }
-        const { name, subdomain, adminPhone, adminEmail, adminPassword } = req.body;
-
-        const existing = await prisma.tenant.findUnique({ where: { subdomain } });
-        if (existing) return res.status(400).json({ error: "Este subdominio ya está reservado" });
-
-        // 1. Create Openpay Customer
-        let openpayId = null;
-        try {
-            const customer = await new Promise((resolve, reject) => {
-                openpay.customers.create({
-                    name: name,
-                    email: adminEmail,
-                    phone_number: adminPhone,
-                    requires_account: false
-                }, (error, body) => error ? reject(error) : resolve(body));
-            });
-            openpayId = customer.id;
-        } catch (opErr) {
-            console.warn("⚠️ Openpay Customer creation failed, continuing without it:", opErr.description);
-        }
-
-        // 2. ACID Transaction: Create Tenant + Default Branch + Admin User
-        const result = await prisma.$transaction(async (tx) => {
-            const tenant = await tx.tenant.create({
-                data: {
-                    name,
-                    subdomain,
-                    planType: 'BASIC',
-                    features: SAAS_PLANS[0].features,
-                    status: 'PENDINGPAYMENT',
-                    organizationId: subdomain,
-                    openpayId
-                }
-            });
-
-
-            const branch = await tx.branch.create({
-                data: {
-                    name: "Sucursal Principal",
-                    tenantId: tenant.id,
-                    organizationId: subdomain
-                }
-            });
-
-            const hashedPassword = await bcrypt.hash(adminPassword, 10);
-            const user = await tx.user.create({
-                data: {
-                    name: "Administrador de " + name,
-                    phone: adminPhone,
-                    email: adminEmail,
-                    password: hashedPassword,
-                    role: 'STUDIO_OWNER',
-                    branchId: branch.id,
-                    organizationId: subdomain
-                }
-            });
-
-            return { tenant, user };
-        });
-
-        res.json({ success: true, message: "Estudio creado con éxito", tenantId: result.tenant.id });
-
-    } catch (e) {
-        console.error("Registration Error:", e);
-        res.status(500).json({ error: "Falla en el aprovisionamiento masivo: " + e.message });
-    }
-});
-
-
-app.post('/api/saas/subscribe', authenticateToken, async (req, res) => {
-    try {
-        const { planId, provider = 'MERCADOPAGO' } = req.body;
-        const plan = SAAS_PLANS.find(p => p.id === planId);
-
-        if (!plan) return res.status(400).json({ error: "Plan inválido" });
-
-        const user = await prisma.user.findFirst({ where: { id: req.user.id } });
-        const payerEmail = user?.email || "test_user@test.com";
-
-        if (provider === 'OPENPAY') {
-            // Openpay Checkout logic
-            const chargeRequest = {
-                method: 'card',
-                amount: plan.price,
-                description: `Suscripción CitaPlanner - ${plan.title} `,
-                order_id: `CP - ${Date.now()} `,
-                customer: {
-                    name: user?.name || 'Cliente SaaS',
-                    email: payerEmail,
-                    phone_number: user?.phone || '0000000000'
-                },
-                send_email: true,
-                confirm: false,
-                redirect_url: `${process.env.ROOT_DOMAIN}/settings?status=success`
-            };
-
-            return openpay.charges.create(chargeRequest, async (error, charge) => {
-                if (error) return res.status(500).json({ error: error.description });
-
-                // Save PENDING Subscription
-                await prisma.subscription.create({
-                    data: {
-                        tenantId: req.user.tenantId,
-                        planId: plan.id,
-                        status: 'PENDING',
-                        provider: 'OPENPAY',
-                        externalId: charge.id,
-                        currentPeriodStart: new Date(),
-                        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                    }
-                });
-
-                res.json({ id: charge.id, init_point: charge.payment_method.url });
-            });
-        }
-
-        // Mercado Pago Logic (Refactored for externalId)
-        if (!process.env.MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN.startsWith('TEST-0000')) {
-            return res.json({ id: "mock_id", init_point: "#/mock-checkout" });
-        }
-
-        const preapproval = new PreApproval(mpClient);
-        const result = await preapproval.create({
-            body: {
-                reason: `Suscripción CitaPlanner - ${plan.title}`,
-                external_reference: req.user.tenantId || "demo",
-                payer_email: payerEmail,
-                auto_recurring: {
-                    frequency: 1,
-                    frequency_type: 'months',
-                    transaction_amount: plan.price,
-                    currency_id: 'MXN'
-                },
-                back_url: `${ROOT_DOMAIN}/settings?status=success`,
-                status: 'pending'
-            }
-        });
-
-        await prisma.subscription.create({
-            data: {
-                tenantId: req.user.tenantId,
-                planId: plan.id,
-                status: 'PENDING',
-                provider: 'MERCADOPAGO',
-                externalId: result.id,
-                currentPeriodStart: new Date(),
-                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            }
-        });
-
-        res.json({ id: result.id, init_point: result.init_point });
-
-    } catch (e) {
-        console.error("❌ SaaS Sub Error:", e);
-        res.status(500).json({ error: "Error al iniciar suscripción" });
-    }
-});
-
-
-
-
-app.post('/api/saas/webhook', async (req, res) => {
-    const { type, data, action } = req.body;
-
-    // Respond fast to avoid timeouts
-    res.status(200).json({ received: true });
-
-    // Handle Subscription Logic (PreApproval)
-    if (type === 'subscription_preapproval' || (data && data.id && !type)) {
-        // Sometimes webhooks come with just data.id for subscriptions
-        const preapprovalId = data?.id;
-        if (!preapprovalId) return;
-
-        try {
-            console.log(`🔔 Webhook Sub ID: ${preapprovalId}`);
-            const preapproval = new PreApproval(mpClient);
-            const subData = await preapproval.get({ id: preapprovalId });
-
-            if (!subData) return;
-
-            const { status, external_reference } = subData;
-
-            // ACID Transaction for Subscription Activation
-            if (status === 'authorized') {
-                await prisma.$transaction(async (tx) => {
-                    const pendingSub = await tx.subscription.findUnique({
-                        where: { externalId: preapprovalId }
-                    });
-
-                    if (pendingSub) {
-                        // Activate Subscription
-                        await tx.subscription.update({
-                            where: { id: pendingSub.id },
-                            data: { status: 'ACTIVE' }
-                        });
-
-                        // Create Billing Log
-                        await tx.billingLog.create({
-                            data: {
-                                tenantId: pendingSub.tenantId,
-                                amount: SAAS_PLANS.find(p => p.id === pendingSub.planId)?.price || 0,
-                                status: 'SUCCESS',
-                                provider: 'MERCADOPAGO',
-                                description: `Pago Suscripción ${pendingSub.planId}`
-                            }
-                        });
-
-                        // Upgrade Tenant
-                        const planRef = SAAS_PLANS.find(p => p.id === pendingSub.planId) || SAAS_PLANS[0];
-                        await tx.tenant.update({
-                            where: { id: pendingSub.tenantId },
-                            data: {
-                                planType: pendingSub.planId,
-                                features: planRef.features,
-                                status: 'ACTIVE' // Ensure tenant is active
-                            }
-                        });
-                        console.log(`✅ Subscription Authorized for Tenant: ${pendingSub.tenantId}`);
-                    }
-                });
-            }
-        } catch (e) {
-            console.error("❌ Sub Webhook Error:", e);
-        }
-        return;
-    }
-
-    // Handle Payments (Invoice Paid)
-    if (type === 'payment' && data?.id) {
-        try {
-            console.log(`🔔 Webhook Payment ID: ${data.id}`);
-            const paymentClient = new Payment(mpClient);
-            const payment = await paymentClient.get({ id: data.id });
-
-            if (!payment) return;
-
-            const { status, transaction_amount, external_reference } = payment;
-
-            // Log Transaction (ACID not strictly needed for just logging, but good practice if linking)
-            await prisma.transaction.create({
-                data: {
-                    mpPaymentId: String(data.id),
-                    mpStatus: status,
-                    amount: transaction_amount,
-                    organizationId: external_reference || 'demo'
-                }
-            });
-
-            // WebSocket Notification for Payment
-            emitTenantEvent(external_reference || 'demo', 'payment-confirmed', { status, amount: transaction_amount, id: data.id });
-
-            console.log(`💰 Payment Recorded: ${status}`);
-
-        } catch (e) {
-            console.error("❌ Pay Webhook Error:", e);
-        }
-    }
-});
 
 app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
     try {
@@ -1364,65 +634,9 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
     }
 });
 
-app.post('/api/saas/openpay/webhook', async (req, res) => {
-    try {
-        const { type, transaction } = req.body;
-        console.log(`[OPENPAY WEBHOOK] Event: ${type} | Trans: ${transaction?.id}`);
-
-        if (type === 'verification') return res.status(200).send();
-        if (!transaction) return res.status(200).send();
-
-        if (type === 'charge.succeeded') {
-            await prisma.$transaction(async (tx) => {
-                const pendingSub = await tx.subscription.findUnique({
-                    where: { externalId: transaction.id }
-                });
-
-                if (pendingSub) {
-                    // Activate Subscription
-                    await tx.subscription.update({
-                        where: { id: pendingSub.id },
-                        data: { status: 'ACTIVE' }
-                    });
-
-                    // Create Billing Log
-                    await tx.billingLog.create({
-                        data: {
-                            tenantId: pendingSub.tenantId,
-                            amount: transaction.amount,
-                            status: 'SUCCESS',
-                            provider: 'OPENPAY',
-                            description: `Pago Openpay - ${transaction.description}`
-                        }
-                    });
-
-                    // Upgrade Tenant
-                    const planRef = SAAS_PLANS.find(p => p.id === pendingSub.planId) || SAAS_PLANS[0];
-                    await tx.tenant.update({
-                        where: { id: pendingSub.tenantId },
-                        data: {
-                            planType: pendingSub.planId,
-                            features: planRef.features,
-                            status: 'ACTIVE'
-                        }
-                    });
-                    console.log(`✅ Openpay Sub Activated for Tenant: ${pendingSub.tenantId}`);
-                }
-            });
-        }
-
-        res.status(200).send();
-    } catch (e) {
-        console.error("❌ Openpay Webhook Error:", e);
-        res.status(500).send();
-    }
-});
-
 app.get('/api/appointments', async (req, res) => {
     try {
-        const where = {
-            organizationId: req.tenantId
-        };
+        const where = {};
         if (req.branchId) {
             where.branchId = req.branchId;
         }
@@ -1454,8 +668,7 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
                     professionalId,
                     serviceId,
                     notes,
-                    branchId: req.branchId,
-                    organizationId: req.tenantId
+                    branchId: req.branchId
                 }
             });
 
@@ -1465,7 +678,7 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
                     eventType: 'APPOINTMENT_CREATED',
                     payload: { appointmentId: apt.id, clientName },
                     status: 'SUCCESS',
-                    organizationId: req.tenantId,
+                    
                     branchId: req.branchId
                 }
             });
@@ -1507,11 +720,329 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
         // Notify Google Calendar
         syncToGoogleCalendar(newAppointment);
 
+        // Run Gemini No-Show Risk analysis in the background
+        runGeminiNoShowAnalysis(newAppointment).catch(err => {
+            console.error("❌ Background Gemini prediction error:", err.message);
+        });
+
         // Real-time Update via Socket.io
-        emitTenantEvent(req.tenantId, 'new-appointment', newAppointment);
+        emitTenantEvent('new-appointment', newAppointment);
 
         res.json({ success: true, id: newId });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/appointments/:id', async (req, res) => {
+    try {
+        const appointmentId = req.params.id;
+        const oldAppointment = await prisma.appointment.findUnique({
+            where: { id: appointmentId }
+        });
+        if (!oldAppointment) {
+            return res.status(404).json({ error: 'Cita no encontrada' });
+        }
+
+        const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, status } = req.body;
+
+        const updatedAppointment = await prisma.$transaction(async (tx) => {
+            const updated = await tx.appointment.update({
+                where: { id: appointmentId },
+                data: {
+                    title,
+                    startDateTime: startDateTime ? new Date(startDateTime) : undefined,
+                    endDateTime: endDateTime ? new Date(endDateTime) : undefined,
+                    clientName,
+                    clientPhone,
+                    professionalId,
+                    serviceId,
+                    notes,
+                    status
+                }
+            });
+
+            // If the status is transitioning to COMPLETED, deduct service insumos/products
+            if (status === 'COMPLETED' && oldAppointment.status !== 'COMPLETED') {
+                const serviceIdToUse = serviceId || oldAppointment.serviceId;
+                let serviceCategory = null;
+                if (serviceIdToUse) {
+                    const service = await tx.service.findUnique({
+                        where: { id: serviceIdToUse }
+                    });
+                    if (service) {
+                        serviceCategory = service.category;
+                    }
+                }
+
+                const matchConditions = [
+                    { usage: 'INSU_SERVICIO' }
+                ];
+                if (serviceCategory) {
+                    matchConditions.push({ category: serviceCategory });
+                }
+
+                const productsToDeduct = await tx.product.findMany({
+                    where: {
+                        
+                        OR: matchConditions
+                    }
+                });
+
+                for (const product of productsToDeduct) {
+                    const quantity = 1;
+                    const newStock = Math.max(0, (product.stock || 0) - quantity);
+
+                    const updatedProduct = await tx.product.update({
+                        where: { id: product.id },
+                        data: { stock: newStock }
+                    });
+
+                    await tx.inventoryMovement.create({
+                        data: {
+                            productId: product.id,
+                            productName: product.name,
+                            type: 'OUT',
+                            quantity: quantity,
+                            reason: `Servicio Completado - Cita ID: ${updated.id}`
+                        }
+                    });
+
+                    if (updatedProduct.stock <= (updatedProduct.minStock || 0)) {
+                        const tenantName = req.tenant?.name || "CitaPlanner Client";
+                        checkAndAlertInventoryThreshold(updatedProduct, tenantName)
+                            .then(result => {
+                                if (result.triggered) {
+                                    console.log(`📣 Purchase order automatic alert sent for ${updatedProduct.name}: Email=${result.emailSent}, WA=${result.whatsappSent}`);
+                                }
+                            })
+                            .catch(err => console.error("❌ Inventory threshold alert dispatch failed:", err));
+                    }
+                }
+            }
+
+            return updated;
+        });
+
+        // Non-blocking operations in the background
+        if (updatedAppointment.googleEventId) {
+            if (status === 'CANCELLED' || status === 'NOSHOW') {
+                syncDeleteFromGoogleCalendar(updatedAppointment).catch(e => console.error("❌ Google Calendar delete sync error:", e.message));
+            } else if (
+                startDateTime || endDateTime || title || notes || professionalId
+            ) {
+                syncUpdateToGoogleCalendar(updatedAppointment).catch(e => console.error("❌ Google Calendar update sync error:", e.message));
+            }
+        }
+
+        if (startDateTime || clientPhone) {
+            runGeminiNoShowAnalysis(updatedAppointment).catch(err => {
+                console.error("❌ Background Gemini prediction error:", err.message);
+            });
+        }
+
+        emitTenantEvent('update-appointment', updatedAppointment);
+
+        res.json({ success: true, appointment: updatedAppointment });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/appointments/:id', async (req, res) => {
+    try {
+        const appointmentId = req.params.id;
+        const appointment = await prisma.appointment.findUnique({
+            where: { id: appointmentId }
+        });
+
+        if (!appointment) {
+            return res.status(404).json({ error: 'Cita no encontrada' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.appointment.delete({
+                where: { id: appointmentId }
+            });
+
+            await tx.integrationLog.create({
+                data: {
+                    platform: 'SYSTEM',
+                    eventType: 'APPOINTMENT_DELETED',
+                    payload: { appointmentId, clientName: appointment.clientName },
+                    status: 'SUCCESS',
+                    
+                    branchId: req.branchId
+                }
+            });
+        });
+
+        if (appointment.googleEventId) {
+            syncDeleteFromGoogleCalendar(appointment).catch(e => console.error("❌ Google Calendar delete sync error:", e.message));
+        }
+
+        emitTenantEvent('delete-appointment', { id: appointmentId });
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/appointments/:id/predict-no-show', async (req, res) => {
+    try {
+        const appointmentId = req.params.id;
+        const appointment = await prisma.appointment.findUnique({
+            where: { id: appointmentId }
+        });
+
+        if (!appointment) {
+            return res.status(404).json({ error: 'Cita no encontrada' });
+        }
+
+        const updatedAppointment = await runGeminiNoShowAnalysis(appointment);
+        res.json({ success: true, appointment: updatedAppointment });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/calendar/google/webhook/:professionalId', async (req, res) => {
+    const { professionalId } = req.params;
+    console.log(`✉️ Received Google Calendar Webhook for Professional: ${professionalId}`);
+
+    try {
+        const professional = await prisma.professional.findUnique({
+            where: { id: professionalId }
+        });
+
+        if (!professional || !professional.calendarSyncEnabled || !professional.googleRefreshToken) {
+            console.warn(`[WEBHOOK] Professional not found, or calendar sync disabled: ${professionalId}`);
+            return res.status(200).send();
+        }
+
+        const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+        auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+        const calendar = google.calendar({ version: 'v3', auth });
+
+        let pageToken = undefined;
+        let nextSyncToken = undefined;
+        let events = [];
+
+        try {
+            do {
+                const response = await calendar.events.list({
+                    calendarId: professional.googleCalendarId || 'primary',
+                    syncToken: professional.googleCalendarSyncToken || undefined,
+                    pageToken: pageToken,
+                    singleEvents: true
+                });
+
+                if (response.data.items) {
+                    events = events.concat(response.data.items);
+                }
+                pageToken = response.data.nextPageToken;
+                nextSyncToken = response.data.nextSyncToken;
+            } while (pageToken);
+        } catch (syncError) {
+            if (syncError.code === 410) {
+                console.log(`🔄 SyncToken expired for Professional ${professionalId}, performing full resync...`);
+                await prisma.professional.update({
+                    where: { id: professionalId },
+                    data: { googleCalendarSyncToken: null }
+                });
+
+                const now = new Date();
+                const timeMin = new Date(now.setDate(now.getDate() - 30)).toISOString();
+                pageToken = undefined;
+
+                do {
+                    const response = await calendar.events.list({
+                        calendarId: professional.googleCalendarId || 'primary',
+                        timeMin: timeMin,
+                        pageToken: pageToken,
+                        singleEvents: true
+                    });
+
+                    if (response.data.items) {
+                        events = events.concat(response.data.items);
+                    }
+                    pageToken = response.data.nextPageToken;
+                    nextSyncToken = response.data.nextSyncToken;
+                } while (pageToken);
+            } else {
+                throw syncError;
+            }
+        }
+
+        for (const event of events) {
+            const googleEventId = event.id;
+
+            if (event.status === 'cancelled') {
+                console.log(`🗑️ External deletion: Removing blocker/appointment with googleEventId: ${googleEventId}`);
+                const appts = await prisma.appointment.findMany({
+                    where: { googleEventId }
+                });
+                for (const appt of appts) {
+                    await prisma.appointment.delete({
+                        where: { id: appt.id }
+                    });
+                }
+                continue;
+            }
+
+            const startStr = event.start?.dateTime || event.start?.date;
+            const endStr = event.end?.dateTime || event.end?.date;
+            if (!startStr || !endStr) continue;
+
+            const startDateTime = new Date(startStr);
+            const endDateTime = new Date(endStr);
+
+            const existingAppointment = await prisma.appointment.findFirst({
+                where: { googleEventId }
+            });
+
+            if (existingAppointment) {
+                console.log(`🔄 Updating existing appointment/blocker with googleEventId: ${googleEventId}`);
+                await prisma.appointment.update({
+                    where: { id: existingAppointment.id },
+                    data: {
+                        startDateTime,
+                        endDateTime,
+                        title: event.summary || 'Bloqueo de Agenda',
+                        notes: event.description || undefined
+                    }
+                });
+            } else {
+                console.log(`🧱 Creating new external agenda block: ${event.summary} (${startDateTime} - ${endDateTime})`);
+                await prisma.appointment.create({
+                    data: {
+                        title: event.summary || 'Bloqueo de Agenda',
+                        startDateTime,
+                        endDateTime,
+                        clientName: 'Bloqueo Externo',
+                        clientPhone: '',
+                        status: 'BLOCKED',
+                        notes: event.description || 'Bloqueo importado de Google Calendar',
+                        professionalId: professional.id,
+                        branchId: professional.branchId,
+                        googleEventId: event.id
+                    }
+                });
+            }
+        }
+
+        if (nextSyncToken) {
+            await prisma.professional.update({
+                where: { id: professionalId },
+                data: { googleCalendarSyncToken: nextSyncToken }
+            });
+            console.log(`✅ Saved new Google Calendar SyncToken for Professional ${professionalId}`);
+        }
+
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('❌ Error handling Google Calendar webhook:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/api/marketing/campaigns/send', async (req, res) => {
@@ -1520,8 +1051,7 @@ app.post('/api/marketing/campaigns/send', async (req, res) => {
 
         // Build Prisma where clause for target audience
         const where = {
-            role: 'CLIENT',
-            organizationId: req.tenantId
+            role: 'CLIENT'
         };
 
         // Add time-based filters
@@ -1599,7 +1129,7 @@ app.post('/api/integrations/waha/test', async (req, res) => {
 app.get('/api/marketing/templates', authenticateToken, async (req, res) => {
     try {
         const templates = await prisma.marketingTemplate.findMany({
-            where: { tenantId: req.tenantId },
+            
             orderBy: { createdAt: 'desc' }
         });
         res.json(templates);
@@ -1614,8 +1144,7 @@ app.post('/api/marketing/templates', authenticateToken, async (req, res) => {
                 name,
                 content,
                 channel,
-                subject,
-                tenantId: req.tenantId
+                subject
             }
         });
         res.json(template);
@@ -1626,7 +1155,7 @@ app.put('/api/marketing/templates/:id', authenticateToken, async (req, res) => {
     try {
         const { name, content, channel, subject } = req.body;
         const template = await prisma.marketingTemplate.update({
-            where: { id: req.params.id, tenantId: req.tenantId },
+            where: { id: req.params.id },
             data: { name, content, channel, subject }
         });
         res.json(template);
@@ -1636,7 +1165,7 @@ app.put('/api/marketing/templates/:id', authenticateToken, async (req, res) => {
 app.delete('/api/marketing/templates/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.marketingTemplate.delete({
-            where: { id: req.params.id, tenantId: req.tenantId }
+            where: { id: req.params.id }
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1661,25 +1190,13 @@ app.post('/api/webhooks/waha', async (req, res) => {
         const phone = payload.from.replace(/[^0-9]/g, '');
         if (!phone) return res.status(200).json({ status: 'ignored' });
 
-        // Identify Tenant (Defaulting to the first active tenant for shared-instance mode)
-        // In a production multi-tenant setup, we'd map req.body.session to a Tenant
-        const tenant = await prisma.tenant.findFirst({
-            where: { status: 'ACTIVE' },
-            orderBy: { createdAt: 'asc' }
-        });
-
-        if (!tenant) {
-            console.error("❌ [WAHA WEBHOOK] No active tenant found to assign lead");
-            return res.status(200).json({ status: 'error', message: 'No active tenant' });
-        }
-
-        const tenantId = tenant.id;
+        // Single-tenant mode: no tenant lookup needed
 
         // Diagnostic Check: Directory Validation
         const [userExists, clientExists, leadExists] = await Promise.all([
-            prisma.user.findFirst({ where: { phone: { contains: phone }, tenantId, role: 'CLIENT' } }),
-            prisma.client.findFirst({ where: { phone: { contains: phone }, tenantId } }),
-            prisma.lead.findFirst({ where: { phone: { contains: phone }, tenantId } })
+            prisma.user.findFirst({ where: { phone: { contains: phone },  role: 'CLIENT' } }),
+            prisma.client.findFirst({ where: { phone: { contains: phone } } }),
+            prisma.lead.findFirst({ where: { phone: { contains: phone } } })
         ]);
 
         if (!userExists && !clientExists && !leadExists) {
@@ -1690,7 +1207,6 @@ app.post('/api/webhooks/waha', async (req, res) => {
                     phone: phone,
                     source: 'WHATSAPP',
                     status: 'NEW',
-                    tenantId: tenantId,
                     notes: `Mensaje inicial: "${payload.body || 'Contenido multimedia'}"`
                 }
             });
@@ -1716,7 +1232,7 @@ app.get('/api/integrations/status', async (req, res) => {
 
         if (req.tenantId) {
             where.OR = [
-                { organizationId: req.tenantId },
+                {},
                 { organizationId: null }
             ];
         }
@@ -1735,7 +1251,7 @@ app.get('/api/integrations/status', async (req, res) => {
 app.get('/api/maintenance/tasks', authenticateToken, async (req, res) => {
     try {
         const tasks = await prisma.maintenanceTask.findMany({
-            where: { tenantId: req.tenantId },
+            
             orderBy: [{ dayOfWeek: 'asc' }, { priority: 'asc' }]
         });
         res.json(tasks);
@@ -1749,8 +1265,7 @@ app.post('/api/maintenance/tasks', authenticateToken, async (req, res) => {
             data: {
                 dayOfWeek,
                 taskName,
-                priority: priority || 1,
-                tenantId: req.tenantId
+                priority: priority || 1
             }
         });
         res.json(task);
@@ -1760,7 +1275,7 @@ app.post('/api/maintenance/tasks', authenticateToken, async (req, res) => {
 app.delete('/api/maintenance/tasks/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.maintenanceTask.delete({
-            where: { id: req.params.id, tenantId: req.tenantId }
+            where: { id: req.params.id }
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1850,15 +1365,7 @@ app.get('/api/calendar/feed/:token.ics', async (req, res) => {
 
 app.get('/api/calendar/tenant/feed/:token.ics', async (req, res) => {
     try {
-        const { token } = req.params;
-        const tenant = await prisma.tenant.findFirst({
-            where: { icalToken: token }
-        });
-
-        if (!tenant) return res.status(404).send('Feed de tenant no encontrado');
-
         const appointments = await prisma.appointment.findMany({
-            where: { organizationId: tenant.organizationId || 'demo' },
             include: { professional: true }
         });
 
@@ -1884,55 +1391,6 @@ app.get('/api/calendar/tenant/feed/:token.ics', async (req, res) => {
         res.set('Content-Type', 'text/calendar; charset=utf-8');
         res.send(value);
     } catch (e) { res.status(500).send(e.message); }
-});
-
-app.get('/api/tenants/calendar/link', authenticateToken, async (req, res) => {
-    try {
-        const tenant = await prisma.tenant.findFirst({
-            where: { organizationId: req.tenantId }
-        });
-        if (!tenant) return res.status(404).json({ error: "Tenant no encontrado" });
-
-        let icalToken = tenant.icalToken;
-        if (!icalToken) {
-            icalToken = Array.from(Array(24), () => Math.floor(Math.random() * 36).toString(36)).join('');
-            await prisma.tenant.update({
-                where: { id: tenant.id },
-                data: { icalToken }
-            });
-        }
-
-        res.json({ icalToken });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-
-
-
-app.post('/api/saas/tenants/:id/impersonate', authenticateToken, checkGodMode, async (req, res) => {
-    try {
-        const targetUser = await prisma.user.findFirst({
-            where: {
-                // Note: Using organizationId as tenantId proxy based on schema
-                organizationId: req.params.id,
-                role: 'STUDIO_OWNER'
-            }
-        });
-
-        if (!targetUser) {
-            return res.status(404).json({ error: "No se encontró administrador en este nodo" });
-        }
-
-        const token = jwt.sign({
-            id: targetUser.id,
-            role: targetUser.role,
-            tenantId: targetUser.organizationId,
-            isImpersonated: true,
-            originalGodId: req.user?.id
-        }, JWT_SECRET, { expiresIn: '1h' });
-
-        res.json({ success: true, token, user: targetUser });
-    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, res) => {
@@ -1967,8 +1425,7 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
         // Search by phone OR email
         let user = await prisma.user.findFirst({
             where: {
-                OR: [{ phone }, { email: phone }],
-                organizationId: req.tenantId
+                OR: [{ phone }, { email: phone }]
             }
         });
 
@@ -2016,14 +1473,13 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
             const token = jwt.sign({
                 id: user.id,
                 role: user.role,
-                tenantId: userTenantId,
+                
                 branchId: user.branchId
             }, JWT_SECRET, { expiresIn: '8h' });
 
             const refreshToken = jwt.sign({
                 id: user.id,
-                role: user.role,
-                tenantId: userTenantId
+                role: user.role
             }, JWT_SECRET, { expiresIn: '7d' });
 
             await prisma.user.update({
@@ -2038,8 +1494,7 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
                 phone: user.phone,
                 role: user.role,
                 branchId: user.branchId,
-                relatedId: user.relatedId,
-                tenantId: userTenantId // CRITICAL: Frontend needs this to know its current tenant context
+                relatedId: user.relatedId // CRITICAL: Frontend needs this to know its current tenant context
             };
 
             res.json({ success: true, token, refreshToken, user: mappedUser });
@@ -2067,7 +1522,7 @@ async function syncToGoogleCalendar(appointment) {
         auth.setCredentials({ refresh_token: professional.googleRefreshToken });
 
         const calendar = google.calendar({ version: 'v3', auth });
-        await calendar.events.insert({
+        const res = await calendar.events.insert({
             calendarId: professional.googleCalendarId || 'primary',
             requestBody: {
                 summary: `Cita: ${appointment.title} `,
@@ -2076,9 +1531,106 @@ async function syncToGoogleCalendar(appointment) {
                 end: { dateTime: appointment.endDateTime.toISOString() }
             }
         });
-        console.log(`✅ Google Sync Success for App: ${appointment.id} `);
+        
+        if (res.data && res.data.id) {
+            await prisma.appointment.update({
+                where: { id: appointment.id },
+                data: { googleEventId: res.data.id }
+            });
+            console.log(`✅ Google Sync Success & googleEventId saved for App: ${appointment.id} `);
+        }
     } catch (e) {
         console.error("❌ Google Sync Error:", e.message);
+    }
+}
+
+async function syncUpdateToGoogleCalendar(appointment) {
+    if (!appointment.professionalId || !appointment.googleEventId) return;
+    try {
+        const professional = await prisma.professional.findUnique({
+            where: { id: appointment.professionalId }
+        });
+        if (!professional || !professional.calendarSyncEnabled || !professional.googleRefreshToken) return;
+
+        const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+        auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+
+        const calendar = google.calendar({ version: 'v3', auth });
+        await calendar.events.update({
+            calendarId: professional.googleCalendarId || 'primary',
+            eventId: appointment.googleEventId,
+            requestBody: {
+                summary: `Cita: ${appointment.title} `,
+                description: `Cliente: ${appointment.clientName}\nNotas: ${appointment.notes || ''} `,
+                start: { dateTime: appointment.startDateTime.toISOString() },
+                end: { dateTime: appointment.endDateTime.toISOString() }
+            }
+        });
+        console.log(`✅ Google Sync Update Success for App: ${appointment.id} `);
+    } catch (e) {
+        console.error("❌ Google Sync Update Error:", e.message);
+    }
+}
+
+async function syncDeleteFromGoogleCalendar(appointment) {
+    if (!appointment.professionalId || !appointment.googleEventId) return;
+    try {
+        const professional = await prisma.professional.findUnique({
+            where: { id: appointment.professionalId }
+        });
+        if (!professional || !professional.calendarSyncEnabled || !professional.googleRefreshToken) return;
+
+        const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+        auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+
+        const calendar = google.calendar({ version: 'v3', auth });
+        await calendar.events.delete({
+            calendarId: professional.googleCalendarId || 'primary',
+            eventId: appointment.googleEventId
+        });
+        console.log(`✅ Google Sync Delete Success for App: ${appointment.id} `);
+    } catch (e) {
+        console.error("❌ Google Sync Delete Error:", e.message);
+    }
+}
+
+async function runGeminiNoShowAnalysis(appointment) {
+    try {
+        const clientHistory = { completedCount: 0, cancelledCount: 0 };
+        if (appointment.clientPhone) {
+            const completedCount = await prisma.appointment.count({
+                where: {
+                    clientPhone: appointment.clientPhone,
+                    status: 'COMPLETED',
+                    organizationId: appointment.organizationId
+                }
+            });
+            const cancelledCount = await prisma.appointment.count({
+                where: {
+                    clientPhone: appointment.clientPhone,
+                    status: { in: ['CANCELLED', 'NOSHOW'] },
+                    organizationId: appointment.organizationId
+                }
+            });
+            clientHistory.completedCount = completedCount;
+            clientHistory.cancelledCount = cancelledCount;
+        }
+
+        const prediction = await predictNoShowRisk(appointment, clientHistory);
+        
+        // Save the prediction results back to the appointment
+        const updated = await prisma.appointment.update({
+            where: { id: appointment.id },
+            data: {
+                noShowRisk: prediction.noShowProbability,
+                noShowReasons: prediction.rationales ? prediction.rationales.join(' | ') : prediction.actionPlan
+            }
+        });
+        
+        console.log(`🧠 [GEMINI AI] Predict completed for App ${appointment.id}: Risk=${prediction.noShowProbability}`);
+        return updated;
+    } catch (e) {
+        console.error("❌ [GEMINI AI ERROR] Failed to run prediction:", e.message);
     }
 }
 
@@ -2105,15 +1657,14 @@ app.post('/api/auth/refresh', async (req, res) => {
         const newToken = jwt.sign({
             id: user.id,
             role: user.role,
-            tenantId: payload.tenantId,
+            
             branchId: user.branchId
         }, JWT_SECRET, { expiresIn: '8h' }); // Standard session
 
         // Issue new Refresh Token (Rotation)
         const newRefreshToken = jwt.sign({
             id: user.id,
-            role: user.role,
-            tenantId: payload.tenantId
+            role: user.role
         }, JWT_SECRET, { expiresIn: '7d' });
 
         // Update DB with the new refresh token (invalidating the old one)
@@ -2131,7 +1682,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 });
 
 app.post('/api/auth/forgot-password', async (req, res) => {
-    const { email, tenantId } = req.body;
+    const { email } = req.body;
     // Check tenant context if needed, or find user globally. 
     // Usually user is unique by (phone/email, organizationId).
     // Modest assumption: email is unique per tenant.
@@ -2139,8 +1690,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     try {
         const user = await prisma.user.findFirst({
             where: {
-                email,
-                organizationId: tenantId || req.tenantId || 'demo'
+                email
             }
         });
 
@@ -2211,9 +1761,7 @@ app.get('/api/products', async (req, res) => {
     try {
         const branchKey = req.branchId || 'global';
         const products = await getCached(`products:${req.tenantId}:${branchKey} `, async () => {
-            const where = {
-                organizationId: req.tenantId
-            };
+            const where = {};
             if (req.branchId) {
                 where.branchId = req.branchId;
             }
@@ -2235,7 +1783,7 @@ app.get('/api/services', async (req, res) => {
     try {
         const services = await getCached(`services:${req.tenantId} `, async () => {
             const rawServices = await prisma.service.findMany({
-                where: { organizationId: req.tenantId },
+                
                 orderBy: { name: 'asc' }
             });
             return rawServices.map(s => ({
@@ -2247,9 +1795,9 @@ app.get('/api/services', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/services', authenticateToken, async (req, res) => {
     try {
-        const { name, duration, price, category, status, description, imageUrl, tenantId } = req.body;
+        const { name, duration, price, category, status, description, imageUrl } = req.body;
 
         // Ensure tenantId matches (security)
         const targetTenant = req.user.role === 'GOD_MODE' ? (tenantId || req.tenantId) : req.tenantId;
@@ -2262,13 +1810,12 @@ app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) 
                 category,
                 status,
                 description,
-                imageUrl,
-                organizationId: targetTenant
+                imageUrl
             }
         });
 
         // Invalidate Cache
-        if (redisClient && redisClient.isOpen) {
+        if (redisClient && redisClient.isReady) {
             await redisClient.del(`services:${targetTenant} `);
         }
 
@@ -2279,17 +1826,17 @@ app.post('/api/services', authenticateToken, tenantMiddleware, async (req, res) 
     }
 });
 
-app.get('/api/services/export', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/services/export', authenticateToken, async (req, res) => {
     try {
         const services = await prisma.service.findMany({
-            where: { organizationId: req.tenantId },
+            
             orderBy: { name: 'asc' }
         });
         res.json(services);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/services/import', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/services/import', authenticateToken, async (req, res) => {
     try {
         const { services } = req.body;
         if (!Array.isArray(services)) return res.status(400).json({ success: false, error: "Datos inválidos" });
@@ -2304,30 +1851,29 @@ app.post('/api/services/import', authenticateToken, tenantMiddleware, async (req
                     category: s.category || 'General',
                     status: s.status || 'ACTIVE',
                     description: s.description || '',
-                    imageUrl: s.imageUrl || '',
-                    organizationId: req.tenantId
+                    imageUrl: s.imageUrl || ''
                 }
             });
             created.push(newS);
         }
 
-        if (redisClient && redisClient.isOpen) await redisClient.del(`services:${req.tenantId}`);
+        if (redisClient && redisClient.isReady) await redisClient.del(`services:${req.tenantId}`);
         res.json({ success: true, count: created.length });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // --- PRODUCTS IMPORT/EXPORT ---
-app.get('/api/products/export', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/products/export', authenticateToken, async (req, res) => {
     try {
         const products = await prisma.product.findMany({
-            where: { organizationId: req.tenantId },
+            
             orderBy: { name: 'asc' }
         });
         res.json(products);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/products/import', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/products/import', authenticateToken, async (req, res) => {
     try {
         const { products } = req.body;
         if (!Array.isArray(products)) return res.status(400).json({ success: false, error: "Datos inválidos" });
@@ -2345,7 +1891,7 @@ app.post('/api/products/import', authenticateToken, tenantMiddleware, async (req
                     category: p.category || 'General',
                     usage: p.usage || 'RETAIL',
                     description: p.description || '',
-                    organizationId: req.tenantId,
+                    
                     branchId: req.branchId || null
                 }
             });
@@ -2353,12 +1899,12 @@ app.post('/api/products/import', authenticateToken, tenantMiddleware, async (req
         }
 
         const branchKey = req.branchId || 'global';
-        if (redisClient && redisClient.isOpen) await redisClient.del(`products:${req.tenantId}:${branchKey}`);
+        if (redisClient && redisClient.isReady) await redisClient.del(`products:${req.tenantId}:${branchKey}`);
         res.json({ success: true, count: created.length });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/services/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, duration, price, category, status, description, imageUrl } = req.body;
@@ -2377,7 +1923,7 @@ app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, re
         });
 
         // Invalidate Cache
-        if (redisClient && redisClient.isOpen) {
+        if (redisClient && redisClient.isReady) {
             await redisClient.del(`services:${req.tenantId} `);
         }
 
@@ -2385,7 +1931,7 @@ app.put('/api/services/:id', authenticateToken, tenantMiddleware, async (req, re
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/services/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -2394,7 +1940,7 @@ app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req,
         });
 
         // Invalidate Cache
-        if (redisClient && redisClient.isOpen) {
+        if (redisClient && redisClient.isReady) {
             await redisClient.del(`services:${req.tenantId}`);
         }
 
@@ -2404,11 +1950,11 @@ app.delete('/api/services/:id', authenticateToken, tenantMiddleware, async (req,
 
 // --- CLIENTS ENDPOINTS ---
 
-app.get('/api/clients', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
         const clients = await prisma.user.findMany({
             where: {
-                organizationId: req.tenantId,
+                
                 role: 'CLIENT'
             },
             orderBy: { name: 'asc' }
@@ -2433,7 +1979,7 @@ app.get('/api/clients', authenticateToken, tenantMiddleware, async (req, res) =>
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/clients', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/clients', authenticateToken, async (req, res) => {
     try {
         const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate } = req.body;
 
@@ -2443,7 +1989,7 @@ app.post('/api/clients', authenticateToken, tenantMiddleware, async (req, res) =
                 phone,
                 email,
                 role: 'CLIENT',
-                organizationId: req.tenantId,
+                
                 skinType,
                 allergies,
                 medicalConditions,
@@ -2459,7 +2005,7 @@ app.post('/api/clients', authenticateToken, tenantMiddleware, async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted } = req.body;
@@ -2489,7 +2035,7 @@ app.put('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, res
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/clients/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await prisma.user.delete({ where: { id } });
@@ -2499,17 +2045,17 @@ app.delete('/api/clients/:id', authenticateToken, tenantMiddleware, async (req, 
 
 // --- LEADS ENDPOINTS ---
 
-app.get('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/leads', authenticateToken, async (req, res) => {
     try {
         const leads = await prisma.lead.findMany({
-            where: { organizationId: req.tenantId },
+            
             orderBy: { createdAt: 'desc' }
         });
         res.json(leads);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/leads', authenticateToken, async (req, res) => {
     try {
         const { name, phone, email, source, notes, estimatedValue, interestLevel, preferredContact } = req.body;
         const newLead = await prisma.lead.create({
@@ -2520,8 +2066,7 @@ app.post('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => 
                 notes,
                 estimatedValue: estimatedValue ? parseFloat(estimatedValue) : 0,
                 interestLevel: interestLevel || 'MEDIUM',
-                preferredContact: preferredContact || 'WHATSAPP',
-                organizationId: req.tenantId
+                preferredContact: preferredContact || 'WHATSAPP'
             }
         });
         res.json({ success: true, lead: newLead });
@@ -2531,18 +2076,7 @@ app.post('/api/leads', authenticateToken, tenantMiddleware, async (req, res) => 
 // WEBHOOK for n8n/Facebook/WhatsApp
 app.post('/api/leads/webhook', async (req, res) => {
     try {
-        const { name, phone, email, source, tenantId, notes } = req.body;
-
-        const tenant = await prisma.tenant.findFirst({
-            where: {
-                OR: [
-                    { id: tenantId },
-                    { subdomain: tenantId }
-                ]
-            }
-        });
-
-        if (!tenant) return res.status(404).json({ error: "Tenant host no detectado" });
+        const { name, phone, email, source,  notes } = req.body;
 
         const newLead = await prisma.lead.create({
             data: {
@@ -2551,8 +2085,7 @@ app.post('/api/leads/webhook', async (req, res) => {
                 email,
                 source: source || 'EXTERNAL_API',
                 status: 'NEW',
-                notes: notes || 'Lead capturado vía webhook',
-                organizationId: tenant.organizationId
+                notes: notes || 'Lead capturado vía webhook'
             }
         });
 
@@ -2560,7 +2093,7 @@ app.post('/api/leads/webhook', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/leads/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, notes, name, phone, email, estimatedValue, interestLevel, preferredContact } = req.body;
@@ -2578,7 +2111,7 @@ app.put('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/leads/:id/convert', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/leads/:id/convert', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const lead = await prisma.lead.findUnique({ where: { id } });
@@ -2590,7 +2123,7 @@ app.post('/api/leads/:id/convert', authenticateToken, tenantMiddleware, async (r
                 phone: lead.phone,
                 email: lead.email,
                 role: 'CLIENT',
-                organizationId: req.tenantId,
+                
                 preferences: { notes: lead.notes, convertedFrom: 'LEAD', leadId: lead.id }
             }
         });
@@ -2604,17 +2137,17 @@ app.post('/api/leads/:id/convert', authenticateToken, tenantMiddleware, async (r
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/leads/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/leads/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.lead.delete({ where: { id: req.params.id } });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/professionals', tenantMiddleware, async (req, res) => {
+app.get('/api/professionals', async (req, res) => {
     try {
         const professionals = await prisma.professional.findMany({
-            where: { organizationId: req.tenantId || 'demo' },
+            
             select: {
                 id: true,
                 name: true,
@@ -2623,7 +2156,7 @@ app.get('/api/professionals', tenantMiddleware, async (req, res) => {
                 aurumEmployeeId: true,
                 weeklySchedule: true,
                 exceptions: true,
-                tenantId: true,
+                
                 branchId: true,
                 serviceIds: true
             }
@@ -2632,7 +2165,7 @@ app.get('/api/professionals', tenantMiddleware, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/professionals', authenticateToken, async (req, res) => {
     try {
         const { name, role, email, aurumEmployeeId, weeklySchedule, exceptions } = req.body;
         const pro = await prisma.professional.create({
@@ -2642,9 +2175,7 @@ app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, 
                 email,
                 aurumEmployeeId: aurumEmployeeId,
                 weeklySchedule: weeklySchedule || [],
-                exceptions: exceptions || [],
-                organizationId: req.tenantId || 'demo',
-                tenantId: req.tenantId,
+                exceptions: exceptions || [] || 'demo',
                 serviceIds: ''
             }
         });
@@ -2653,7 +2184,7 @@ app.post('/api/professionals', authenticateToken, tenantMiddleware, async (req, 
 });
 
 
-app.put('/api/professionals/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/professionals/:id', authenticateToken, async (req, res) => {
     try {
         const { name, role, email, aurumEmployeeId, weeklySchedule, exceptions } = req.body;
         await prisma.professional.update({
@@ -2671,7 +2202,7 @@ app.put('/api/professionals/:id', authenticateToken, tenantMiddleware, async (re
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/professionals/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/professionals/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.professional.delete({ where: { id: req.params.id } });
         res.json({ success: true });
@@ -2727,7 +2258,7 @@ app.post('/api/payments/create_preference', async (req, res) => {
 
 // --- SAAS PLANS CONFIGURATION ---
 
-app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
+app.get('/api/settings/landing', async (req, res) => {
     try {
         const organizationId = req.tenantId || 'demo';
         let data = await prisma.landingSetting.findUnique({
@@ -2786,11 +2317,6 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
             }
         }
 
-        // Fetch complementary info from Tenant table
-        const tenant = await prisma.tenant.findUnique({
-            where: { subdomain: organizationId }
-        });
-
         const normalized = {
             businessName: organizationId === 'demo' ? BRAND_NAME : (data?.businessName?.trim() || organizationId.toUpperCase() || BRAND_NAME),
             primaryColor: data.primaryColor || '#630E14',
@@ -2819,25 +2345,13 @@ app.get('/api/settings/landing', tenantMiddleware, async (req, res) => {
             stats: data.stats || [],
             testimonials: data.testimonials || [],
             serviceIds: data.serviceIds || [],
-            productIds: data.productIds || [],
-            subdomain: organizationId,
-            bridge: tenant ? {
-                enabled: tenant.bridgeEnabled || false,
-                webhookUrl: tenant.bridgeWebhookUrl || '',
-                apiKey: tenant.bridgeApiKey || '',
-                satelliteId: tenant.bridgeSatelliteId || 3
-            } : {
-                enabled: false,
-                webhookUrl: '',
-                apiKey: '',
-                satelliteId: 3
-            }
+            productIds: data.productIds || []
         };
         res.json({ success: true, value: normalized });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req, res) => {
+app.put('/api/settings/landing', authenticateToken, async (req, res) => {
     try {
         const organizationId = req.tenantId;
         const s = req.body;
@@ -2889,66 +2403,17 @@ app.put('/api/settings/landing', authenticateToken, tenantMiddleware, async (req
     }
 });
 
-// --- BRIDGE SETTINGS & INTERCONNECTIVITY ---
-app.put('/api/settings/bridge', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const { enabled, webhookUrl, satelliteId } = req.body;
-        const subdomain = req.tenantId;
-
-        await prisma.tenant.update({
-            where: { subdomain },
-            data: {
-                bridgeEnabled: enabled,
-                bridgeWebhookUrl: webhookUrl,
-                bridgeSatelliteId: parseInt(satelliteId) || 3
-            }
-        });
-
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+// --- BRIDGE SETTINGS: deprecated in single-tenant mode ---
+app.put('/api/settings/bridge', authenticateToken, async (req, res) => {
+    res.status(410).json({ success: false, message: 'Bridge feature no disponible en modo single-tenant' });
 });
 
-app.post('/api/settings/bridge/rotate-key', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const subdomain = req.tenantId;
-        const newKey = crypto.randomUUID();
-
-        await prisma.tenant.update({
-            where: { subdomain },
-            data: { bridgeApiKey: newKey }
-        });
-
-        res.json({ success: true, key: newKey });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+app.post('/api/settings/bridge/rotate-key', authenticateToken, async (req, res) => {
+    res.status(410).json({ success: false, message: 'Bridge feature no disponible en modo single-tenant' });
 });
 
-app.post('/api/settings/bridge/test', authenticateToken, tenantMiddleware, async (req, res) => {
-    try {
-        const tenant = await prisma.tenant.findUnique({
-            where: { subdomain: req.tenantId }
-        });
-
-        if (!tenant || !tenant.bridgeWebhookUrl) {
-            return res.status(400).json({ success: false, message: "Webhook no configurado" });
-        }
-
-        console.log(`[BRIDGE] Testing handshake for: ${req.tenantId} -> ${tenant.bridgeWebhookUrl}`);
-
-        const response = await axios.post(tenant.bridgeWebhookUrl, {
-            type: 'HANDSHAKE',
-            satelliteId: tenant.bridgeSatelliteId,
-            timestamp: new Date().toISOString()
-        }, {
-            headers: { 'X-Aurum-Key': tenant.bridgeApiKey },
-            timeout: 5000
-        }).catch(e => ({ status: 500, data: { message: e.message } }));
-
-        if (response.status === 200) {
-            res.json({ success: true, message: "Handshake Exitoso con Aurum Holding" });
-        } else {
-            res.json({ success: false, message: "Holding Offline o Error de Configuración" });
-        }
-    } catch (e) { res.status(500).json({ error: e.message }); }
+app.post('/api/settings/bridge/test', authenticateToken, async (req, res) => {
+    res.status(410).json({ success: false, message: 'Bridge feature no disponible en modo single-tenant' });
 });
 
 
@@ -3057,7 +2522,7 @@ app.post('/api/ai/concierge', async (req, res) => {
         2. Ver disponibilidad de citas.
         3. Instrucciones de cuidado post-cita.
         Solo agenda citas de forma tentativa. Siempre sé amable y sofisticado.
-        ID del Tenant actual: ${tenantId}`;
+        ID del Negocio actual: Sistema Único`;
 
         const result = await chat.sendMessageStream(`${systemPrompt}\n\nCliente: ${message}`);
 
@@ -3070,14 +2535,14 @@ app.post('/api/ai/concierge', async (req, res) => {
                 let functionResponse = {};
 
                 if (call.name === "get_services") {
-                    const services = await prisma.service.findMany({ where: { organizationId: tenantId, status: 'ACTIVE' } });
+                    const services = await prisma.service.findMany({ where: {  status: 'ACTIVE' } });
                     functionResponse = { services: services.map(s => ({ name: s.name, price: s.price, duration: s.duration, description: s.description, careInstructions: s.careInstructions })) };
                 } else if (call.name === "check_availability") {
                     const { date } = call.args;
                     // Mock availability check based on existing appointments
                     const apps = await prisma.appointment.findMany({
                         where: {
-                            organizationId: tenantId,
+                            
                             startDateTime: { gte: new Date(date), lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000) }
                         }
                     });
@@ -3110,47 +2575,45 @@ app.post('/api/ai/concierge', async (req, res) => {
 // --- MAINTENANCE MANAGEMENT SYSTEM API ---
 
 // 1. Get/Set Master Plan (Maintenance Tasks)
-app.get('/api/maintenance/tasks', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/maintenance/tasks', authenticateToken, async (req, res) => {
     try {
         const tasks = await prisma.maintenanceTask.findMany({
-            where: { tenantId: req.tenantId },
+            
             orderBy: [{ dayOfWeek: 'asc' }, { priority: 'asc' }]
         });
         res.json(tasks);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/maintenance/tasks', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/maintenance/tasks', authenticateToken, async (req, res) => {
     try {
         const { dayOfWeek, taskName, priority } = req.body;
         const task = await prisma.maintenanceTask.create({
             data: {
                 dayOfWeek: parseInt(dayOfWeek),
                 taskName,
-                priority: parseInt(priority) || 1,
-                tenantId: req.tenantId
+                priority: parseInt(priority) || 1
             }
         });
         res.json(task);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/maintenance/tasks/:id', authenticateToken, tenantMiddleware, async (req, res) => {
+app.delete('/api/maintenance/tasks/:id', authenticateToken, async (req, res) => {
     try {
         await prisma.maintenanceTask.delete({
-            where: { id: req.params.id, tenantId: req.tenantId }
+            where: { id: req.params.id }
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 2. Daily Assignments
-app.get('/api/maintenance/assignments', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/maintenance/assignments', authenticateToken, async (req, res) => {
     try {
         const { date } = req.query; // YYYY-MM-DD
         const assignments = await prisma.taskAssignment.findMany({
             where: {
-                tenantId: req.tenantId,
                 date: date ? new Date(date) : undefined
             },
             include: { task: true, professional: true },
@@ -3161,10 +2624,10 @@ app.get('/api/maintenance/assignments', authenticateToken, tenantMiddleware, asy
 });
 
 // 3. Mark Task as Complete (Professional)
-app.post('/api/maintenance/assignments/:id/complete', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/maintenance/assignments/:id/complete', authenticateToken, async (req, res) => {
     try {
         const assignment = await prisma.taskAssignment.update({
-            where: { id: req.params.id, tenantId: req.tenantId },
+            where: { id: req.params.id },
             data: {
                 status: 'COMPLETED',
                 completedAt: new Date()
@@ -3197,7 +2660,7 @@ app.post('/api/notifications/subscribe', async (req, res) => {
 });
 
 
-app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, res) => {
+app.get('/api/business-stats', authenticateToken, async (req, res) => {
     try {
         const organizationId = req.tenantId;
         const tenantUuid = req.tenantUuid;
@@ -3207,7 +2670,7 @@ app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, 
         // 1. Core KPIs
         const [totalRevenue, completedAppointments, newClients, totalAppointments] = await Promise.all([
             prisma.sale.aggregate({
-                where: { tenantId: tenantUuid },
+                
                 _sum: { total: true }
             }),
             prisma.appointment.count({
@@ -3225,7 +2688,7 @@ app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const salesLast7Days = await prisma.sale.findMany({
-            where: { tenantId: tenantUuid, createdAt: { gte: sevenDaysAgo } },
+            where: {  createdAt: { gte: sevenDaysAgo } },
             select: { total: true, createdAt: true }
         });
 
@@ -3267,7 +2730,7 @@ app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, 
 
         // 4. Top Products
         const sales = await prisma.sale.findMany({
-            where: { tenantId: tenantUuid },
+            
             select: { items: true }
         });
 
@@ -3303,20 +2766,75 @@ app.get('/api/business-stats', authenticateToken, tenantMiddleware, async (req, 
     }
 });
 
-app.post('/api/sales', authenticateToken, tenantMiddleware, async (req, res) => {
+app.post('/api/sales', authenticateToken, async (req, res) => {
     try {
         const { items, total, paymentMethod, clientName } = req.body;
-        const sale = await prisma.sale.create({
-            data: {
-                items,
-                total: parseFloat(total),
-                paymentMethod,
-                clientName,
-                tenantId: req.tenantUuid
+        
+        // ACID Transaction to handle stock updates and sale registration safely
+        const sale = await prisma.$transaction(async (tx) => {
+            const createdSale = await tx.sale.create({
+                data: {
+                    items,
+                    total: parseFloat(total),
+                    paymentMethod,
+                    clientName
+                }
+            });
+
+            // Deduct products from stock if they are retail products
+            if (items && Array.isArray(items)) {
+                for (const item of items) {
+                    const productId = item.id || item.productId;
+                    const quantity = parseInt(item.quantity || 1);
+
+                    if (!productId) continue;
+
+                    // Fetch product inside the transaction
+                    const product = await tx.product.findUnique({
+                        where: { id: productId }
+                    });
+
+                    if (product) {
+                        const newStock = Math.max(0, (product.stock || 0) - quantity);
+
+                        // Update product stock
+                        const updatedProduct = await tx.product.update({
+                            where: { id: productId },
+                            data: { stock: newStock }
+                        });
+
+                        // Create inventory movement OUT
+                        await tx.inventoryMovement.create({
+                            data: {
+                                productId: product.id,
+                                productName: product.name,
+                                type: 'OUT',
+                                quantity: quantity,
+                                reason: `Venta POS - Venta ID: ${createdSale.id}`
+                            }
+                        });
+
+                        // Check and alert threshold
+                        if (updatedProduct.stock <= (updatedProduct.minStock || 0)) {
+                            const tenantName = req.tenant?.name || "CitaPlanner Client";
+                            checkAndAlertInventoryThreshold(updatedProduct, tenantName)
+                                .then(result => {
+                                    if (result.triggered) {
+                                        console.log(`📣 Purchase order automatic alert sent for ${updatedProduct.name}: Email=${result.emailSent}, WA=${result.whatsappSent}`);
+                                    }
+                                })
+                                .catch(err => console.error("❌ Inventory threshold alert dispatch failed:", err));
+                        }
+                    }
+                }
             }
+
+            return createdSale;
         });
+
         res.json({ success: true, saleId: sale.id, date: sale.createdAt });
     } catch (e) {
+        console.error("❌ POS Sale Error:", e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -3411,11 +2929,8 @@ cron.schedule('0 6 * * *', async () => {
         });
 
         for (const client of clients) {
-            const tenant = await prisma.tenant.findUnique({ where: { subdomain: client.organizationId } });
-            if (tenant?.features?.ai_automation) {
-                const message = `🎂 ¡Feliz Cumpleaños ${client.name}! En ${tenant.name} celebramos tu día. Visítanos este mes y recibe un 15% de regalo en tu próximo servicio. ✨`;
-                await sendWhatsAppMessage(client.phone, message, null, client.organizationId);
-            }
+            const message = `🎂 ¡Feliz Cumpleaños ${client.name}! Celebramos tu día. Visítanos este mes y recibe un 15% de regalo en tu próximo servicio. ✨`;
+            await sendWhatsAppMessage(client.phone, message, null, null);
         }
     } catch (e) { console.error("❌ Birthday Worker Error:", e); }
 });
@@ -3427,65 +2942,232 @@ cron.schedule('0 6 * * *', async () => {
     try {
         const today = new Date();
         const dayOfWeek = today.getDay(); // 0-6
-        const tenants = await prisma.tenant.findMany({ where: { status: 'ACTIVE' } });
+        const tasks = await prisma.maintenanceTask.findMany({
+            where: { dayOfWeek },
+            orderBy: { priority: 'asc' }
+        });
 
-        for (const tenant of tenants) {
-            // Only if AI Automation is enabled
-            if (!tenant.features?.ai_automation) continue;
+        if (tasks.length === 0) return;
 
-            const tasks = await prisma.maintenanceTask.findMany({
-                where: { tenantId: tenant.id, dayOfWeek },
-                orderBy: { priority: 'asc' }
+        const professionals = await prisma.professional.findMany({});
+
+        // Filter professionals working today based on weekly_schedule
+        const activeStaff = professionals.filter(p => {
+            const schedule = p.weeklySchedule;
+            const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+            return schedule?.some(s => s.day === dayNames[dayOfWeek]);
+        });
+
+        if (activeStaff.length === 0) return;
+
+        // Equitable Distribution (Round-Robin)
+        const assignments = [];
+        for (let i = 0; i < tasks.length; i++) {
+            const staff = activeStaff[i % activeStaff.length];
+            assignments.push({
+                date: today,
+                taskId: tasks[i].id,
+                assignedTo: staff.id
             });
+        }
 
-            if (tasks.length === 0) continue;
+        // Save Assignments
+        await prisma.taskAssignment.createMany({ data: assignments });
 
-            const professionals = await prisma.professional.findMany({
-                where: { tenantId: tenant.id }
-            });
+        // Notify each active staff member via WhatsApp
+        for (const staff of activeStaff) {
+            const staffTasks = assignments.filter(a => a.assignedTo === staff.id);
+            const taskList = staffTasks.map((a, idx) => {
+                const t = tasks.find(t => t.id === a.taskId);
+                return `${idx + 1}. ${t.taskName}`;
+            }).join('\n');
 
-            // Filter professionals working today based on weekly_schedule
-            const activeStaff = professionals.filter(p => {
-                const schedule = p.weeklySchedule; // e.g., [{day: "Lunes", label: "09:00 - 18:00"}]
-                const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
-                return schedule?.some(s => s.day === dayNames[dayOfWeek]);
-            });
+            const message = `🧹 ¡Buen día ${staff.name}! Hoy tus tareas de mantenimiento asignadas son:\n\n${taskList}\n\nPor favor, marca como "Completada" cada una en tu dashboard al finalizar. ¡Buen turno! ✨`;
 
-            if (activeStaff.length === 0) continue;
-
-            // Equitable Distribution (Round-Robin)
-            const assignments = [];
-            for (let i = 0; i < tasks.length; i++) {
-                const staff = activeStaff[i % activeStaff.length];
-                assignments.push({
-                    date: today,
-                    taskId: tasks[i].id,
-                    assignedTo: staff.id,
-                    tenantId: tenant.id
-                });
-            }
-
-            // Save Assignments
-            await prisma.taskAssignment.createMany({ data: assignments });
-
-            // Notify each active staff member via WhatsApp
-            for (const staff of activeStaff) {
-                const staffTasks = assignments.filter(a => a.assignedTo === staff.id);
-                const taskList = staffTasks.map((a, idx) => {
-                    const t = tasks.find(t => t.id === a.taskId);
-                    return `${idx + 1}. ${t.taskName}`;
-                }).join('\n');
-
-                const message = `🧹 ¡Buen día ${staff.name}! Hoy en ${tenant.name} tus tareas de mantenimiento asignadas son:\n\n${taskList}\n\nPor favor, marca como "Completada" cada una en tu dashboard al finalizar. ¡Buen turno! ✨`;
-
-                // Assuming phone is stored in professional's email or we need to find the user
-                const user = await prisma.user.findFirst({ where: { relatedId: staff.id } });
-                if (user?.phone) {
-                    await sendWhatsAppMessage(user.phone, message, staff.branchId, tenant.organizationId);
-                }
+            const user = await prisma.user.findFirst({ where: { relatedId: staff.id } });
+            if (user?.phone) {
+                await sendWhatsAppMessage(user.phone, message, staff.branchId, null);
             }
         }
     } catch (e) { console.error("❌ Maintenance Worker Error:", e); }
+});
+
+// --- GOOGLE CALENDAR WEBHOOK & SAFETY SYNC cronS & HELPERS ---
+
+async function renewGoogleCalendarWatch(professional) {
+    if (!professional.googleRefreshToken) return;
+    try {
+        const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+        auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+        const calendar = google.calendar({ version: 'v3', auth });
+
+        const channelId = `chan_${professional.id.replace(/-/g, '')}`;
+        const rootDomain = process.env.ROOT_DOMAIN || 'citaplanner.ai';
+        const address = `https://${rootDomain}/api/calendar/google/webhook/${professional.id}`;
+
+        console.log(`📡 Registering/Renewing Google Watch for Professional ${professional.id} on address: ${address}`);
+        
+        await calendar.events.watch({
+            calendarId: professional.googleCalendarId || 'primary',
+            requestBody: {
+                id: channelId,
+                type: 'web_hook',
+                address: address
+            }
+        });
+        console.log(`✅ Google Watch registered successfully for Professional ${professional.id}`);
+    } catch (e) {
+        console.error(`❌ Failed to renew Google Calendar Watch for Professional ${professional.id}:`, e.message);
+    }
+}
+
+// 5. Google Calendar Bidirectional safety sync worker (every 15 minutes)
+cron.schedule('*/15 * * * *', async () => {
+    console.log("🕒 Running Google Calendar Safety Sync Worker...");
+    try {
+        const professionals = await prisma.professional.findMany({
+            where: { calendarSyncEnabled: true }
+        });
+
+        for (const professional of professionals) {
+            if (!professional.googleRefreshToken) continue;
+            console.log(`🔄 Performing safety incremental sync for Professional: ${professional.id}`);
+
+            const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+            auth.setCredentials({ refresh_token: professional.googleRefreshToken });
+            const calendar = google.calendar({ version: 'v3', auth });
+
+            let pageToken = undefined;
+            let nextSyncToken = undefined;
+            let events = [];
+
+            try {
+                do {
+                    const response = await calendar.events.list({
+                        calendarId: professional.googleCalendarId || 'primary',
+                        syncToken: professional.googleCalendarSyncToken || undefined,
+                        pageToken: pageToken,
+                        singleEvents: true
+                    });
+
+                    if (response.data.items) {
+                        events = events.concat(response.data.items);
+                    }
+                    pageToken = response.data.nextPageToken;
+                    nextSyncToken = response.data.nextSyncToken;
+                } while (pageToken);
+            } catch (syncError) {
+                if (syncError.code === 410) {
+                    console.log(`🔄 SyncToken expired for Professional ${professional.id} during safety sync, resyncing...`);
+                    await prisma.professional.update({
+                        where: { id: professional.id },
+                        data: { googleCalendarSyncToken: null }
+                    });
+
+                    const now = new Date();
+                    const timeMin = new Date(now.setDate(now.getDate() - 30)).toISOString();
+                    pageToken = undefined;
+
+                    do {
+                        const response = await calendar.events.list({
+                            calendarId: professional.googleCalendarId || 'primary',
+                            timeMin: timeMin,
+                            pageToken: pageToken,
+                            singleEvents: true
+                        });
+
+                        if (response.data.items) {
+                            events = events.concat(response.data.items);
+                        }
+                        pageToken = response.data.nextPageToken;
+                        nextSyncToken = response.data.nextSyncToken;
+                    } while (pageToken);
+                } else {
+                    console.error(`❌ Sync error for Professional ${professional.id}:`, syncError.message);
+                    continue;
+                }
+            }
+
+            for (const event of events) {
+                const googleEventId = event.id;
+
+                if (event.status === 'cancelled') {
+                    const appts = await prisma.appointment.findMany({
+                        where: { googleEventId }
+                    });
+                    for (const appt of appts) {
+                        await prisma.appointment.delete({
+                            where: { id: appt.id }
+                        });
+                    }
+                    continue;
+                }
+
+                const startStr = event.start?.dateTime || event.start?.date;
+                const endStr = event.end?.dateTime || event.end?.date;
+                if (!startStr || !endStr) continue;
+
+                const startDateTime = new Date(startStr);
+                const endDateTime = new Date(endStr);
+
+                const existingAppointment = await prisma.appointment.findFirst({
+                    where: { googleEventId }
+                });
+
+                if (existingAppointment) {
+                    await prisma.appointment.update({
+                        where: { id: existingAppointment.id },
+                        data: {
+                            startDateTime,
+                            endDateTime,
+                            title: event.summary || 'Bloqueo de Agenda',
+                            notes: event.description || undefined
+                        }
+                    });
+                } else {
+                    await prisma.appointment.create({
+                        data: {
+                            title: event.summary || 'Bloqueo de Agenda',
+                            startDateTime,
+                            endDateTime,
+                            clientName: 'Bloqueo Externo',
+                            clientPhone: '',
+                            status: 'BLOCKED',
+                            notes: event.description || 'Bloqueo importado de Google Calendar',
+                            professionalId: professional.id,
+                            branchId: professional.branchId,
+                            googleEventId: event.id
+                        }
+                    });
+                }
+            }
+
+            if (nextSyncToken) {
+                await prisma.professional.update({
+                    where: { id: professional.id },
+                    data: { googleCalendarSyncToken: nextSyncToken }
+                });
+            }
+        }
+    } catch (e) {
+        console.error("❌ safety sync worker error:", e.message);
+    }
+});
+
+// 6. Google Calendar Webhook renewal worker (every 12 hours)
+cron.schedule('0 */12 * * *', async () => {
+    console.log("🕒 Running Google Calendar Webhook Renewal Worker...");
+    try {
+        const professionals = await prisma.professional.findMany({
+            where: { calendarSyncEnabled: true }
+        });
+
+        for (const professional of professionals) {
+            await renewGoogleCalendarWatch(professional);
+        }
+    } catch (e) {
+        console.error("❌ Webhook renewal worker error:", e.message);
+    }
 });
 
 

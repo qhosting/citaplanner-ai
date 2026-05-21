@@ -19,15 +19,15 @@ model Appointment {
   description    String?
   branchId       String?   @map("branch_id") @db.Uuid
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenantId       String?   @map("tenant_id") @db.Uuid
-  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
   notes          String?
   reminderSent   Boolean?  @default(false) @map("reminder_sent")
   careSent       Boolean?  @default(false) @map("care_sent")
   updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   professionalId String?   @map("professional_id") @db.Uuid
   serviceId      String?   @map("service_id") @db.Uuid
-  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  googleEventId  String?   @map("google_event_id") @db.VarChar(255)
+  noShowRisk     Float?    @map("no_show_risk")
+  noShowReasons  String?   @map("no_show_reasons")
 
   @@map("appointments")
 }
@@ -40,15 +40,12 @@ model AutomationRule {
   delayHours      Int?     @default(0) @map("delay_hours")
   channel         String?  @db.VarChar(50)
   templateMessage String?  @map("template_message")
-  tenantId        String?  @map("tenant_id") @db.Uuid
-  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("automation_rules")
 }
 
 model BillingLog {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String?   @map("tenant_id") @db.Uuid
   amount      Decimal?  @db.Decimal(12, 2)
   currency    String?   @default("MXN") @db.VarChar(10)
   status      String?   @db.VarChar(20)
@@ -56,7 +53,6 @@ model BillingLog {
   description String?
   invoiceUrl  String?   @map("invoice_url")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("billing_logs")
 }
@@ -69,9 +65,6 @@ model Branch {
   manager        String?       @db.VarChar(100)
   status         String?       @default("ACTIVE") @db.VarChar(20)
   createdAt      DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
-  tenantId       String?       @map("tenant_id") @db.Uuid
-  organizationId String?       @default("demo") @map("organization_id") @db.VarChar(50)
-  tenant         Tenant?       @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   transactions   Transaction[]
 
   @@map("branches")
@@ -89,10 +82,8 @@ model Client {
   consentAccepted   Boolean?  @default(false) @map("consent_accepted")
   consentDate       DateTime? @map("consent_date") @db.Timestamp(6)
   consentType       String?   @map("consent_type") @db.VarChar(100)
-  tenantId          String?   @map("tenant_id") @db.Uuid
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   treatmentHistory  Json?     @default("[]")
-  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("clients")
 }
@@ -106,7 +97,6 @@ model IntegrationLog {
   status         String?   @db.VarChar(20)
   branchId       String?   @map("branch_id") @db.Uuid
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
 
   @@map("integration_logs")
 }
@@ -119,8 +109,6 @@ model InventoryMovement {
   quantity    Int?
   reason      String?
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenantId    String?   @map("tenant_id") @db.Uuid
-  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("inventory_movements")
 }
@@ -137,7 +125,6 @@ model LandingSetting {
   contactPhone    String? @map("contact_phone") @db.VarChar(20)
   heroImageUrl    String? @map("hero_image_url")
   logoUrl         String? @map("logo_url")
-  organizationId  String? @unique(map: "idx_landing_org_unique") @default("demo") @map("organization_id") @db.VarChar(50)
   seoTitle        String? @map("seo_title") @db.VarChar(100)
   seoDescription  String? @map("seo_description")
   seoKeywords     String? @map("seo_keywords")
@@ -171,9 +158,7 @@ model MarketingCampaign {
   targetSegment String?   @map("target_segment") @db.VarChar(100)
   subject       String?   @db.VarChar(255)
   sentCount     Int?      @default(0) @map("sent_count")
-  tenantId      String?   @map("tenant_id") @db.Uuid
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenant        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("marketing_campaigns")
 }
@@ -184,9 +169,7 @@ model MarketingTemplate {
   content   String
   channel   String    @db.VarChar(50) // EMAIL, WHATSAPP, SMS
   subject   String?   @db.VarChar(255)
-  tenantId  String?   @map("tenant_id") @db.Uuid
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenant    Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("marketing_templates")
 }
@@ -202,10 +185,10 @@ model Product {
   minStock       Int?     @map("min_stock")
   status         String?  @default("ACTIVE") @db.VarChar(20)
   usage          String?  @db.VarChar(20)
-  tenantId       String?  @map("tenant_id") @db.Uuid
-  organizationId String?  @default("demo") @map("organization_id") @db.VarChar(50)
   branchId       String?  @map("branch_id") @db.Uuid
-  tenant         Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supplierName   String?  @map("supplier_name") @db.VarChar(100)
+  supplierEmail  String?  @map("supplier_email") @db.VarChar(100)
+  supplierPhone  String?  @map("supplier_phone") @db.VarChar(20)
 
   @@map("products")
 }
@@ -217,17 +200,15 @@ model Professional {
   email               String?
   weeklySchedule      Json?            @map("weekly_schedule")
   exceptions          Json?
-  tenantId            String?          @map("tenant_id") @db.Uuid
-  organizationId      String?          @default("demo") @map("organization_id") @db.VarChar(50)
   branchId            String?          @map("branch_id") @db.Uuid
   aurumEmployeeId     String?          @map("aurum_employee_id") @db.VarChar(50)
   serviceIds          String?          @map("service_ids")
   googleAccessToken   String?          @map("google_access_token")
   googleRefreshToken  String?          @map("google_refresh_token")
-  googleCalendarId    String?          @map("google_calendar_id")
-  calendarSyncEnabled Boolean?         @default(false) @map("calendar_sync_enabled")
-  icalToken           String?          @map("ical_token")
-  tenant              Tenant?          @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  googleCalendarId        String?          @map("google_calendar_id")
+  calendarSyncEnabled     Boolean?         @default(false) @map("calendar_sync_enabled")
+  googleCalendarSyncToken String?          @map("google_calendar_sync_token")
+  icalToken               String?          @map("ical_token")
   taskAssignments     TaskAssignment[]
 
   @@map("professionals")
@@ -241,8 +222,6 @@ model Sale {
   paymentMethod String?   @map("payment_method")
   clientName    String?   @map("client_name")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenantId      String?   @map("tenant_id") @db.Uuid
-  tenant        Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("sales")
 }
@@ -256,11 +235,8 @@ model Service {
   description      String?
   status           String?  @default("ACTIVE") @db.VarChar(20)
   imageUrl         String?  @map("image_url")
-  tenantId         String?  @map("tenant_id") @db.Uuid
-  organizationId   String?  @default("demo") @map("organization_id") @db.VarChar(50)
   branchId         String?  @map("branch_id") @db.Uuid
   careInstructions String?  @map("care_instructions")
-  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("services")
 }
@@ -268,69 +244,8 @@ model Service {
 model Setting {
   key      String  @id @db.VarChar(50)
   value    Json?   @default("{}")
-  tenantId String? @map("tenant_id") @db.Uuid
-  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("settings")
-}
-
-model Subscription {
-  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String?   @map("tenant_id") @db.Uuid
-  planId             String?   @map("plan_id") @db.VarChar(50)
-  status             String?   @default("INACTIVE") @db.VarChar(20)
-  provider           String?   @default("MERCADOPAGO") @db.VarChar(20)
-  externalId         String?   @map("external_id") @db.VarChar(100)
-  currentPeriodStart DateTime? @map("current_period_start") @db.Timestamp(6)
-  currentPeriodEnd   DateTime? @map("current_period_end") @db.Timestamp(6)
-  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
-  tenant             Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("subscriptions")
-}
-
-model Tenant {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String?             @db.VarChar(100)
-  subdomain          String?             @unique(map: "idx_tenants_subdomain") @db.VarChar(50)
-  customDomain       String?             @unique @map("custom_domain") @db.VarChar(100)
-  cloudflareId       String?             @map("cloudflare_id") @db.VarChar(100)
-  status             String?             @default("ACTIVE") @db.VarChar(20)
-  planType           String?             @default("PRO") @map("plan_type") @db.VarChar(20)
-  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
-  cloudflareStatus   String?             @default("pending") @map("cloudflare_status") @db.VarChar(50)
-  verificationRecord Json?               @map("verification_record")
-  organizationId     String?             @default("demo") @map("organization_id") @db.VarChar(50)
-  features           Json?               @default("{\"ai_scheduler\": true, \"marketing_pro\": true, \"analytics_nexus\": true, \"inventory_advanced\": true}")
-  openpayId          String?             @map("openpay_id") @db.VarChar(100)
-  suspendedAt        DateTime?           @map("suspended_at") @db.Timestamp(6)
-  trialEndsAt        DateTime?           @map("trial_ends_at") @db.Timestamp(6)
-  lastLoginAt        DateTime?           @map("last_login_at") @db.Timestamp(6)
-  bridgeEnabled      Boolean?            @default(false) @map("bridge_enabled")
-  bridgeWebhookUrl   String?             @map("bridge_webhook_url")
-  bridgeApiKey       String?             @default(dbgenerated("gen_random_uuid()")) @map("bridge_api_key") @db.Uuid
-  bridgeSatelliteId  Int?                @default(3) @map("bridge_satellite_id")
-  appointments       Appointment[]
-  automationRules    AutomationRule[]
-  billingLogs        BillingLog[]
-  branches           Branch[]
-  clients            Client[]
-  inventoryMovements InventoryMovement[]
-  maintenanceTasks   MaintenanceTask[]
-  marketingCampaigns MarketingCampaign[]
-  marketingTemplates MarketingTemplate[]
-  products           Product[]
-  professionals      Professional[]
-  sales              Sale[]
-  services           Service[]
-  settings           Setting[]
-  subscriptions      Subscription[]
-  taskAssignments    TaskAssignment[]
-  users              User[]
-  leads              Lead[]
-
-  @@map("tenants")
 }
 
 model Transaction {
@@ -339,7 +254,6 @@ model Transaction {
   mpPaymentId    String?   @map("mp_payment_id") @db.VarChar(100)
   mpStatus       String?   @map("mp_status") @db.VarChar(50)
   branchId       String?   @map("branch_id") @db.Uuid
-  organizationId String?   @default("demo") @map("organization_id") @db.VarChar(50)
   createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   branches       Branch?   @relation(fields: [branchId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -357,8 +271,6 @@ model User {
   branchId          String?   @map("branch_id") @db.Uuid
   preferences       Json?     @default("{}")
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
-  tenantId          String?   @map("tenant_id") @db.Uuid
-  organizationId    String?   @default("demo") @map("organization_id") @db.VarChar(50)
   relatedId         String?   @map("related_id") @db.VarChar(100)
   pushSubscription  Json?     @map("push_subscription")
   skinType          String?   @map("skin_type") @db.VarChar(100)
@@ -368,10 +280,6 @@ model User {
   refreshToken      String?   @map("refresh_token")
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry") @db.Timestamp(6)
-  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([phone, organizationId], map: "idx_users_phone_org")
-  @@unique([phone, organizationId])
   @@map("users")
 }
 
@@ -380,8 +288,6 @@ model MaintenanceTask {
   dayOfWeek   Int              @map("day_of_week")
   taskName    String           @map("task_name") @db.VarChar(255)
   priority    Int              @default(1)
-  tenantId    String           @map("tenant_id") @db.Uuid
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignments TaskAssignment[]
 
   @@map("maintenance_tasks")
@@ -394,10 +300,8 @@ model TaskAssignment {
   assignedTo   String          @map("assigned_to") @db.Uuid
   status       String          @default("PENDING") @db.VarChar(20)
   completedAt  DateTime?       @map("completed_at") @db.Timestamp(6)
-  tenantId     String          @map("tenant_id") @db.Uuid
   professional Professional    @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
   task         MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("task_assignments")
 }
@@ -413,11 +317,8 @@ model Lead {
   estimatedValue   Float?    @map("estimated_value")
   interestLevel    String?   @default("MEDIUM") @map("interest_level") @db.VarChar(20)
   preferredContact String?   @default("WHATSAPP") @map("preferred_contact") @db.VarChar(50)
-  organizationId   String?   @default("demo") @map("organization_id") @db.VarChar(50)
-  tenantId         String?   @map("tenant_id") @db.Uuid
   createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
-  tenant           Tenant?   @relation(fields: [tenantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("leads")
 }

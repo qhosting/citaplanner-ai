@@ -561,32 +561,6 @@ export const api = {
     } catch { return null; }
   },
 
-  // SaaS / Billing
-  getSaasPlans: async (): Promise<SaasPlan[]> => {
-    try {
-      const res = await fetch(`${API_URL}/saas/plans`, { headers: getHeaders() });
-      return res.ok ? await res.json() : [];
-    } catch { return []; }
-  },
-
-  subscribeToPlan: async (planId: string): Promise<{ init_point?: string, id?: string, error?: string }> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/saas/subscribe`, {
-        method: 'POST',
-        body: JSON.stringify({ planId })
-      });
-      return await res.json();
-    } catch { return { error: "Error de red" }; }
-  },
-
-  getTenantCalendarLink: async (): Promise<{ icalToken: string }> => {
-    try {
-      const res = await fetchWithAuth(`${API_URL}/tenants/calendar/link`);
-      if (!res.ok) throw new Error("Falla al obtener link maestro");
-      return await res.json();
-    } catch { return { icalToken: '' }; }
-  },
-
   // Forgot Password
   requestPasswordReset: async (email: string, tenantId?: string) => {
     try {

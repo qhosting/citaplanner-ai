@@ -1,33 +1,10 @@
 
-export type Role = 'GOD_MODE' | 'STUDIO_OWNER' | 'STAFF' | 'MEMBER' | 'ADMIN' | 'PROFESSIONAL' | 'CLIENT';
+export type Role = 'ADMIN' | 'STAFF' | 'PROFESSIONAL' | 'CLIENT';
 
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED',
-}
-
-export interface TenantFeatures {
-  ai_scheduler: boolean;
-  marketing_pro: boolean;
-  inventory_advanced: boolean;
-  analytics_nexus: boolean;
-  ai_automation: boolean;
-}
-
-export interface Tenant {
-  id: string;
-  name: string;
-  subdomain: string;
-  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
-  planType: 'BASIC' | 'PRO' | 'ELITE' | 'LEGACY';
-  features: TenantFeatures;
-  openpayId?: string;
-  suspendedAt?: string;
-  trialEndsAt?: string;
-  createdAt: string;
-  icalToken?: string;
-  organizationId?: string;
 }
 
 export interface BridgeSettings {
@@ -89,7 +66,6 @@ export interface Professional {
   weeklySchedule: any[];
   exceptions: any[];
   serviceIds?: string[];
-  tenantId?: string;
   calendarSyncEnabled?: boolean;
   icalToken?: string;
   avatarUrl?: string;
@@ -106,7 +82,6 @@ export interface Product {
   minStock: number;
   status: 'ACTIVE' | 'INACTIVE';
   usage: 'RETAIL' | 'INTERNAL';
-  tenantId?: string;
   batchNumber?: string;
   expiryDate?: string;
   description?: string;
@@ -119,7 +94,6 @@ export interface Service {
   price: number;
   category: string;
   status: 'ACTIVE' | 'INACTIVE';
-  tenantId?: string;
   description: string;
   imageUrl?: string;
   careInstructions?: string;
@@ -135,7 +109,6 @@ export interface Appointment {
   status: AppointmentStatus;
   professionalId?: string;
   serviceId?: string;
-  tenantId: string;
   description?: string;
 }
 
@@ -152,7 +125,6 @@ export interface User {
   role: Role;
   token?: string;
   refreshToken?: string;
-  tenantId?: string;
   avatar?: string;
   preferences?: NotificationPreferences;
   relatedId?: string;
@@ -266,7 +238,6 @@ export interface Branch {
   phone: string;
   manager: string;
   status: 'ACTIVE' | 'INACTIVE';
-  tenantId?: string;
 }
 
 export interface AurumClientPayload {
@@ -294,15 +265,6 @@ export interface AurumResponse<T> {
   error?: string;
 }
 
-export interface SaasPlan {
-  id: string;
-  title: string;
-  price: number;
-  currency: string;
-  description: string;
-  features: TenantFeatures;
-}
-
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'INTERESTED' | 'CONVERTED' | 'LOST';
 export type LeadSource = 'FACEBOOK' | 'WHATSAPP' | 'INSTAGRAM' | 'MANUAL';
 
@@ -317,7 +279,6 @@ export interface Lead {
   interestLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   estimatedValue?: number;
   preferredContact?: 'WHATSAPP' | 'EMAIL' | 'PHONE';
-  tenantId: string;
   createdAt: string;
   updatedAt: string;
 }
