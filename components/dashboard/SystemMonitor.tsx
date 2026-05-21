@@ -25,7 +25,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({ logs }) => {
                     <div key={idx} className="p-5 bg-input-theme rounded-[2rem] border border-theme transition-all">
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                                {log.event_type.includes('AI') ? (
+                                {(log.event_type || '').includes('AI') ? (
                                     <BrainCircuit size={16} className="text-[#CE4676]" />
                                 ) : (
                                     <MessageSquare size={16} className="text-emerald-500" />
@@ -35,7 +35,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({ logs }) => {
                             <span className="text-[8px] text-muted font-bold">{new Date(log.created_at).toLocaleTimeString()}</span>
                         </div>
                         <p className="text-[10px] font-bold text-muted uppercase tracking-tight mb-2">
-                            {log.event_type.replace(/_/g, ' ')}
+                            {(log.event_type || '').replace(/_/g, ' ')}
                         </p>
                         <div className="p-3 bg-card-theme rounded-xl border border-theme">
                             <p className="text-[10px] text-muted italic leading-relaxed">"{log.response || 'Sincronización OK'}"</p>
