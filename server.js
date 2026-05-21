@@ -525,7 +525,6 @@ app.get('/api/integrations/aurum/status', async (req, res) => {
 app.get('/api/branches', authenticateToken, async (req, res) => {
     try {
         const branches = await prisma.branch.findMany({
-            where: { organizationId: req.organizationId || 'demo' },
             orderBy: { createdAt: 'asc' }
         });
         res.json(branches);
@@ -541,8 +540,7 @@ app.post('/api/branches', authenticateToken, async (req, res) => {
                 address: address || '',
                 phone: phone || '',
                 manager: manager || '',
-                status: 'ACTIVE',
-                organizationId: req.organizationId || 'demo'
+                status: 'ACTIVE'
             }
         });
         res.json(branch);
@@ -572,7 +570,6 @@ app.delete('/api/branches/:id', authenticateToken, async (req, res) => {
 app.get('/api/sales', authenticateToken, async (req, res) => {
     try {
         const sales = await prisma.sale.findMany({
-            where: { tenantId: req.tenantUuid || undefined, organizationId: req.organizationId || 'demo' },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
@@ -2260,33 +2257,36 @@ app.post('/api/payments/create_preference', async (req, res) => {
 
 app.get('/api/settings/landing', async (req, res) => {
     try {
-        const organizationId = req.tenantId || 'demo';
-        let data = await prisma.landingSetting.findUnique({
-            where: { organizationId }
+        let data = await prisma.landingSetting.findFirst({
+            where: { templateId: 'shulastudio' }
         });
+        if (!data) {
+            data = await prisma.landingSetting.findFirst({
+                where: { businessName: { contains: 'shula', mode: 'insensitive' } }
+            });
+        }
+        if (!data) {
+            data = await prisma.landingSetting.findFirst();
+        }
 
         // Initialize default with Rich Data (Shula Studio Template)
         if (!data) {
-            console.log(`[LANDING] Creating default settings for org: ${organizationId}`);
+            console.log(`[LANDING] Creating default settings`);
             try {
-                // If it's shula, we want specifically the shula branding
-                const isShula = organizationId === 'shula' || organizationId === 'master';
-
                 data = await prisma.landingSetting.create({
                     data: {
-                        organizationId,
-                        businessName: isShula ? 'Shula Studio Global' : organizationId.toUpperCase(),
+                        businessName: 'Shula Studio Global',
                         primaryColor: '#D4AF37', // Gold
                         secondaryColor: '#000000', // Black
-                        templateId: 'shula_dark',
-                        slogan: isShula ? 'Elegancia en cada detalle de tu mirada' : 'Gestión Inteligente de Citas',
-                        aboutText: isShula ? 'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.' : 'Plataforma líder en gestión de servicios y citas.',
+                        templateId: 'shulastudio',
+                        slogan: 'Elegancia en cada detalle de tu mirada',
+                        aboutText: 'En Shula Studio, transformamos la belleza en una experiencia de lujo. Expertos en extensiones de pestañas y diseño de cejas.',
                         address: 'Ciudad de México',
                         contactPhone: '+52 55 1234 5678',
                         whatsappPhone: '525512345678',
-                        heroImageUrl: isShula ? 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899' : 'https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2074&auto=format&fit=crop',
+                        heroImageUrl: 'https://images.unsplash.com/photo-1522335718011-7f3bc8fba899',
                         logoUrl: '',
-                        seoTitle: isShula ? 'Shula Studio - Pestañas & Cejas' : `${organizationId.toUpperCase()} - Reservas`,
+                        seoTitle: 'Shula Studio - Pestañas & Cejas',
                         images: [
                             { url: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=2070&auto=format&fit=crop', caption: 'Resultados Naturales' },
                             { url: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop', caption: 'Estudio Premium' },
@@ -2300,14 +2300,12 @@ app.get('/api/settings/landing', async (req, res) => {
                     }
                 });
             } catch (createErr) {
-                console.warn(`[LANDING] Failed to persist default settings for ${organizationId}, returning in-memory fallback.`, createErr.message);
-                // Return a valid object so the frontend works even if DB fails to create the default record
+                console.warn(`[LANDING] Failed to persist default settings, returning in-memory fallback.`, createErr.message);
                 data = {
-                    organizationId,
-                    businessName: organizationId === 'shula' ? 'Shula Studio Global' : organizationId.toUpperCase(),
+                    businessName: 'Shula Studio Global',
                     primaryColor: '#D4AF37',
                     secondaryColor: '#000000',
-                    templateId: 'shula_dark',
+                    templateId: 'shulastudio',
                     images: [
                         { url: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?q=80&w=2070&auto=format&fit=crop', caption: 'Resultados Naturales' },
                         { url: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop', caption: 'Estudio Premium' },
@@ -2318,7 +2316,7 @@ app.get('/api/settings/landing', async (req, res) => {
         }
 
         const normalized = {
-            businessName: organizationId === 'demo' ? BRAND_NAME : (data?.businessName?.trim() || organizationId.toUpperCase() || BRAND_NAME),
+            businessName: data?.businessName?.trim() || BRAND_NAME,
             primaryColor: data.primaryColor || '#630E14',
             secondaryColor: data.secondaryColor || '#C5A028',
             templateId: data.templateId || 'citaplanner',
@@ -2353,11 +2351,20 @@ app.get('/api/settings/landing', async (req, res) => {
 
 app.put('/api/settings/landing', authenticateToken, async (req, res) => {
     try {
-        const organizationId = req.tenantId;
         const s = req.body;
         const safeStr = (val, max) => val ? String(val).substring(0, max) : null;
 
-        const existing = await prisma.landingSetting.findUnique({ where: { organizationId } });
+        let existing = await prisma.landingSetting.findFirst({
+            where: { templateId: 'shulastudio' }
+        });
+        if (!existing) {
+            existing = await prisma.landingSetting.findFirst({
+                where: { businessName: { contains: 'shula', mode: 'insensitive' } }
+            });
+        }
+        if (!existing) {
+            existing = await prisma.landingSetting.findFirst();
+        }
 
         const data = {
             businessName: s.businessName !== undefined ? safeStr(s.businessName, 100) : existing?.businessName,
@@ -2390,11 +2397,17 @@ app.put('/api/settings/landing', authenticateToken, async (req, res) => {
             productIds: Array.isArray(s.productIds) ? s.productIds : existing?.productIds || []
         };
 
-        const updated = await prisma.landingSetting.upsert({
-            where: { organizationId },
-            update: data,
-            create: { organizationId, ...data }
-        });
+        let updated;
+        if (existing) {
+            updated = await prisma.landingSetting.update({
+                where: { id: existing.id },
+                data
+            });
+        } else {
+            updated = await prisma.landingSetting.create({
+                data
+            });
+        }
 
         res.json({ success: true, settings: updated });
     } catch (e) {

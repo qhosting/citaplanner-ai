@@ -42,7 +42,6 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
           clientPhone: parsed.clientPhone || '',
           description: parsed.description || 'Experiencia solicitada vía Shula AI',
           status: AppointmentStatus.SCHEDULED,
-          tenantId: user?.tenantId || '',
           professionalId: parsed.professionalId || '',
           serviceId: parsed.serviceId || ''
         };

@@ -28,7 +28,6 @@ export const WebBuilderPage: React.FC = () => {
         address: '',
         contactPhone: '',
         heroImageUrl: '',
-        organizationId: '',
         seoTitle: '',
         seoDescription: '',
         seoKeywords: '',

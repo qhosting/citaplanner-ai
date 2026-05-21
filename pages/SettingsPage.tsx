@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
    Settings, Save, Globe, Zap, Building2, Loader2,
    ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Link as LinkIcon, RefreshCw, Server, ShieldAlert, Activity, Wifi, MapPin,
-   Calendar, Copy, ExternalLink
+   Calendar, Copy, ExternalLink, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';

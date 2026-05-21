@@ -216,7 +216,6 @@ export const BookingPage: React.FC = () => {
 
     const endDateTime = new Date(startDateTime.getTime() + selectedService.duration * 60000);
 
-    // Fixed: Included tenantId in Omit<Appointment, 'id'>
     const newAppointment: Omit<Appointment, 'id'> = {
       title: selectedService.name,
       startDateTime: startDateTime.toISOString(),
@@ -226,8 +225,7 @@ export const BookingPage: React.FC = () => {
       description: clientDetails.notes || 'Reserva Online Web',
       status: AppointmentStatus.SCHEDULED,
       professionalId: selectedPro.id,
-      serviceId: selectedService.id,
-      tenantId: '' // Server handles identification via host
+      serviceId: selectedService.id
     };
 
     const result = await api.createAppointment(newAppointment);

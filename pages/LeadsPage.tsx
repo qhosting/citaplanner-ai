@@ -98,11 +98,9 @@ export const LeadsPage: React.FC = () => {
                 <div className="flex gap-4">
                     <button
                         onClick={() => {
-                            const user = JSON.parse(localStorage.getItem('citaPlannerUser') || '{}');
                             const webhookUrl = `${window.location.origin}/api/leads/webhook`;
                             navigator.clipboard.writeText(JSON.stringify({
                                 url: webhookUrl,
-                                tenantId: user.tenantId || user.subdomain,
                                 examplePayload: {
                                     name: "Nombre del Lead",
                                     phone: "521... ",

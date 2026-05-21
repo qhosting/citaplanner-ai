@@ -101,8 +101,7 @@ export const SchedulesPage: React.FC = () => {
             email: proFormData.email || '',
             aurumEmployeeId: proFormData.aurumEmployeeId,
             weeklySchedule: DAYS_OF_WEEK.map(d => ({ dayOfWeek: d.id, isEnabled: [1, 2, 3, 4, 5].includes(d.id), slots: [{ start: '09:00', end: '18:00' }] })),
-            exceptions: [],
-            tenantId: user?.tenantId || ''
+            exceptions: []
          };
          const res = await api.createProfessional(newPro as any);
          if (res.success) {

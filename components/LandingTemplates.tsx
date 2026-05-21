@@ -374,6 +374,9 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60 z-20" />
                 
                 <div className="relative z-30 text-center max-w-4xl px-6 flex flex-col items-center animate-entrance">
+                    <span className="block text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-[#D4AF37]">{slides?.[currentSlide || 0]?.subtitle || 'Alta Estética de Lujo'}</span>
+                    <h1 className="text-4xl md:text-7xl font-playfair font-black text-white uppercase tracking-tighter mb-6 leading-none">{slides?.[currentSlide || 0]?.title || settings.businessName || 'Shula Studio'}</h1>
+                    <p className="text-zinc-400 font-light italic text-sm md:text-base max-w-2xl mb-10 leading-relaxed">{slides?.[currentSlide || 0]?.text || settings.slogan || 'Elegancia en cada detalle de tu mirada.'}</p>
                     <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
                         Reserva Tu Cita <ArrowRight size={16} />
                     </Link>

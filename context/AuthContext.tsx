@@ -28,9 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Verificar integridad básica (token existe)
           if (parsedUser.token) {
             setUser(parsedUser);
-            if (parsedUser.tenantId) {
-              socketService.connect(parsedUser.tenantId);
-            }
+            socketService.connect();
           } else {
             localStorage.removeItem('citaPlannerUser'); // Limpiar auth corrupta
           }
@@ -55,9 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           setUser(apiUser);
           localStorage.setItem('citaPlannerUser', JSON.stringify(apiUser));
-          if (apiUser.tenantId) {
-            socketService.connect(apiUser.tenantId);
-          }
+          socketService.connect();
         } catch (e) {
           console.warn('Storage Error:', e);
         }

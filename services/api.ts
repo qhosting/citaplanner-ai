@@ -1,5 +1,5 @@
 
-import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule, SaasPlan, Lead } from "../types";
+import { Appointment, User, Professional, Service, LandingSettings, NotificationPreferences, Product, Client, Branch, InventoryMovement, Campaign, AutomationRule, Lead } from "../types";
 import { AurumConnectorService } from "./aurumConnector";
 
 const API_URL = '/api';
@@ -357,7 +357,7 @@ export const api = {
     return res.ok ? await res.json() : [];
   },
 
-  createAppointment: async (a: Omit<Appointment, 'id' | 'tenantId'>) => {
+  createAppointment: async (a: Omit<Appointment, 'id'>) => {
     const res = await fetchWithAuth(`${API_URL}/appointments`, {
       method: 'POST',
       body: JSON.stringify(a)
@@ -466,6 +466,13 @@ export const api = {
     } catch { return { url: '', icalToken: '' }; }
   },
 
+  getTenantCalendarLink: async (): Promise<{ url: string, icalToken: string }> => {
+    return {
+      url: `/api/calendar/tenant/feed/global.ics`,
+      icalToken: 'global'
+    };
+  },
+
   // User / Profile
   updatePassword: async (id: string, current: string, next: string): Promise<boolean> => {
     const res = await fetchWithAuth(`${API_URL}/users/${id}/password`, {
@@ -562,12 +569,12 @@ export const api = {
   },
 
   // Forgot Password
-  requestPasswordReset: async (email: string, tenantId?: string) => {
+  requestPasswordReset: async (email: string) => {
     try {
       const res = await fetch(`${API_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, tenantId })
+        body: JSON.stringify({ email })
       });
       return await res.json();
     } catch { return { success: false, error: "Error de red" }; }

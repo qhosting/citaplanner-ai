@@ -91,7 +91,6 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
       endDateTime: end.toISOString(),
       status: AppointmentStatus.SCHEDULED,
       description: 'Agendado manualmente',
-      tenantId: user?.tenantId || '',
       professionalId: data.professionalId,
       serviceId: data.serviceId,
     };

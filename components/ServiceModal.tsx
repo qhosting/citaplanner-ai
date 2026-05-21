@@ -68,7 +68,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Fixed: Included tenantId in serviceToSave
     const serviceToSave: Service = {
       id: initialData?.id || (Date.now().toString(36) + Math.random().toString(36).substring(2)),
       name: formData.name || 'Nuevo Servicio',
@@ -78,8 +77,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       category: formData.category || 'General',
       status: formData.status as 'ACTIVE' | 'INACTIVE' || 'ACTIVE',
       imageUrl: formData.imageUrl || '',
-      careInstructions: formData.careInstructions || '',
-      tenantId: user?.tenantId || '',
+      careInstructions: formData.careInstructions || ''
     };
 
     onSave(serviceToSave);

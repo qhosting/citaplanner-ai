@@ -292,7 +292,6 @@ const MainLayout = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/book" element={<BookingPage />} />
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
-            <Route path="/nexus" element={<ProtectedRoute allowedRoles={['GOD_MODE']}><SuperAdminDashboard /></ProtectedRoute>} />
             <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
@@ -307,9 +306,8 @@ const MainLayout = () => {
             <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN']}><LeadsPage /></ProtectedRoute>} />
             <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaintenancePage /></ProtectedRoute>} />
             <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
-            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['MEMBER']}><ClientPortal /></ProtectedRoute>} />
+            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/plans-billing" element={<ProtectedRoute allowedRoles={['ADMIN']}><PlansPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

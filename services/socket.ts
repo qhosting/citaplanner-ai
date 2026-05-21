@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 class SocketService {
     private socket: Socket | null = null;
 
-    connect(tenantId: string) {
+    connect() {
         if (this.socket?.connected) return;
 
         this.socket = io({
@@ -12,7 +12,6 @@ class SocketService {
 
         this.socket.on('connect', () => {
             console.log('✅ Connected to Real-time Gateway');
-            this.socket?.emit('join-tenant', tenantId);
         });
 
         this.socket.on('disconnect', () => {
