@@ -2632,11 +2632,11 @@ app.post('/api/maintenance/assignments/:id/complete', authenticateToken, async (
                 status: 'COMPLETED',
                 completedAt: new Date()
             },
-            include: { task: true, tenant: true }
+            include: { task: true }
         });
 
         // Notify Admin via WhatsApp
-        const adminPhone = assignment.tenant?.verificationRecord?.adminPhone || '52155...'; // Use tenant config
+        const adminPhone = '52155...'; // TODO: Configure admin phone in settings
         const message = `✅ Tarea Completada: "${assignment.task.taskName}" ha sido finalizada por ${req.user.name} a las ${new Date().toLocaleTimeString('es-MX')}.`;
         await sendWhatsAppMessage(adminPhone, message, null, req.tenantId);
 
@@ -2864,22 +2864,18 @@ cron.schedule('0 * * * *', async () => {
                     gte: new Date(),
                     lte: tomorrow
                 }
-            },
-            include: { tenant: true }
+            }
         });
 
         for (const app of apps) {
-            // Only if AI Automation is enabled for this tenant
-            if (app.tenant?.features?.ai_automation) {
-                const dateStr = app.startDateTime.toLocaleString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
-                const message = `🌟 Recordatorio Aurum: Hola ${app.clientName}, te esperamos mañana ${dateStr} para tu cita de "${app.title}". ¿Deseas confirmar tu asistencia?`;
-                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, app.organizationId);
+            const dateStr = app.startDateTime.toLocaleString('es-MX', { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+            const message = `🌟 Recordatorio: Hola ${app.clientName}, te esperamos mañana ${dateStr} para tu cita de "${app.title}". ¿Deseas confirmar tu asistencia?`;
+            await sendWhatsAppMessage(app.clientPhone, message, app.branchId, null);
 
-                await prisma.appointment.update({
-                    where: { id: app.id },
-                    data: { reminderSent: true }
-                });
-            }
+            await prisma.appointment.update({
+                where: { id: app.id },
+                data: { reminderSent: true }
+            });
         }
     } catch (e) { console.error("❌ Reminder Worker Error:", e); }
 });
@@ -2897,13 +2893,13 @@ cron.schedule('30 * * * *', async () => {
                 careSent: false,
                 updatedAt: { lte: threeHoursAgo }
             },
-            include: { service: true, tenant: true }
+            include: { service: true }
         });
 
         for (const app of apps) {
-            if (app.tenant?.features?.ai_automation && app.service?.careInstructions) {
-                const message = `🌸 En Aurum nos importa tu belleza: Para prolongar los resultados de tu "${app.service.name}", te recomendamos:\n\n${app.service.careInstructions}\n\n¡Esperamos verte pronto!`;
-                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, app.organizationId);
+            if (app.service?.careInstructions) {
+                const message = `🌸 Para prolongar los resultados de tu "${app.service.name}", te recomendamos:\n\n${app.service.careInstructions}\n\n¡Esperamos verte pronto!`;
+                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, null);
 
                 await prisma.appointment.update({
                     where: { id: app.id },
