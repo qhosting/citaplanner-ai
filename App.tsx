@@ -83,7 +83,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
 
     // Validación de roles
     if (allowedRoles && user) {
-      const hasPermission = allowedRoles.includes(user.role);
+      const hasPermission = allowedRoles.includes(user.role) || user.role === 'GOD_MODE';
 
       if (!hasPermission) {
         console.warn('[AUTH] Access denied for role:', user.role, 'on path:', location.pathname);
@@ -107,7 +107,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children?: React.ReactNode
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return null;
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && user && !allowedRoles.includes(user.role) && user.role !== 'GOD_MODE') {
     return <LoadingScreen />;
   }
 
@@ -138,7 +138,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
       }`}>
       <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to={user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : '/admin'}>
+          <Link to={user?.role === 'CLIENT' ? '/client-portal' : user?.role === 'STAFF' ? '/professional-dashboard' : user?.role === 'GOD_MODE' ? '/nexus' : '/admin'}>
             <div className="flex items-center gap-3 group">
               <div className="p-2.5 rounded-xl bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30 group-hover:border-[#D4AF37]/60 transition-all shadow-lg">
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
@@ -150,7 +150,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
             </div>
           </Link>
 
-          {user && (user.role === 'ADMIN') && (
+          {user && (user.role === 'ADMIN' || user.role === 'GOD_MODE') && (
             <div className="hidden xl:flex items-center gap-1">
               {}
               <NavLink to="/admin">Consola</NavLink>
@@ -272,7 +272,7 @@ const MainLayout = () => {
 
   if (appLoading) return <LoadingScreen />;
 
-  const isStaff = user && ['ADMIN', 'STAFF'].includes(user.role);
+  const isStaff = user && ['ADMIN', 'STAFF', 'GOD_MODE'].includes(user.role);
   const normalizedPath = location.pathname.replace(/\/+/g, '/');
   const isLoginPage = normalizedPath === '/login';
   const isLandingPage = normalizedPath === '/';
@@ -291,20 +291,21 @@ const MainLayout = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/book" element={<BookingPage />} />
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>} />
-            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN']}><POSPage /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
-            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN']}><ClientsPage /></ProtectedRoute>} />
-            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN']}><MarketingPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
-            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN']}><BranchesPage /></ProtectedRoute>} />
-            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN']}><ServicesPage /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><InventoryPage /></ProtectedRoute>} />
-            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN']}><SchedulesPage /></ProtectedRoute>} />
-            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN']}><WebBuilderPage /></ProtectedRoute>} />
-            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN']}><InsightsPage /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN']}><LeadsPage /></ProtectedRoute>} />
-            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN']}><MaintenancePage /></ProtectedRoute>} />
+            <Route path="/nexus" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
+            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
+            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
+            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
+            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
             <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
             <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

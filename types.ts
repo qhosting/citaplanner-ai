@@ -1,5 +1,5 @@
 
-export type Role = 'ADMIN' | 'STAFF' | 'PROFESSIONAL' | 'CLIENT';
+export type Role = 'ADMIN' | 'STAFF' | 'PROFESSIONAL' | 'CLIENT' | 'GOD_MODE';
 
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
