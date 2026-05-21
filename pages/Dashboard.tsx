@@ -1,22 +1,17 @@
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Calendar as CalendarIcon, Clock, User, Plus, Mic, Activity,
-  Sparkles, Send, DollarSign, Users, TrendingUp, MapPin, Loader2, Globe, Link2, MessageSquare,
-  Zap, BrainCircuit, ShoppingBag, UserPlus, Package, Megaphone, BarChart3, Settings
+  Calendar as CalendarIcon, Plus, Mic,
+  ShoppingBag, UserPlus, Package, Megaphone, BarChart3, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SmartScheduler } from '../components/SmartScheduler';
 import { AppointmentModal } from '../components/AppointmentModal';
 import { VoiceAssistant } from '../components/VoiceAssistant';
-import { EnergyMonitor } from '../components/EnergyMonitor';
 import { Skeleton } from '../components/Skeleton';
-import { StatGrid } from '../components/dashboard/StatGrid';
-import { SystemMonitor } from '../components/dashboard/SystemMonitor';
 import { OperationsAgenda } from '../components/dashboard/OperationsAgenda';
-import { Appointment, AppointmentStatus, Client } from '../types';
+import { AppointmentStatus } from '../types';
 import { api } from '../services/api';
 
 export const Dashboard: React.FC = () => {
@@ -41,35 +36,10 @@ export const Dashboard: React.FC = () => {
     queryFn: api.getProfessionals,
   });
 
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
-    queryKey: ['clients'],
-    queryFn: api.getClients,
-  });
-
-  // Sales Data
-  const { data: sales = [] } = useQuery({
-    queryKey: ['sales'],
-    queryFn: api.getSales,
-  });
-
-  const isLoading = isLoadingAppointments || isLoadingClients;
-
-  // Monitor de Integraciones Real
-  const { data: integrationStatus = [] } = useQuery({
-    queryKey: ['integrationStatus'],
-    queryFn: async () => {
-      const res = await fetch('/api/integrations/status');
-      if (!res.ok) return [];
-      return res.json();
-    },
-    refetchInterval: 10000
-  });
-
   const createMutation = useMutation({
     mutationFn: api.createAppointment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['integrationStatus'] });
       toast.success("Cita sincronizada con éxito en la red global");
     }
   });
@@ -78,14 +48,8 @@ export const Dashboard: React.FC = () => {
     return [...appointments]
       .filter(a => a.status !== AppointmentStatus.CANCELLED)
       .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
-      .slice(0, 5);
+      .slice(0, 8);
   }, [appointments]);
-
-  const recentClients = useMemo(() => {
-    return [...clients]
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-      .slice(0, 4);
-  }, [clients]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance relative">
@@ -144,41 +108,10 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="mb-16">
-        <StatGrid appointments={appointments} clients={clients} services={services} sales={sales} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-16 mb-16">
-        <div className="lg:col-span-1">
-          <div className="glass-card p-10 rounded-[3rem] border-main h-full">
-            <div className="flex items-center gap-4 mb-8">
-              <Users size={20} className="text-[#D4AF37]" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-main">Recién Registrados</h3>
-            </div>
-            <div className="space-y-6">
-              {recentClients.length > 0 ? recentClients.map(client => (
-                <div key={client.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate('/clients')}>
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:border-[#D4AF37]/40 group-hover:text-[#D4AF37] transition-all">
-                    {client.name.charAt(0)}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-black text-main uppercase tracking-tight line-clamp-1">{client.name}</span>
-                    <span className="text-[8px] font-bold text-muted uppercase tracking-widest">{new Date(client.createdAt || 0).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              )) : (
-                <p className="text-[9px] text-slate-700 font-bold uppercase py-10 text-center">Sin actividad reciente</p>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="lg:col-span-3">
-          <EnergyMonitor />
-        </div>
-      </div>
-
+      {/* 📅 CALENDAR AND AGENDA SECTION */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-        <div className="lg:col-span-2 space-y-16">
+        {/* Left Side: Dynamic Calendar */}
+        <div className="lg:col-span-2">
           <div className="glass-card p-1.5 rounded-[3.5rem] border-[#CE4676]/5">
             <SmartScheduler
               onAddAppointment={(apt) => createMutation.mutate(apt)}
@@ -186,9 +119,13 @@ export const Dashboard: React.FC = () => {
               professionals={professionals}
             />
           </div>
+        </div>
 
-          {isLoading ? (
+        {/* Right Side: Day Agenda */}
+        <div className="lg:col-span-1">
+          {isLoadingAppointments ? (
             <div className="space-y-6">
+              <Skeleton className="h-32 w-full rounded-[3rem]" />
               <Skeleton className="h-32 w-full rounded-[3rem]" />
               <Skeleton className="h-32 w-full rounded-[3rem]" />
             </div>
@@ -196,16 +133,11 @@ export const Dashboard: React.FC = () => {
             <OperationsAgenda appointments={filteredAppointments} />
           )}
         </div>
-
-        <div className="lg:col-span-1 h-full">
-          <SystemMonitor logs={integrationStatus} />
-        </div>
       </div>
 
       <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={(apt) => createMutation.mutate(apt)} />
       <VoiceAssistant isOpen={isVoiceOpen} onClose={() => setIsVoiceOpen(false)} onAppointmentCreated={() => {
         queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        queryClient.invalidateQueries({ queryKey: ['integrationStatus'] });
       }} />
     </div>
   );
