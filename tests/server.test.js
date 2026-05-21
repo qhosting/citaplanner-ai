@@ -6,29 +6,17 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 describe('Server API Checks', () => {
-    let testTenant;
     let testProfessional;
     let testService;
     let testProduct;
     let testAppointment;
 
     beforeAll(async () => {
-        // Create test tenant
-        testTenant = await prisma.tenant.create({
-            data: {
-                name: 'Test Tenant Integration',
-                subdomain: 'test-integration-temp',
-                status: 'ACTIVE'
-            }
-        });
-
         // Create test professional
         testProfessional = await prisma.professional.create({
             data: {
                 name: 'Test Pro Integration',
-                email: 'testpro@integration.com',
-                organizationId: testTenant.subdomain,
-                tenantId: testTenant.id
+                email: 'testpro@integration.com'
             }
         });
 
@@ -38,9 +26,7 @@ describe('Server API Checks', () => {
                 name: 'Test Service Integration',
                 price: 100.0,
                 duration: 60,
-                category: 'Cabello',
-                organizationId: testTenant.subdomain,
-                tenantId: testTenant.id
+                category: 'Cabello'
             }
         });
 
@@ -53,9 +39,7 @@ describe('Server API Checks', () => {
                 stock: 10,
                 minStock: 2,
                 category: 'Cabello',
-                usage: 'INSU_SERVICIO',
-                organizationId: testTenant.subdomain,
-                tenantId: testTenant.id
+                usage: 'INSU_SERVICIO'
             }
         });
     });
@@ -74,9 +58,6 @@ describe('Server API Checks', () => {
         }
         if (testProfessional) {
             await prisma.professional.deleteMany({ where: { id: testProfessional.id } });
-        }
-        if (testTenant) {
-            await prisma.tenant.deleteMany({ where: { id: testTenant.id } });
         }
         await prisma.$disconnect();
     });
@@ -101,8 +82,11 @@ describe('Server API Checks', () => {
 
         const res = await request(app)
             .post('/api/appointments')
-            .set('x-tenant-id', testTenant.subdomain)
             .send(payload);
+
+        if (res.status !== 200) {
+            console.log('CREATE APPOINTMENT FAILED:', res.status, res.body);
+        }
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -120,8 +104,7 @@ describe('Server API Checks', () => {
         expect(testAppointment).toBeDefined();
 
         const res = await request(app)
-            .post(`/api/appointments/${testAppointment.id}/predict-no-show`)
-            .set('x-tenant-id', testTenant.subdomain);
+            .post(`/api/appointments/${testAppointment.id}/predict-no-show`);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -140,7 +123,6 @@ describe('Server API Checks', () => {
         // 2. Perform PUT request to complete appointment
         const res = await request(app)
             .put(`/api/appointments/${testAppointment.id}`)
-            .set('x-tenant-id', testTenant.subdomain)
             .send({
                 status: 'COMPLETED'
             });
@@ -168,8 +150,7 @@ describe('Server API Checks', () => {
         expect(testAppointment).toBeDefined();
 
         const res = await request(app)
-            .delete(`/api/appointments/${testAppointment.id}`)
-            .set('x-tenant-id', testTenant.subdomain);
+            .delete(`/api/appointments/${testAppointment.id}`);
 
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('success', true);
@@ -184,3 +165,4 @@ describe('Server API Checks', () => {
         testAppointment = null;
     });
 });
+

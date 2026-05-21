@@ -134,11 +134,9 @@ io.on('connection', (socket) => {
     });
 });
 
-const emitTenantEvent = ( event, data) => {
-    if (tenantId) {
-        io.to(tenantId).emit(event, data);
-        console.log(`📤 Socket Emit: [${event}] -> Room [global]`);
-    }
+const emitTenantEvent = (event, data) => {
+    io.to("global").emit(event, data);
+    console.log(`📤 Socket Emit: [${event}] -> Room [global]`);
 };
 
 // Trust proxy is required when running behind a reverse proxy (Caddy/Nginx)
@@ -1329,14 +1327,17 @@ app.get('/api/auth/google/callback', async (req, res) => {
 app.get('/api/calendar/feed/:token.ics', async (req, res) => {
     try {
         const { token } = req.params;
-        const professional = await prisma.professional.findUnique({
-            where: { icalToken: token },
-            include: { appointments: true }
+        const professional = await prisma.professional.findFirst({
+            where: { icalToken: token }
         });
 
         if (!professional) return res.status(404).send('Feed no encontrado');
 
-        const events = professional.appointments.map(app => {
+        const appointments = await prisma.appointment.findMany({
+            where: { professionalId: professional.id }
+        });
+
+        const events = appointments.map(app => {
             const startStr = app.startDateTime.toISOString();
             const endStr = app.endDateTime.toISOString();
             const s = new Date(startStr);
@@ -1362,21 +1363,22 @@ app.get('/api/calendar/feed/:token.ics', async (req, res) => {
 
 app.get('/api/calendar/tenant/feed/:token.ics', async (req, res) => {
     try {
-        const appointments = await prisma.appointment.findMany({
-            include: { professional: true }
-        });
+        const appointments = await prisma.appointment.findMany();
+        const professionals = await prisma.professional.findMany();
+        const proMap = new Map(professionals.map(p => [p.id, p]));
 
         const events = appointments.map(app => {
             const startStr = app.startDateTime.toISOString();
             const endStr = app.endDateTime.toISOString();
             const s = new Date(startStr);
             const e = new Date(endStr);
+            const pro = app.professionalId ? proMap.get(app.professionalId) : null;
 
             return {
                 start: [s.getFullYear(), s.getMonth() + 1, s.getDate(), s.getHours(), s.getMinutes()],
                 end: [e.getFullYear(), e.getMonth() + 1, e.getDate(), e.getHours(), e.getMinutes()],
-                title: `[${app.professional?.name || 'Gral'}] ${app.title}`,
-                description: `Cliente: ${app.clientName}\nNotas: ${app.notes || ''}\nAtiende: ${app.professional?.name || 'No asignado'}`,
+                title: `[${pro?.name || 'Gral'}] ${app.title}`,
+                description: `Cliente: ${app.clientName}\nNotas: ${app.notes || ''}\nAtiende: ${pro?.name || 'No asignado'}`,
                 status: 'CONFIRMED',
                 busyStatus: 'BUSY'
             };
