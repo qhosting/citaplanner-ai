@@ -47,18 +47,6 @@ export const Dashboard: React.FC = () => {
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#CE4676]/5 blur-[120px] rounded-full -z-10 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-[#D4AF37]/5 blur-[100px] rounded-full -z-10 pointer-events-none" />
 
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
-        <div>
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-1 h-10 bg-gradient-to-b from-[#CE4676] to-transparent rounded-full shadow-[0_0_20px_#CE4676]"></div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-none text-main">
-              Console <span className="bugambilia-text-gradient font-light italic">Master</span>
-            </h1>
-          </div>
-          <p className="text-muted font-bold uppercase tracking-[0.5em] text-[10px] ml-5">Network Operation Center • Aurum Infrastructure</p>
-        </div>
-      </div>
 
       {/* 🚀 QUICK ACTIONS BAR */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-16">
