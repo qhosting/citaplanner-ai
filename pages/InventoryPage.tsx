@@ -153,103 +153,73 @@ export const InventoryPage: React.FC = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
-        <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-4 uppercase leading-none">
-            <Package className="text-[#D4AF37]" size={40} />
-            Asset <span className="gold-text-gradient font-light italic">Intelligence</span>
-          </h1>
-          <p className="text-slate-600 font-bold text-[10px] uppercase tracking-[0.5em] ml-14 mt-2">Inventory Control • Aurum Master Node</p>
-        </div>
-        <div className="flex gap-4">
-          <button
-            onClick={runAIForecast}
-            disabled={isAnalyzing}
-            className="bg-white/5 text-slate-400 px-8 py-4 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all"
-          >
-            {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} className="text-[#D4AF37]" />} Predicción AI
-          </button>
-          <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5 gap-1">
-            <button onClick={handleExport} title="Exportar Inventario XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-white/5 transition-all"><Download size={18} /></button>
-            <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-white/5 transition-all cursor-pointer">
-              <Upload size={18} />
-              <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
-            </label>
-          </div>
-          <button
-            onClick={handleCreate}
-            className="gold-btn text-black px-10 py-4 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
-          >
-            <Plus size={18} /> Integrar Activo
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Row Premium */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
-        {[
-          { label: 'Matriz de Activos', value: stats.totalItems, sub: 'Items Registrados', icon: ClipboardList, color: 'text-white' },
-          { label: 'Valorización Venta', value: `$${stats.retailValue.toLocaleString()}`, sub: 'Capital en Vitrina', icon: ArrowUpRight, color: 'text-emerald-500' },
-          { label: 'Nodos de Insumo', value: stats.internalItems, sub: 'Uso Profesional', icon: Beaker, color: 'text-blue-400' },
-          { label: 'Umbral Crítico', value: stats.lowStock, sub: 'Requiere Atención', icon: ShieldAlert, color: stats.lowStock > 0 ? 'text-rose-500' : 'text-slate-500' }
-        ].map((s, i) => (
-          <div key={i} className="glass-card p-10 rounded-[3.5rem] border-white/5 group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform"><s.icon size={48} /></div>
-            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-4">{s.label}</p>
-            <p className={`text-4xl font-black tracking-tighter ${s.color}`}>{s.value}</p>
-            <p className="text-[9px] text-slate-700 font-bold uppercase mt-2 tracking-widest">{s.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {aiForecast && (
-        <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-10 rounded-[3.5rem] mb-16 animate-slide-up flex gap-8 items-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-10 opacity-10"><Zap size={100} className="text-[#D4AF37]" /></div>
-          <div className="p-5 bg-[#D4AF37] text-black rounded-[2rem] shadow-2xl shrink-0"><Wand2 size={32} /></div>
-          <div>
-            <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em] mb-3">Veredicto Estratégico AI</h4>
-            <p className="text-xl font-light text-slate-200 italic leading-relaxed tracking-tight">"{aiForecast}"</p>
-          </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-2 mb-10 overflow-x-auto no-scrollbar pb-2">
-        {[
-          { id: 'RETAIL', label: 'Retail & Ventas', icon: ShoppingBag },
-          { id: 'INTERNAL', label: 'Consumo Máster', icon: Beaker },
-          { id: 'HISTORY', label: 'Auditoría de Movimientos', icon: History }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center gap-3 whitespace-nowrap border ${activeTab === tab.id ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-2xl' : 'bg-white/5 text-slate-500 border-white/5 hover:border-white/10'}`}
-          >
-            <tab.icon size={16} /> {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab !== 'HISTORY' ? (
-        <div className="space-y-10 animate-entrance">
-          <div className="glass-card p-4 rounded-[3.5rem] border-white/5 flex flex-col lg:flex-row gap-6 justify-between items-center bg-black/20">
-            <div className="relative w-full lg:w-[450px]">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
-              <input
-                type="text" placeholder="Buscar por SKU o Identidad de Activo..."
-                className="w-full pl-16 pr-6 py-5 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#D4AF37]/30 font-medium transition-all"
-                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <>
+      <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+        {aiForecast && (
+          <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-10 rounded-[3.5rem] mb-16 animate-slide-up flex gap-8 items-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-10 opacity-10"><Zap size={100} className="text-[#D4AF37]" /></div>
+            <div className="p-5 bg-[#D4AF37] text-black rounded-[2rem] shadow-2xl shrink-0"><Wand2 size={32} /></div>
+            <div>
+              <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em] mb-3">Veredicto Estratégico AI</h4>
+              <p className="text-xl font-light text-slate-200 italic leading-relaxed tracking-tight">"{aiForecast}"</p>
             </div>
-            <select
-              className="w-full lg:w-72 px-8 py-5 bg-black/40 border border-white/5 rounded-3xl text-zinc-300 text-[10px] font-black uppercase outline-none focus:border-[#D4AF37] cursor-pointer"
-              value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="ALL">Todas las Ramas</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
           </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-10 overflow-x-auto no-scrollbar pb-2">
+          {[
+            { id: 'RETAIL', label: 'Retail & Ventas', icon: ShoppingBag },
+            { id: 'INTERNAL', label: 'Consumo Máster', icon: Beaker },
+            { id: 'HISTORY', label: 'Auditoría de Movimientos', icon: History }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center gap-3 whitespace-nowrap border ${activeTab === tab.id ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-2xl' : 'bg-white/5 text-slate-500 border-white/5 hover:border-white/10'}`}
+            >
+              <tab.icon size={16} /> {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab !== 'HISTORY' ? (
+          <div className="space-y-10 animate-entrance">
+            <div className="glass-card p-4 rounded-[3.5rem] border-white/5 flex flex-col lg:flex-row gap-6 justify-between items-center bg-black/20">
+              <div className="relative w-full lg:w-[450px]">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
+                <input
+                  type="text" placeholder="Buscar por SKU o Identidad de Activo..."
+                  className="w-full pl-16 pr-6 py-5 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#D4AF37]/30 font-medium transition-all"
+                  value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+                <select
+                  className="w-full lg:w-72 px-8 py-5 bg-black/40 border border-white/5 rounded-3xl text-zinc-300 text-[10px] font-black uppercase outline-none focus:border-[#D4AF37] cursor-pointer"
+                  value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="ALL">Todas las Ramas</option>
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+
+                <button
+                  onClick={runAIForecast}
+                  disabled={isAnalyzing}
+                  className="bg-black/40 text-slate-400 px-6 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 hover:bg-white/5 transition-all"
+                >
+                  {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} className="text-[#D4AF37]" />} Predicción AI
+                </button>
+
+                <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 gap-1">
+                  <button onClick={handleExport} title="Exportar Inventario XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-white/5 transition-all"><Download size={18} /></button>
+                  <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-white/5 transition-all cursor-pointer">
+                    <Upload size={18} />
+                    <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
+                  </label>
+                </div>
+              </div>
+            </div>
 
           <div className="glass-card rounded-[3.5rem] border-white/5 overflow-hidden">
             <table className="w-full text-left">
@@ -355,6 +325,18 @@ export const InventoryPage: React.FC = () => {
         mode={modalMode}
         initialData={selectedProduct}
       />
-    </div>
+      </div>
+
+      {/* 🔮 FLOATING ACTION BUTTON (FAB) */}
+      <div className="fixed bottom-10 right-10 z-[600]">
+        <button
+          onClick={handleCreate}
+          className="flex items-center justify-center gap-3 gold-btn text-black px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+          <span>Integrar Activo</span>
+        </button>
+      </div>
+    </>
   );
 };
