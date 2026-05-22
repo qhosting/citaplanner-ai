@@ -456,18 +456,7 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
           clientName={client.name} 
         />
 
-        {/* Footer Master */}
-        <div className="p-10 bg-black/60 border-t border-white/5 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-             <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_15px_#10b981] animate-pulse"></div>
-             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Aurum Compliance Protocol <span className="text-white">v2.6</span></span>
-          </div>
-          <div className="flex gap-8 items-center">
-             <p className="text-[10px] text-slate-700 font-black uppercase tracking-widest hidden md:block">Node Polanco CDMX NodeMaster-01</p>
-             <div className="h-4 w-px bg-white/5" />
-             <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest italic">© 2026 CitaPlanner Infrastructure</p>
-          </div>
-        </div>
+
       </div>
     </div>
   );
