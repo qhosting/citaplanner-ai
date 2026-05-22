@@ -323,27 +323,37 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             {/* WhatsApp Floating Button */}
             <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
-            {/* 1. Navbar Fijo Transparente con degradado inmersivo */}
-            <nav className="fixed w-full z-50 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-all duration-300">
+            {/* 1. Navbar Fijo con Glassmorphism y Estilo Bugambilia Premium */}
+            <nav className="fixed w-full z-50 bg-black/60 backdrop-blur-xl border-b border-[#CE4676]/20 shadow-[0_4px_30px_rgba(206,70,123,0.15)] transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-24">
                     <Link to="/" className="flex items-center group">
-                        <LogoCitaplanner size={32} color={gold} businessName={settings.businessName} customUrl={settings.logoUrl} />
+                        <LogoCitaplanner size={32} color={magenta} businessName={settings.businessName} customUrl={settings.logoUrl} />
                     </Link>
                     
                     <div className="hidden md:flex items-center gap-10">
                         {['Inicio', 'Servicios', 'Galería'].map(t => (
-                            <a key={t} href={`#${t.toLowerCase()}`} className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 hover:text-[#D4AF37] transition-colors">{t}</a>
+                            <a 
+                                key={t} 
+                                href={`#${t.toLowerCase()}`} 
+                                className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                            >
+                                {t}
+                            </a>
                         ))}
                         <button 
                             onClick={onContactClick} 
-                            className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 hover:text-[#D4AF37] transition-colors"
+                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
                         >
                             Contacto
                         </button>
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <Link to="/book" className="hidden md:inline-block px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-[0.2em] text-white hover:scale-105 transition-all shadow-[0_10px_30px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
+                        <Link 
+                            to="/book" 
+                            className="hidden md:inline-block px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-white hover:scale-105 hover:bg-[#b0305c] transition-all duration-300 shadow-[0_0_20px_rgba(206,70,123,0.45)] hover:shadow-[0_0_30px_rgba(206,70,123,0.7)]" 
+                            style={{ backgroundColor: magenta }}
+                        >
                             Agendar Cita
                         </Link>
                         <button 
@@ -666,16 +676,31 @@ export const TemplateClassic: React.FC<TemplateProps & {
     <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
         <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
-        <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 shadow-2xl' : 'bg-transparent py-8'}`} style={scrolled ? { borderBottom: `1px solid ${accent}20` } : {}}>
+        <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#CE4676]/20 shadow-[0_4px_30px_rgba(206,70,123,0.15)]' : 'bg-transparent py-8'}`}>
             <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
-                <LogoCitaplanner color={accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
+                <LogoCitaplanner color={accent === gold || accent === '#C5A028' ? magenta : accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
                 <div className="hidden lg:flex items-center gap-10">
                     {['Servicios', 'Nosotros', 'Galería'].map(item => (
-                        <a key={item} href={`#${item.toLowerCase()}`} className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">{item}</a>
+                        <a 
+                            key={item} 
+                            href={`#${item.toLowerCase()}`} 
+                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                        >
+                            {item}
+                        </a>
                     ))}
-                    <button onClick={onContactClick} className="font-bold text-[10px] uppercase tracking-[0.3em] transition-all text-white/80 hover:opacity-80">Contacto</button>
-                    <Link to="/book" className="px-10 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:-translate-y-1 transition-all flex items-center gap-3 text-white" style={{ backgroundColor: accent }}>
-                        Mi Cita <ArrowRight size={14} />
+                    <button 
+                        onClick={onContactClick} 
+                        className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                    >
+                        Contacto
+                    </button>
+                    <Link 
+                        to="/book" 
+                        className="px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-white hover:scale-105 hover:bg-[#b0305c] transition-all duration-300 shadow-[0_0_20px_rgba(206,70,123,0.45)] hover:shadow-[0_0_30px_rgba(206,70,123,0.7)]" 
+                        style={{ backgroundColor: magenta }}
+                    >
+                        Mi Cita <ArrowRight size={14} className="inline ml-1" />
                     </Link>
                 </div>
                 <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden p-3 text-white bg-white/5 rounded-xl border border-white/10"><Menu size={24} /></button>
