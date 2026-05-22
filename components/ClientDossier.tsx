@@ -110,8 +110,8 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#050505]/95 backdrop-blur-2xl z-[150] flex items-center justify-center p-4">
-      <div className="glass-card w-full max-w-6xl rounded-[4rem] overflow-hidden flex flex-col max-h-[92vh] border-[#D4AF37]/20 shadow-[0_0_120px_rgba(212,175,55,0.12)] animate-scale-in">
+    <div className="fixed inset-0 bg-[#050505]/95 backdrop-blur-2xl z-[150] flex items-center justify-center p-0 sm:p-4">
+      <div className="glass-card w-full h-full max-w-none sm:rounded-[2.5rem] overflow-hidden flex flex-col border-[#D4AF37]/20 shadow-[0_0_120px_rgba(212,175,55,0.12)] animate-scale-in">
         
         {/* Header Elite */}
         <div className="p-10 border-b border-white/5 flex justify-between items-start bg-white/5">
