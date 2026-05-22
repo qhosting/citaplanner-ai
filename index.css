@@ -180,3 +180,9 @@ body {
         border-radius: 2rem !important;
     }
 }
+
+/* Dropdown Option Theme Corrective Overrides */
+select option {
+    background-color: var(--bg-card-solid, #0A0A0A) !important;
+    color: var(--text-main, #FFFFFF) !important;
+}
