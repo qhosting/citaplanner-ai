@@ -59,16 +59,10 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="flex gap-4">
           <button
-            onClick={() => setIsVoiceOpen(true)}
-            className="glass-card text-main px-8 py-5 rounded-2xl bg-card-theme hover:bg-input-theme transition-all flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-theme shadow-lg group"
-          >
-            <Mic size={18} className="text-[#CE4676] group-hover:scale-110 transition-transform" /> AI Concierge
-          </button>
-          <button
             onClick={() => setIsModalOpen(true)}
             className="bugambilia-btn text-white px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl hover:scale-105 transition-all"
           >
-            <Plus size={18} /> Nueva Cita Elite
+            <Plus size={18} /> Nueva Cita
           </button>
         </div>
       </div>
