@@ -57,14 +57,6 @@ export const Dashboard: React.FC = () => {
           </div>
           <p className="text-muted font-bold uppercase tracking-[0.5em] text-[10px] ml-5">Network Operation Center • Aurum Infrastructure</p>
         </div>
-        <div className="flex gap-4">
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bugambilia-btn text-white px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl hover:scale-105 transition-all"
-          >
-            <Plus size={18} /> Nueva Cita
-          </button>
-        </div>
       </div>
 
       {/* 🚀 QUICK ACTIONS BAR */}
@@ -102,6 +94,24 @@ export const Dashboard: React.FC = () => {
         ) : (
           <OperationsAgenda appointments={filteredAppointments} />
         )}
+      </div>
+
+      {/* 🔮 FLOATING ACTION BUTTONS (FABs) */}
+      <div className="fixed bottom-10 right-10 z-[600] flex flex-col gap-4">
+        <button
+          onClick={() => navigate('/schedules')}
+          className="flex items-center justify-center gap-3 bg-zinc-950/80 backdrop-blur-md hover:bg-zinc-900 text-white px-6 py-4 rounded-full border border-zinc-800 hover:border-[#D4AF37]/50 shadow-[0_10px_30px_rgba(0,0,0,0.6)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+        >
+          <CalendarIcon size={18} className="text-[#D4AF37] group-hover:scale-110 transition-transform duration-300" />
+          <span>Calendario</span>
+        </button>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center gap-3 bg-[#CE4676] hover:bg-[#b0305c] text-white px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(206,70,123,0.45)] hover:shadow-[0_15px_40px_rgba(206,70,123,0.65)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+          <span>Nueva Cita</span>
+        </button>
       </div>
 
       <AppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={(apt) => createMutation.mutate(apt)} />
