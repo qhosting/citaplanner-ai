@@ -84,6 +84,7 @@ export const LeadsPage: React.FC = () => {
     if (isLoading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
     return (
+        <>
         <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
                 <div>
@@ -189,12 +190,14 @@ export const LeadsPage: React.FC = () => {
                 })}
             </div>
 
+            </div>
+
             <LeadModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onSave={(data) => mutation.mutate(data)}
                 initialData={editingLead}
             />
-        </div>
+        </>
     );
 };
