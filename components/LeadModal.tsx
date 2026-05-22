@@ -54,14 +54,14 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-12 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
             <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl" onClick={onClose} />
 
-            <div className="relative w-full max-w-3xl bg-zinc-950 border border-white/10 rounded-[4rem] overflow-hidden shadow-[0_0_150px_rgba(206,70,118,0.2)] animate-entrance my-auto">
+            <div className="relative w-full h-full max-w-none bg-zinc-950 border border-white/10 sm:rounded-[2.5rem] overflow-hidden shadow-[0_0_150px_rgba(206,70,118,0.2)] animate-entrance flex flex-col">
                 {/* Header Decoration */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#CE4676] to-transparent opacity-50" />
 
-                <div className="flex justify-between items-center p-12 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
+                <div className="flex justify-between items-center p-8 sm:p-12 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent shrink-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 bg-[#CE4676]/10 rounded-xl">
@@ -73,12 +73,12 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                         </div>
                         <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.4em] ml-1">Protocolo de Prospección • Alta Prioridad</p>
                     </div>
-                    <button onClick={onClose} className="group p-4 bg-white/5 hover:bg-rose-500/10 rounded-3xl text-zinc-500 hover:text-rose-500 transition-all border border-white/5">
+                    <button onClick={onClose} type="button" className="group p-4 bg-white/5 hover:bg-rose-500/10 rounded-3xl text-zinc-500 hover:text-rose-500 transition-all border border-white/5">
                         <X size={24} className="group-hover:rotate-90 transition-transform duration-500" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-12 space-y-10 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-8 sm:p-12 space-y-10 flex-1 overflow-y-auto custom-scrollbar">
                     {/* Basic Info Group */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
