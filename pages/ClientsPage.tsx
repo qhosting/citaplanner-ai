@@ -64,16 +64,7 @@ export const ClientsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
-        <div>
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-1 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_20px_#D4AF37]"></div>
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
-              Client <span className="gold-text-gradient font-light">Intelligence</span>
-            </h1>
-          </div>
-          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Network Assets • Aurum Luxury CRM Hub</p>
-        </div>
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center mb-16 gap-8">
         <div className="flex gap-4">
           <button
             onClick={() => {
