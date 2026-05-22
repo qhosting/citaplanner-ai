@@ -125,10 +125,7 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
                 </div>
             </div>
             <div>
-              <div className="flex items-center gap-4 mb-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">Expediente Maestro de Operaciones</span>
-                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black text-slate-400 uppercase tracking-widest">Aurum Layer-8 Secured</span>
-              </div>
+
               <h2 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">{client.name}</h2>
               <div className="flex items-center gap-6 mt-4">
                   <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2"><Activity size={12} className="text-[#D4AF37]"/> ID Red: {client.phone}</p>
