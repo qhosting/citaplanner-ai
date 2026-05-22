@@ -17,6 +17,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { LogoCitaplanner } from './components/LogoCitaplanner';
 import { Role } from './types';
+import { DeviceVisualizer } from './components/DeviceVisualizer';
 
 // --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: (m as any).Dashboard || (m as any).default })));
@@ -270,6 +271,17 @@ const MainLayout = () => {
     checkMaintenance();
   }, [location.pathname]);
 
+  // --- PUENTE DE COMUNICACIÓN BIDIRECCIONAL PARA SIMULADOR DE DISPOSITIVOS ---
+  useEffect(() => {
+    const isIframe = window.self !== window.top;
+    if (isIframe) {
+      window.parent.postMessage({ 
+        type: 'ROUTE_CHANGE', 
+        pathname: location.pathname + location.search 
+      }, '*');
+    }
+  }, [location]);
+
   if (appLoading) return <LoadingScreen />;
 
   const isStaff = user && ['ADMIN', 'STAFF', 'GOD_MODE'].includes(user.role);
@@ -282,39 +294,41 @@ const MainLayout = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col transition-colors">
-      <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
-      {!isLoginPage && !isLandingPage && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
-      <div className="flex-grow">
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/book" element={<BookingPage />} />
-            <Route path="/nexus" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
-            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
-            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
-            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
-            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
-            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
-            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
-            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
-            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
-            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
-            <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
-            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
+    <DeviceVisualizer theme={theme} isLoginPage={isLoginPage} isLandingPage={isLandingPage}>
+      <div className="min-h-screen flex flex-col transition-colors">
+        <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
+        {!isLoginPage && !isLandingPage && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
+        <div className="flex-grow">
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/book" element={<BookingPage />} />
+              <Route path="/nexus" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+              <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
+              <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
+              <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
+              <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
+              <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
+              <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
+              <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
+              <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
+              <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
+              <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
+              <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
+              <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </div>
+        {settings && !isLoginPage && <Footer settings={settings} accent={settings.primaryColor} />}
       </div>
-      {settings && !isLoginPage && <Footer settings={settings} accent={settings.primaryColor} />}
-    </div>
+    </DeviceVisualizer>
   );
 };
 
