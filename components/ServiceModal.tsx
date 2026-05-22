@@ -89,21 +89,21 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[200] flex items-center justify-center">
       {/* Container Principal: Pantalla completa en móvil, Inmersivo en Desktop */}
-      <div className="w-full h-full md:h-[95vh] md:max-w-[1400px] md:rounded-[4rem] bg-[#050505] overflow-hidden flex flex-col border-white/5 shadow-[0_0_150px_rgba(212,175,55,0.1)] md:animate-scale-in relative">
+      <div className="w-full h-full md:h-[90vh] md:max-w-5xl md:rounded-[3rem] bg-[#050505] overflow-hidden flex flex-col border border-white/10 shadow-[0_0_150px_rgba(212,175,55,0.1)] md:animate-scale-in relative">
         
         {/* Header Inmersivo */}
-        <div className="relative flex justify-between items-center p-8 md:p-14 border-b border-white/5 bg-gradient-to-r from-black via-[#080808] to-black shrink-0">
+        <div className="relative flex justify-between items-center p-6 md:p-10 border-b border-white/5 bg-gradient-to-r from-black via-[#080808] to-black shrink-0">
           <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#D4AF37]/10 blur-[120px] rounded-full opacity-50" />
           
-          <div className="flex items-center gap-6 md:gap-10 relative z-10">
+          <div className="flex items-center gap-6 md:gap-8 relative z-10">
             <div className="relative group shrink-0">
               <div className="absolute inset-0 bg-[#D4AF37] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
-              <div className="relative p-4 md:p-6 rounded-3xl bg-black border border-[#D4AF37]/30 text-[#D4AF37] shadow-2xl">
-                <Sparkles size={28} className="md:w-10 md:h-10" strokeWidth={1.2} />
+              <div className="relative p-3 md:p-4 rounded-[1.5rem] bg-black border border-[#D4AF37]/30 text-[#D4AF37] shadow-2xl">
+                <Sparkles size={28} className="md:w-8 md:h-8" strokeWidth={1.2} />
               </div>
             </div>
             <div>
-              <h3 className="font-black text-2xl md:text-5xl text-white tracking-tighter uppercase italic leading-none">
+              <h3 className="font-black text-2xl md:text-4xl text-white tracking-tighter uppercase italic leading-none">
                 {initialData ? 'Editar Nodo' : 'Nuevo Nodo'}
               </h3>
               <div className="flex items-center gap-3 mt-3">
@@ -122,15 +122,15 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest mb-1 italic">Presupuesto</p>
               <p className="text-3xl font-black text-white italic tracking-tighter">${formData.price}</p>
             </div>
-            <button onClick={onClose} className="p-4 md:p-6 bg-white/5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 transition-all rounded-3xl border border-white/5">
-              <X size={24} className="md:w-8 md:h-8" />
+            <button onClick={onClose} type="button" className="p-3 md:p-4 bg-white/5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 transition-all rounded-2xl border border-white/5">
+              <X size={24} />
             </button>
           </div>
         </div>
 
         {/* Scrollable Content - Mobile Optimized */}
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto custom-scrollbar bg-black/40">
-          <div className="p-8 md:p-16 grid grid-cols-1 lg:grid-cols-12 gap-10 md:gap-20">
+          <div className="p-6 md:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
             
             {/* Columna Multimedia (Full width en móvil) */}
             <div className="lg:col-span-5 space-y-10">
@@ -241,9 +241,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         </form>
 
         {/* Footer Pegajoso - Full Width Desktop & Mobile */}
-        <div className="p-8 md:p-14 border-t border-white/5 bg-gradient-to-r from-black via-[#050505] to-black shrink-0 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-0 z-50">
+        <div className="p-6 md:p-10 border-t border-white/5 bg-gradient-to-r from-black via-[#050505] to-black shrink-0 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0 z-50">
           <div className="hidden md:flex items-center gap-6">
-            <div className="w-16 h-16 rounded-[2rem] bg-white/5 border border-white/5 flex items-center justify-center text-zinc-700 shadow-xl"><Cpu size={28} /></div>
+            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-zinc-700 shadow-xl"><Cpu size={24} /></div>
             <div>
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-1">Integridad Sincronizada</p>
               <div className="flex items-center gap-2">
@@ -253,9 +253,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-10 w-full md:w-auto">
-            <button type="button" onClick={onClose} className="hidden md:block text-[12px] font-black uppercase text-zinc-600 hover:text-white transition-colors tracking-[0.4em] italic">Descartar Cambios</button>
-            <button type="submit" onClick={handleSubmit} className="gold-btn w-full md:w-auto px-12 md:px-24 py-6 md:py-8 rounded-full md:rounded-[2.5rem] font-black text-sm md:text-lg uppercase tracking-[0.5em] shadow-[0_20px_60px_rgba(212,175,55,0.3)] flex items-center justify-center gap-6 group active:scale-95 transition-all overflow-hidden relative">
+          <div className="flex items-center gap-8 w-full md:w-auto">
+            <button type="button" onClick={onClose} className="hidden md:block text-[11px] font-black uppercase text-zinc-600 hover:text-white transition-colors tracking-[0.4em] italic">Descartar Cambios</button>
+            <button type="submit" onClick={handleSubmit} className="gold-btn w-full md:w-auto px-8 md:px-12 py-4 md:py-6 rounded-full md:rounded-[2rem] font-black text-sm uppercase tracking-[0.5em] shadow-[0_20px_60px_rgba(212,175,55,0.3)] flex items-center justify-center gap-4 group active:scale-95 transition-all overflow-hidden relative">
               <div className="absolute inset-0 bg-white/30 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[1500ms] skew-x-12" />
               <CheckCircle2 size={24} className="group-hover:scale-125 transition-transform" /> 
               <span className="relative z-10">{initialData ? 'Actualizar Nodo' : 'Sincronizar Nodo'}</span>

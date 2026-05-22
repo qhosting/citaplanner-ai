@@ -229,13 +229,14 @@ export const ServicesPage: React.FC = () => {
         </div>
       )}
 
+      </div>
+
       <ServiceModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveService}
         initialData={editingService}
       />
-      </div>
 
       {/* 🔮 FLOATING ACTION BUTTON (FAB) */}
       <div className="fixed bottom-10 right-10 z-[600]">
