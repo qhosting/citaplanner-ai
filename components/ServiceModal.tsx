@@ -87,9 +87,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[200] flex items-center justify-center">
-      {/* Container Principal: Pantalla completa en móvil, Inmersivo en Desktop */}
-      <div className="w-full h-full md:h-[90vh] md:max-w-5xl md:rounded-[3rem] bg-[#050505] overflow-hidden flex flex-col border border-white/10 shadow-[0_0_150px_rgba(212,175,55,0.1)] md:animate-scale-in relative">
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[200] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {/* Container Principal: Pantalla completa */}
+      <div className="relative w-full h-full max-w-none bg-[#050505] overflow-hidden flex flex-col border border-white/10 sm:rounded-[2.5rem] shadow-[0_0_150px_rgba(212,175,55,0.1)] md:animate-scale-in">
         
         {/* Header Inmersivo */}
         <div className="relative flex justify-between items-center p-6 md:p-10 border-b border-white/5 bg-gradient-to-r from-black via-[#080808] to-black shrink-0">
@@ -255,9 +255,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
           <div className="flex items-center gap-8 w-full md:w-auto">
             <button type="button" onClick={onClose} className="hidden md:block text-[11px] font-black uppercase text-zinc-600 hover:text-white transition-colors tracking-[0.4em] italic">Descartar Cambios</button>
-            <button type="submit" onClick={handleSubmit} className="gold-btn w-full md:w-auto px-8 md:px-12 py-4 md:py-6 rounded-full md:rounded-[2rem] font-black text-sm uppercase tracking-[0.5em] shadow-[0_20px_60px_rgba(212,175,55,0.3)] flex items-center justify-center gap-4 group active:scale-95 transition-all overflow-hidden relative">
+            <button type="submit" onClick={handleSubmit} className="gold-btn w-full md:w-auto px-8 md:px-10 py-4 md:py-5 rounded-full md:rounded-3xl font-black text-xs md:text-sm uppercase tracking-[0.3em] shadow-[0_20px_60px_rgba(212,175,55,0.3)] flex items-center justify-center gap-3 group active:scale-95 transition-all overflow-hidden relative">
               <div className="absolute inset-0 bg-white/30 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-[1500ms] skew-x-12" />
-              <CheckCircle2 size={24} className="group-hover:scale-125 transition-transform" /> 
+              <CheckCircle2 size={20} className="group-hover:scale-125 transition-transform" /> 
               <span className="relative z-10">{initialData ? 'Actualizar Nodo' : 'Sincronizar Nodo'}</span>
             </button>
           </div>
