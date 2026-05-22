@@ -234,13 +234,7 @@ export const SchedulesPage: React.FC = () => {
 
    return (
       <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
-        <div>
-          <h1 className="text-4xl font-black text-main uppercase tracking-tighter">
-            Master <span className="bugambilia-text-gradient font-light">Matrix</span>
-          </h1>
-          <p className="text-[10px] text-muted font-bold uppercase tracking-[0.4em] mt-2">Arquitectura de Operaciones en Tiempo Real</p>
-        </div>
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center mb-12 gap-8">
         <div className="flex flex-wrap gap-4">
           <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
             <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Operaciones</button>
@@ -253,32 +247,6 @@ export const SchedulesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* INTELLIGENCE HEADER */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-        <div className="glass-card p-6 rounded-3xl border-theme flex flex-col justify-between">
-          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Ocupación Hoy</p>
-          <div className="flex items-end justify-between">
-            <h3 className="text-2xl font-black text-main">{stats.occupancy}%</h3>
-            <div className="w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
-               <div style={{ width: `${stats.occupancy}%` }} className="h-full bg-emerald-500 shadow-[0_0_10px_#10B981]" />
-            </div>
-          </div>
-        </div>
-        <div className="glass-card p-6 rounded-3xl border-theme">
-          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Citas Programadas</p>
-          <h3 className="text-2xl font-black text-main">{stats.totalApts} <span className="text-[10px] text-muted font-bold tracking-normal uppercase">Node Hits</span></h3>
-        </div>
-        <div className="glass-card p-6 rounded-3xl border-theme">
-          <p className="text-[9px] font-black text-muted uppercase tracking-widest mb-3">Staff Operativo</p>
-          <h3 className="text-2xl font-black text-main">{stats.activePros} <span className="text-[10px] text-muted font-bold tracking-normal uppercase">Unidades</span></h3>
-        </div>
-        <div className="glass-card p-6 rounded-3xl border-theme bg-gradient-to-tr from-[#CE4676]/5 to-transparent">
-          <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-3">AI Recommendation</p>
-          <p className="text-[10px] font-bold text-main leading-relaxed">
-            {stats.occupancy > 70 ? "Capacidad crítica detectada. Considera activar Nodo de Refuerzo." : "Disponibilidad óptima para walk-ins."}
-          </p>
-        </div>
-      </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* SIDEBAR - Only visible in Individual Tabs */}
