@@ -124,7 +124,8 @@ export const ServicesPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+    <>
+      <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
       <div className="bg-card-theme p-5 rounded-[2.5rem] border border-theme mb-10 flex flex-col md:flex-row gap-6 justify-between items-center">
         <div className="relative w-full md:w-[450px]">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
@@ -234,6 +235,7 @@ export const ServicesPage: React.FC = () => {
         onSave={handleSaveService}
         initialData={editingService}
       />
+      </div>
 
       {/* 🔮 FLOATING ACTION BUTTON (FAB) */}
       <div className="fixed bottom-10 right-10 z-[600]">
@@ -245,6 +247,6 @@ export const ServicesPage: React.FC = () => {
           <span>Nuevo</span>
         </button>
       </div>
-    </div>
+    </>
   );
 };
