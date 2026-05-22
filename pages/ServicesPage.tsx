@@ -125,16 +125,7 @@ export const ServicesPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-8">
-        <div>
-          <div className="flex items-center gap-4 mb-3">
-            <div className="w-1 h-10 bg-[#CE4676] rounded-full shadow-[0_0_20px_#CE4676]"></div>
-            <h1 className="text-4xl font-black text-main tracking-tighter uppercase leading-none">
-              Service <span className="bugambilia-text-gradient font-light">Inventory</span>
-            </h1>
-          </div>
-          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Operational Core • Aurum Business Solutions</p>
-        </div>
+      <div className="flex justify-end mb-12">
         <div className="flex gap-4">
           <div className="flex bg-card-theme p-1.5 rounded-2xl border border-theme">
             <button onClick={() => setViewMode('GRID')} title="Vista Cuadrícula" className={`p-2.5 rounded-xl transition-all ${viewMode === 'GRID' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><LayoutGrid size={18} /></button>
