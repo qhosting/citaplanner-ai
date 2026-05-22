@@ -63,70 +63,61 @@ export const ClientsPage: React.FC = () => {
   if (isLoading) return <div className="h-screen flex items-center justify-center bg-black"><Loader2 className="animate-spin text-[#D4AF37]" size={40} /></div>;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex flex-col md:flex-row justify-end items-start md:items-center mb-16 gap-8">
-        <div className="flex gap-4">
-          <button
-            onClick={() => {
-              const csv = clients.map(c => `${c.name},${c.phone},${c.email}`).join('\n');
-              const blob = new Blob([`Nombre,Telefono,Email\n${csv}`], { type: 'text/csv' });
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`;
-              a.click();
-            }}
-            className="bg-white/5 text-slate-300 hover:text-white px-6 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 transition-all"
-          >
-            <Loader2 size={16} className="hidden" /> Exportar
-          </button>
-
-          <label className="bg-white/5 text-slate-300 hover:text-white px-6 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 transition-all cursor-pointer">
-            <input type="file" className="hidden" accept=".csv" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = async (event) => {
-                const text = event.target?.result as string;
-                const lines = text.split('\n').slice(1); // Skip header
-                let count = 0;
-                // Basic client-side parsing for demo
-                for (const line of lines) {
-                  const [name, phone, email] = line.split(',');
-                  if (name && phone) {
-                    await api.createClient({ name: name.trim(), phone: phone.trim(), email: email?.trim() });
-                    count++;
+    <>
+      <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+        <div className="glass-card p-4 rounded-[3.5rem] border-white/5 mb-16 flex flex-col md:flex-row gap-4 items-center">
+          <div className="relative flex-grow w-full">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
+            <input
+              type="text"
+              placeholder="Filtrar por identidad, red o estatus de socio..."
+              className="w-full pl-16 pr-6 py-6 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#D4AF37]/30 transition-all font-medium"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-4 shrink-0 px-2">
+            <button
+              onClick={() => {
+                const csv = clients.map(c => `${c.name},${c.phone},${c.email}`).join('\n');
+                const blob = new Blob([`Nombre,Telefono,Email\n${csv}`], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `clients_export_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+              }}
+              className="bg-white/5 text-slate-300 hover:text-white px-6 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 transition-all"
+            >
+              <Loader2 size={16} className="hidden" /> Exportar
+            </button>
+  
+            <label className="bg-white/5 text-slate-300 hover:text-white px-6 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest border border-white/5 transition-all cursor-pointer">
+              <input type="file" className="hidden" accept=".csv" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                  const text = event.target?.result as string;
+                  const lines = text.split('\n').slice(1); // Skip header
+                  let count = 0;
+                  // Basic client-side parsing for demo
+                  for (const line of lines) {
+                    const [name, phone, email] = line.split(',');
+                    if (name && phone) {
+                      await api.createClient({ name: name.trim(), phone: phone.trim(), email: email?.trim() });
+                      count++;
+                    }
                   }
-                }
-                toast.success(`${count} Socios importados exitosamente.`);
-                queryClient.invalidateQueries({ queryKey: ['clients'] });
-              };
-              reader.readAsText(file);
-            }} />
-            Importar CSV
-          </label>
-
-          <button
-            onClick={() => { setEditingClient(undefined); setIsModalOpen(true); }}
-            className="gold-btn text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl transition-all active:scale-95"
-          >
-            <Plus size={18} /> Registrar Socio Elite
-          </button>
+                  toast.success(`${count} Socios importados exitosamente.`);
+                  queryClient.invalidateQueries({ queryKey: ['clients'] });
+                };
+                reader.readAsText(file);
+              }} />
+              Importar CSV
+            </label>
+          </div>
         </div>
-      </div>
-
-      <div className="glass-card p-4 rounded-[3.5rem] border-white/5 mb-16 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-grow w-full">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
-          <input
-            type="text"
-            placeholder="Filtrar por identidad, red o estatus de socio..."
-            className="w-full pl-16 pr-6 py-6 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#D4AF37]/30 transition-all font-medium"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {filteredClients.map(client => {
@@ -204,6 +195,18 @@ export const ClientsPage: React.FC = () => {
         onSave={(data) => mutation.mutate(data)}
         initialData={editingClient}
       />
-    </div>
+      </div>
+
+      {/* 🔮 FLOATING ACTION BUTTON (FAB) */}
+      <div className="fixed bottom-10 right-10 z-[600]">
+        <button
+          onClick={() => { setEditingClient(undefined); setIsModalOpen(true); }}
+          className="flex items-center justify-center gap-3 bg-[#D4AF37] hover:bg-[#b5952f] text-black px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+          <span>Cliente</span>
+        </button>
+      </div>
+    </>
   );
 };
