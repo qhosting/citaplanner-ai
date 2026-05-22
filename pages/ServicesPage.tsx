@@ -125,30 +125,6 @@ export const ServicesPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
-      <div className="flex justify-end mb-12">
-        <div className="flex gap-4">
-          <div className="flex bg-card-theme p-1.5 rounded-2xl border border-theme">
-            <button onClick={() => setViewMode('GRID')} title="Vista Cuadrícula" className={`p-2.5 rounded-xl transition-all ${viewMode === 'GRID' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><LayoutGrid size={18} /></button>
-            <button onClick={() => setViewMode('TABLE')} title="Vista Tabla" className={`p-2.5 rounded-xl transition-all ${viewMode === 'TABLE' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><List size={18} /></button>
-          </div>
-
-          <div className="flex bg-card-theme p-1.5 rounded-2xl border border-theme gap-1">
-            <button onClick={handleExport} title="Exportar Servicios XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all"><Download size={18} /></button>
-            <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all cursor-pointer">
-              <Upload size={18} />
-              <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
-            </label>
-          </div>
-
-          <button
-            onClick={() => { setEditingService(undefined); setIsModalOpen(true); }}
-            className="bugambilia-btn text-white px-8 py-4 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl"
-          >
-            <Plus size={18} /> Nuevo Servicio
-          </button>
-        </div>
-      </div>
-
       <div className="bg-card-theme p-5 rounded-[2.5rem] border border-theme mb-10 flex flex-col md:flex-row gap-6 justify-between items-center">
         <div className="relative w-full md:w-[450px]">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
@@ -158,7 +134,7 @@ export const ServicesPage: React.FC = () => {
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-4 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
           <select
             className="w-full md:w-64 px-6 py-4 bg-input-theme border border-theme rounded-2xl text-main text-[10px] font-black uppercase outline-none focus:border-[#CE4676] cursor-pointer"
             value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
@@ -166,6 +142,19 @@ export const ServicesPage: React.FC = () => {
             <option value="ALL">Todas las Ramas</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+
+          <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme">
+            <button onClick={() => setViewMode('GRID')} title="Vista Cuadrícula" className={`p-2.5 rounded-xl transition-all ${viewMode === 'GRID' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('TABLE')} title="Vista Tabla" className={`p-2.5 rounded-xl transition-all ${viewMode === 'TABLE' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><List size={18} /></button>
+          </div>
+
+          <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme gap-1">
+            <button onClick={handleExport} title="Exportar Servicios XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all"><Download size={18} /></button>
+            <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all cursor-pointer">
+              <Upload size={18} />
+              <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -245,6 +234,17 @@ export const ServicesPage: React.FC = () => {
         onSave={handleSaveService}
         initialData={editingService}
       />
+
+      {/* 🔮 FLOATING ACTION BUTTON (FAB) */}
+      <div className="fixed bottom-10 right-10 z-[600]">
+        <button
+          onClick={() => { setEditingService(undefined); setIsModalOpen(true); }}
+          className="flex items-center justify-center gap-3 bugambilia-btn text-white px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(206,70,118,0.3)] hover:shadow-[0_15px_40px_rgba(206,70,118,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+          <span>Nuevo</span>
+        </button>
+      </div>
     </div>
   );
 };
