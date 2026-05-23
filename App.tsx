@@ -17,7 +17,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { LogoCitaplanner } from './components/LogoCitaplanner';
 import { Role } from './types';
-import { DeviceVisualizer } from './components/DeviceVisualizer';
+import { useDeviceMode } from './hooks/useDeviceMode';
 
 // --- OPTIMIZACIÓN: Lazy Loading de Páginas ---
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: (m as any).Dashboard || (m as any).default })));
@@ -282,6 +282,8 @@ const MainLayout = () => {
     }
   }, [location]);
 
+  const { isDesktop, isPWA, isMobile } = useDeviceMode();
+
   if (appLoading) return <LoadingScreen />;
 
   const isStaff = user && ['ADMIN', 'STAFF', 'GOD_MODE'].includes(user.role);
@@ -294,41 +296,124 @@ const MainLayout = () => {
   }
 
   return (
-    <DeviceVisualizer theme={theme} isLoginPage={isLoginPage} isLandingPage={isLandingPage}>
-      <div className="min-h-screen flex flex-col transition-colors">
-        <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
-        {!isLoginPage && !isLandingPage && <Navbar maintenanceMode={maintenanceMode} settings={settings} />}
-        <div className="flex-grow">
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/book" element={<BookingPage />} />
-              <Route path="/nexus" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
-              <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
-              <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
-              <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
-              <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
-              <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
-              <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
-              <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
-              <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
-              <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
-              <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
-              <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
-              <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Suspense>
+    <div className={`min-h-screen flex flex-col transition-colors ${isMobile && user ? 'pb-20' : ''}`}>
+      <Toaster richColors position="top-right" theme={theme === 'dark' ? 'dark' : 'light'} />
+      
+      {/* 💻 PWA Mode macOS-Style Header */}
+      {isPWA && (
+        <div className="bg-[#0A0A0A] border-b border-white/5 h-10 px-4 flex items-center justify-between select-none text-white shrink-0 z-50">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] border border-[#E0443E]/20" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] border border-[#DEA123]/20" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F] border border-[#1AAB29]/20" />
+          </div>
+          <div className="bg-black/40 border border-white/5 px-4 py-0.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-[#D4AF37]">
+            <span>{settings?.businessName || 'Shula Studio'} • Aplicación PWA</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[7.5px] font-bold text-zinc-400 uppercase tracking-widest">Sincronizado</span>
+          </div>
         </div>
-        {settings && !isLoginPage && <Footer settings={settings} accent={settings.primaryColor} />}
+      )}
+
+      {/* 📱 Mobile Top Navigation Header (Alternative to the missing Navbar) */}
+      {!isLoginPage && !isLandingPage && (
+        isMobile ? (
+          <div className={`h-16 px-6 border-b flex items-center justify-between backdrop-blur-2xl z-40 sticky top-0 ${theme === 'dark' ? 'bg-black/90 border-white/10' : 'bg-white/90 border-slate-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-tr from-[#222] to-black border border-[#D4AF37]/30">
+                <Sparkles className="text-[#D4AF37]" size={14} />
+              </div>
+              <span className={`font-black text-sm uppercase tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {settings?.businessName || 'Shula Studio'}
+              </span>
+            </div>
+            {user && (
+              <Link to="/profile" className="w-8 h-8 rounded-full border border-[#D4AF37]/40 flex items-center justify-center overflow-hidden bg-white/5">
+                {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="" /> : <span className="text-[10px] font-black text-[#D4AF37]">{user.name.charAt(0)}</span>}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <Navbar maintenanceMode={maintenanceMode} settings={settings} />
+        )
+      )}
+
+      <div className="flex-grow">
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/book" element={<BookingPage />} />
+            <Route path="/nexus" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/pos" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><POSPage /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><AnalyticsPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ClientsPage /></ProtectedRoute>} />
+            <Route path="/marketing" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MarketingPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SettingsPage /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><ServicesPage /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InventoryPage /></ProtectedRoute>} />
+            <Route path="/schedules" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><SchedulesPage /></ProtectedRoute>} />
+            <Route path="/web-builder" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><WebBuilderPage /></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><InsightsPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><LeadsPage /></ProtectedRoute>} />
+            <Route path="/maintenance" element={<ProtectedRoute allowedRoles={['ADMIN', 'GOD_MODE']}><MaintenancePage /></ProtectedRoute>} />
+            <Route path="/professional-dashboard" element={<ProtectedRoute allowedRoles={['STAFF']}><ProfessionalDashboard /></ProtectedRoute>} />
+            <Route path="/client-portal" element={<ProtectedRoute allowedRoles={['CLIENT']}><ClientPortal /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </div>
-    </DeviceVisualizer>
+
+      {/* 📱 Mobile Mode Elite Glassmorphic Bottom Navigation */}
+      {isMobile && user && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-black/95 border-t border-white/10 backdrop-blur-lg flex items-center justify-around px-4 pb-safe shadow-[0_-10px_35px_rgba(0,0,0,0.9)]">
+          {[
+            {
+              label: 'Inicio',
+              icon: LayoutDashboard,
+              path: user.role === 'CLIENT' ? '/client-portal' : user.role === 'STAFF' ? '/professional-dashboard' : user.role === 'GOD_MODE' ? '/nexus' : '/admin'
+            },
+            ...(user.role === 'CLIENT' 
+              ? [
+                  { label: 'Citas', icon: CalendarDays, path: '/client-portal' },
+                  { label: 'Reservar', icon: ShoppingBag, path: '/book' }
+                ]
+              : [
+                  { label: 'Matriz', icon: CalendarDays, path: '/schedules' },
+                  { label: 'Ventas', icon: ShoppingBag, path: '/pos' },
+                  { label: 'Clientes', icon: Users, path: '/clients' }
+                ]
+            ),
+            { label: 'Perfil', icon: Settings, path: '/profile' }
+          ].map((tab, idx) => {
+            const tabNormalizedPath = tab.path.replace(/\/+/g, '/');
+            const isTabActive = normalizedPath === tabNormalizedPath;
+            return (
+              <Link
+                key={idx}
+                to={tab.path}
+                className={`flex flex-col items-center justify-center gap-1.5 transition-all py-1 w-16 ${
+                  isTabActive ? 'text-[#D4AF37] scale-105 font-bold' : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <tab.icon size={18} className={isTabActive ? 'text-[#D4AF37]' : 'text-zinc-500'} />
+                <span className="text-[8px] font-black uppercase tracking-widest leading-none text-center block w-full truncate">{tab.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 💻 Desktop Website-Style Footer */}
+      {settings && !isLoginPage && isDesktop && (
+        <Footer settings={settings} accent={settings.primaryColor} />
+      )}
+    </div>
   );
 };
 
