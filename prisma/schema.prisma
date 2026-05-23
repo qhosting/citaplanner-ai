@@ -28,6 +28,7 @@ model Appointment {
   googleEventId  String?   @map("google_event_id") @db.VarChar(255)
   noShowRisk     Float?    @map("no_show_risk")
   noShowReasons  String?   @map("no_show_reasons")
+  paymentReceiptUrl String?  @map("payment_receipt_url")
 
   @@map("appointments")
 }

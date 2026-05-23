@@ -5,6 +5,7 @@ export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED',
+  PRECONFIRMED = 'PRECONFIRMED',
 }
 
 export interface BridgeSettings {
@@ -110,6 +111,7 @@ export interface Appointment {
   professionalId?: string;
   serviceId?: string;
   description?: string;
+  paymentReceiptUrl?: string;
 }
 
 export interface NotificationPreferences {

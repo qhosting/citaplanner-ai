@@ -13,7 +13,8 @@ export const appointmentSchema = z.object({
     clientPhone: z.string().optional(),
     professionalId: z.string().uuid("Invalid professional ID").optional().nullable(),
     serviceId: z.string().uuid("Invalid service ID").optional().nullable(),
-    notes: z.string().optional()
+    notes: z.string().optional(),
+    paymentReceiptUrl: z.string().optional().nullable()
 });
 
 export const professionalSchema = z.object({

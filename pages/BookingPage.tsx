@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 import { Footer } from '../components/Footer';
 import { SEO } from '../components/SEO';
+import { toast } from 'sonner';
 
 // --- HELPERS ---
 const generateTimeSlots = (date: Date, professional: Professional, serviceDuration: number, appointments: Appointment[]): string[] => {
@@ -88,6 +89,9 @@ export const BookingPage: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  const [paymentReceiptUrl, setPaymentReceiptUrl] = useState<string | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   const [step, setStep] = useState<number>(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -216,7 +220,7 @@ export const BookingPage: React.FC = () => {
 
     const endDateTime = new Date(startDateTime.getTime() + selectedService.duration * 60000);
 
-    const newAppointment: Omit<Appointment, 'id'> = {
+    const newAppointment: Omit<Appointment, 'id'> & { paymentReceiptUrl?: string } = {
       title: selectedService.name,
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
@@ -225,7 +229,8 @@ export const BookingPage: React.FC = () => {
       description: clientDetails.notes || 'Reserva Online Web',
       status: AppointmentStatus.SCHEDULED,
       professionalId: selectedPro.id,
-      serviceId: selectedService.id
+      serviceId: selectedService.id,
+      paymentReceiptUrl: paymentReceiptUrl || undefined
     };
 
     const result = await api.createAppointment(newAppointment);
@@ -464,13 +469,109 @@ export const BookingPage: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Bank Transfer Advance Payment Section */}
+              <div className="border-t border-white/5 pt-8 space-y-6">
+                <div>
+                  <h4 className="text-[11px] font-black text-[#D4AF37] uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <Star size={14} className="text-[#D4AF37]" /> Anticipo para Asegurar tu Cita
+                  </h4>
+                  <p className="text-[10.5px] text-zinc-400 font-semibold leading-relaxed uppercase tracking-wider">
+                    Para pre-confirmar y apartar tu espacio técnico, solicitamos un anticipo de **$200 MXN**. Por favor realiza la transferencia a la cuenta de Shula Studio y sube tu comprobante o ticket a continuación.
+                  </p>
+                </div>
+
+                <div className="bg-black/60 border border-white/5 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs font-semibold text-zinc-300">
+                  <div>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Banco</span>
+                    <span className="text-white uppercase font-black tracking-tight">BBVA Bancomer</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">CLABE Interbancaria</span>
+                    <span className="text-white font-mono font-black tracking-tight">0121 8001 2345 6789 01</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Beneficiario</span>
+                    <span className="text-white uppercase font-black tracking-tight">Shula Studio S.A. de C.V.</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Concepto de Pago</span>
+                    <span className="text-[#D4AF37] uppercase font-black tracking-tight">{clientDetails.name || 'Anticipo Cita'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-2">Sube tu Comprobante de Depósito / Ticket (Obligatorio)</label>
+                  <div className="relative">
+                    {paymentReceiptUrl ? (
+                      <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/10 shrink-0">
+                            <ShieldCheck size={24} />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block">Comprobante Cargado Exitosamente</span>
+                            <span className="text-[8.5px] text-zinc-500 font-bold uppercase tracking-wider block mt-0.5">Listo para validación técnica por el administrador</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 w-full sm:w-auto justify-end">
+                          <a href={paymentReceiptUrl} target="_blank" rel="noreferrer" className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-[9px] font-black text-white uppercase tracking-widest rounded-lg border border-white/5 text-center shrink-0">Ver Ticket</a>
+                          <button type="button" onClick={() => setPaymentReceiptUrl(null)} className="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-[9px] font-black text-rose-500 uppercase tracking-widest rounded-lg border border-rose-500/10 text-center shrink-0 cursor-pointer">Eliminar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-[#D4AF37]/30 bg-zinc-900/20 rounded-3xl p-10 cursor-pointer transition-all text-center group">
+                        <input 
+                          type="file" 
+                          accept="image/*,application/pdf"
+                          className="hidden" 
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setUploadingReceipt(true);
+                            try {
+                              const url = await api.uploadImage(file);
+                              if (url) {
+                                setPaymentReceiptUrl(url);
+                                toast.success("Comprobante de anticipo cargado");
+                              } else {
+                                toast.error("Error al cargar la imagen del ticket");
+                              }
+                            } catch (err) {
+                              toast.error("Error al cargar comprobante");
+                            } finally {
+                              setUploadingReceipt(false);
+                            }
+                          }}
+                        />
+                        {uploadingReceipt ? (
+                          <div className="space-y-3">
+                            <Loader2 className="animate-spin text-[#D4AF37] mx-auto" size={32} />
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block">Subiendo archivo de pago...</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="w-12 h-12 bg-white/5 group-hover:bg-[#D4AF37]/10 group-hover:text-[#D4AF37] rounded-2xl flex items-center justify-center mx-auto text-zinc-500 transition-all border border-white/5">
+                              <FileText size={20} />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-black text-white uppercase tracking-widest block">Seleccionar Comprobante o Tomar Foto</span>
+                              <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider block mt-1">Formatos JPG, PNG o PDF de tu banca móvil</span>
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !paymentReceiptUrl}
               style={{ backgroundColor: '#CE467B' }}
-              className="w-full py-7 rounded-full text-white font-black text-[14px] uppercase tracking-[0.5em] shadow-[0_30px_60px_-15px_rgba(206,70,123,0.3)] flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform disabled:opacity-50"
+              className="w-full py-7 rounded-full text-white font-black text-[14px] uppercase tracking-[0.5em] shadow-[0_30px_60px_-15px_rgba(206,70,123,0.3)] flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform disabled:opacity-30 disabled:pointer-events-none"
             >
               {submitting ? <Loader2 className="animate-spin" size={24} /> : <><ShieldCheck size={28} /> Confirmar Mi Cita</>}
             </button>

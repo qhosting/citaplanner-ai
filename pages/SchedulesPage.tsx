@@ -6,11 +6,12 @@ import {
    Activity, Copy, ExternalLink, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Professional, ScheduleException, ExceptionType, Appointment } from '../types';
+import { Professional, ScheduleException, ExceptionType, Appointment, Service } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppointmentModal } from '../components/AppointmentModal';
+import { AppointmentDetailsModal } from '../components/AppointmentDetailsModal';
 
 const DAYS_OF_WEEK = [
    { id: 1, name: 'Lunes' },
@@ -55,6 +56,9 @@ export const SchedulesPage: React.FC = () => {
    });
 
    const [isAptModalOpen, setIsAptModalOpen] = useState(false);
+   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+   const [selectedAppointmentForDetails, setSelectedAppointmentForDetails] = useState<Appointment | null>(null);
+   const [services, setServices] = useState<Service[]>([]);
 
    const { data: appointments = [] } = useQuery({
       queryKey: ['appointments'],
@@ -78,12 +82,16 @@ export const SchedulesPage: React.FC = () => {
    const loadProfessionals = async () => {
       try {
          setLoading(true);
-         const data = await api.getProfessionals();
-         setProfessionals(data);
-         if (data.length > 0 && !selectedProId) setSelectedProId(data[0].id);
+         const [prosData, servsData] = await Promise.all([
+            api.getProfessionals(),
+            api.getServices()
+         ]);
+         setProfessionals(prosData);
+         setServices(servsData);
+         if (prosData.length > 0 && !selectedProId) setSelectedProId(prosData[0].id);
       } catch (e) {
-         console.error("Error loading professionals:", e);
-         toast.error("Error de sincronización con el nodo de especialistas.");
+         console.error("Error loading initial data:", e);
+         toast.error("Error de sincronización con especialistas y servicios.");
       } finally {
          setLoading(false);
       }
@@ -370,15 +378,24 @@ export const SchedulesPage: React.FC = () => {
                                           return (
                                              <div
                                                 key={pro.id}
-                                                onClick={() => isAvailable && !apt && setIsAptModalOpen(true)}
-                                                className={`p-1 border-r border-theme last:border-0 min-h-[90px] relative transition-all ${apt ? 'bg-input-theme/50' : isAvailable ? 'hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/10'}`}
+                                                onClick={() => {
+                                                   if (apt) {
+                                                      setSelectedAppointmentForDetails(apt);
+                                                      setIsDetailsModalOpen(true);
+                                                   } else if (isAvailable) {
+                                                      setIsAptModalOpen(true);
+                                                   }
+                                                }}
+                                                className={`p-1 border-r border-theme last:border-0 min-h-[90px] relative transition-all ${apt ? 'bg-input-theme/50 cursor-pointer' : isAvailable ? 'hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/10'}`}
                                              >
                                                 {apt ? (
-                                                   <div className="absolute inset-1.5 bg-gradient-to-tr from-[#CE4676] to-[#9D2D51] rounded-xl p-3 shadow-lg flex flex-col justify-center border border-white/10 z-10 group/apt overflow-hidden">
+                                                   <div className={`absolute inset-1.5 bg-gradient-to-tr ${apt.status === 'PRECONFIRMED' ? 'from-[#D4AF37] to-[#b3922e] border-[#D4AF37]/50 shadow-[#D4AF37]/10 animate-pulse' : 'from-[#CE4676] to-[#9D2D51] border-white/10 shadow-lg'} rounded-xl p-3 shadow-lg flex flex-col justify-center border z-10 group/apt overflow-hidden`}>
                                                       <div className="absolute top-0 right-0 p-2 opacity-10 scale-150">
                                                          <Calendar size={32} />
                                                       </div>
-                                                      <p className="text-[8px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Confirmada</p>
+                                                      <p className="text-[8px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">
+                                                         {apt.status === 'PRECONFIRMED' ? 'Pre-Confirmada (Anticipo)' : 'Confirmada'}
+                                                      </p>
                                                       <h4 className="text-[10px] font-black text-white uppercase truncate">{apt.title}</h4>
                                                       <p className="text-[9px] font-bold text-white/80 truncate mt-0.5">{apt.clientName}</p>
                                                    </div>
@@ -699,6 +716,14 @@ export const SchedulesPage: React.FC = () => {
             isOpen={isAptModalOpen}
             onClose={() => setIsAptModalOpen(false)}
             onSave={(apt) => createMutation.mutate(apt)}
+         />
+
+         <AppointmentDetailsModal
+            isOpen={isDetailsModalOpen}
+            onClose={() => setIsDetailsModalOpen(false)}
+            appointment={selectedAppointmentForDetails}
+            professionals={professionals}
+            services={services}
          />
       </div >
    );

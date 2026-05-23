@@ -7,10 +7,11 @@ import {
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppointmentModal } from '../components/AppointmentModal';
+import { AppointmentDetailsModal } from '../components/AppointmentDetailsModal';
 import { VoiceAssistant } from '../components/VoiceAssistant';
 import { Skeleton } from '../components/Skeleton';
 import { OperationsAgenda } from '../components/dashboard/OperationsAgenda';
-import { AppointmentStatus } from '../types';
+import { AppointmentStatus, Appointment } from '../types';
 import { api } from '../services/api';
 
 export const Dashboard: React.FC = () => {
@@ -18,11 +19,24 @@ export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
+  
+  const [selectedAppointmentForDetails, setSelectedAppointmentForDetails] = useState<Appointment | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // Agenda Real
   const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
     queryKey: ['appointments'],
     queryFn: api.getAppointments,
+  });
+
+  const { data: professionals = [] } = useQuery({
+    queryKey: ['professionals'],
+    queryFn: api.getProfessionals,
+  });
+
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: api.getServices,
   });
 
   const createMutation = useMutation({
@@ -81,7 +95,13 @@ export const Dashboard: React.FC = () => {
             <Skeleton className="h-32 w-full rounded-[3rem]" />
           </div>
         ) : (
-          <OperationsAgenda appointments={filteredAppointments} />
+          <OperationsAgenda 
+            appointments={filteredAppointments} 
+            onSelectAppointment={(apt) => {
+              setSelectedAppointmentForDetails(apt);
+              setIsDetailsModalOpen(true);
+            }}
+          />
         )}
       </div>
     </div>
@@ -107,5 +127,12 @@ export const Dashboard: React.FC = () => {
     <VoiceAssistant isOpen={isVoiceOpen} onClose={() => setIsVoiceOpen(false)} onAppointmentCreated={() => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
     }} />
+    <AppointmentDetailsModal
+      isOpen={isDetailsModalOpen}
+      onClose={() => setIsDetailsModalOpen(false)}
+      appointment={selectedAppointmentForDetails}
+      professionals={professionals}
+      services={services}
+    />
   </>);
 };

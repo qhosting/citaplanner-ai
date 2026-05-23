@@ -6,9 +6,10 @@ import { Appointment } from '../../types';
 
 interface OperationsAgendaProps {
     appointments: Appointment[];
+    onSelectAppointment?: (apt: Appointment) => void;
 }
 
-export const OperationsAgenda: React.FC<OperationsAgendaProps> = ({ appointments }) => {
+export const OperationsAgenda: React.FC<OperationsAgendaProps> = ({ appointments, onSelectAppointment }) => {
     const navigate = useNavigate();
 
     return (
@@ -36,15 +37,23 @@ export const OperationsAgenda: React.FC<OperationsAgendaProps> = ({ appointments
                     appointments.map((apt) => (
                         <div
                             key={apt.id}
-                            className="glass-card p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col sm:flex-row gap-6 md:gap-10 items-center group relative overflow-hidden transition-all hover:scale-[1.02] border border-theme bg-card-theme"
+                            onClick={() => onSelectAppointment && onSelectAppointment(apt)}
+                            className={`glass-card p-8 md:p-10 rounded-[2.5rem] md:rounded-[3.5rem] flex flex-col sm:flex-row gap-6 md:gap-10 items-center group relative overflow-hidden transition-all hover:scale-[1.02] border border-theme bg-card-theme ${onSelectAppointment ? 'cursor-pointer' : ''}`}
                         >
-                            <div className="absolute top-0 left-0 w-1 h-full bg-[#CE4676]" />
+                            <div className={`absolute top-0 left-0 w-1 h-full ${apt.status === 'PRECONFIRMED' ? 'bg-[#D4AF37]' : 'bg-[#CE4676]'}`} />
                             <div className="flex-grow">
-                                <h3 className="font-black text-xl md:text-2xl tracking-tight text-main">{apt.title}</h3>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <h3 className="font-black text-xl md:text-2xl tracking-tight text-main">{apt.title}</h3>
+                                    {apt.status === 'PRECONFIRMED' && (
+                                        <span className="px-2 py-0.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-[8px] font-black uppercase tracking-wider rounded-md animate-pulse">
+                                            Pre-Confirmada
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-[11px] font-bold text-muted uppercase tracking-widest mt-1">{apt.clientName}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-sm font-black text-[#CE4676]">
+                                <p className={`text-sm font-black ${apt.status === 'PRECONFIRMED' ? 'text-[#D4AF37]' : 'text-[#CE4676]'}`}>
                                     {new Date(apt.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>

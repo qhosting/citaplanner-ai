@@ -87,6 +87,9 @@ async function ensureSchemaIntegrity() {
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='care_sent') THEN
                         ALTER TABLE appointments ADD COLUMN care_sent BOOLEAN DEFAULT FALSE;
                     END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='appointments' AND column_name='payment_receipt_url') THEN
+                        ALTER TABLE appointments ADD COLUMN payment_receipt_url TEXT;
+                    END IF;
                 END IF;
 
                 -- Solo intentar si la tabla existe
@@ -648,7 +651,7 @@ app.get('/api/appointments', async (req, res) => {
 
 app.post('/api/appointments', validateRequest(appointmentSchema), async (req, res) => {
     try {
-        const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes } = req.body;
+        const { title, startDateTime, endDateTime, clientName, clientPhone, professionalId, serviceId, notes, paymentReceiptUrl } = req.body;
 
         // ACID Transaction: Create appointment and log integration event
         const newAppointment = await prisma.$transaction(async (tx) => {
@@ -659,10 +662,11 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
                     endDateTime: new Date(endDateTime),
                     clientName,
                     clientPhone,
-                    status: 'SCHEDULED',
+                    status: paymentReceiptUrl ? 'PRECONFIRMED' : 'SCHEDULED',
                     professionalId,
                     serviceId,
                     notes,
+                    paymentReceiptUrl,
                     branchId: req.branchId
                 }
             });
@@ -671,7 +675,7 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
                 data: {
                     platform: 'SYSTEM',
                     eventType: 'APPOINTMENT_CREATED',
-                    payload: { appointmentId: apt.id, clientName },
+                    payload: { appointmentId: apt.id, clientName, preconfirmed: !!paymentReceiptUrl },
                     status: 'SUCCESS',
                     
                     branchId: req.branchId
@@ -686,7 +690,12 @@ app.post('/api/appointments', validateRequest(appointmentSchema), async (req, re
         // Notify via WhatsApp
         if (clientPhone) {
             const dateStr = new Date(startDateTime).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
-            const message = `Hola ${clientName}, tu cita para "${title}" ha sido confirmada para el ${dateStr}. Te esperamos en Aurum.`;
+            let message = `Hola ${clientName}, tu cita para "${title}" ha sido agendada para el ${dateStr}.`;
+            if (paymentReceiptUrl) {
+                message += ` Hemos recibido tu comprobante de pago de anticipo. Tu cita se encuentra PRE-CONFIRMADA mientras validamos tu depósito. ¡Muchas gracias!`;
+            } else {
+                message += ` Te esperamos en Shula Studio.`;
+            }
             sendWhatsAppMessage(clientPhone, message, req.branchId, req.tenantId);
         }
 
