@@ -11,7 +11,16 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [businessName, setBusinessName] = useState('Plataforma');
+  const [businessName, setBusinessName] = useState(() => {
+    try {
+      const saved = localStorage.getItem('citaPlannerLandingSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.businessName || 'Shula Studio';
+      }
+    } catch {}
+    return 'Shula Studio';
+  });
   const { login, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const isMaintenance = false;
@@ -36,7 +45,10 @@ export const LoginPage: React.FC = () => {
       try {
         const response = await api.getLandingSettings();
         if (response.success && response.value) {
-          setBusinessName(response.value.businessName || 'Plataforma');
+          const name = response.value.businessName || 'Shula Studio';
+          setBusinessName(name);
+          // Sync settings to localStorage so they are immediately available next time
+          localStorage.setItem('citaPlannerLandingSettings', JSON.stringify(response.value));
         }
       } catch (e) {
         console.error('Failed to load settings in login');

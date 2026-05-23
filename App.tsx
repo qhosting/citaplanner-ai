@@ -145,7 +145,7 @@ const Navbar = ({ maintenanceMode, settings }: { maintenanceMode: boolean, setti
                 <Sparkles className="text-[#D4AF37] group-hover:scale-110 transition-transform" size={20} />
               </div>
               <div className="flex flex-col">
-                <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{settings?.businessName || 'Plataforma'}</span>
+                <span className={`font-black text-xl tracking-tighter uppercase leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{settings?.businessName || 'Shula Studio'}</span>
                 <span className="text-[7px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] mt-0.5 opacity-80">Ecosistema Elite</span>
               </div>
             </div>
@@ -242,7 +242,14 @@ const MainLayout = () => {
   const { theme } = useTheme();
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('citaPlannerLandingSettings');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const location = useLocation();
 
   useEffect(() => {
@@ -252,11 +259,12 @@ const MainLayout = () => {
         if (response.success && response.value) {
           const data = response.value;
           setSettings(data);
+          localStorage.setItem('citaPlannerLandingSettings', JSON.stringify(data));
           setMaintenanceMode(!!data.maintenanceMode);
 
           // === MOTOR DE TÍTULO GLOBAL ===
           const bizName = (data.businessName || '').trim();
-          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'CitaPlanner — Gestión de Reservas');
+          const baseTitle = data.seoTitle || (bizName ? `${bizName} — Reservas` : 'Shula Studio — Gestión de Reservas');
           
           if (location.pathname !== '/') {
             document.title = baseTitle;

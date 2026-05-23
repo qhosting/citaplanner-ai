@@ -83,7 +83,23 @@ export const BookingPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
-  const [settings, setSettings] = useState<LandingSettings | null>(null);
+  const [settings, setSettings] = useState<LandingSettings>(() => {
+    try {
+      const saved = localStorage.getItem('citaPlannerLandingSettings');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return {
+      businessName: 'Shula Studio',
+      primaryColor: '#D4AF37',
+      secondaryColor: '#C5A028',
+      slogan: 'Alta Tecnología en Belleza',
+      aboutText: '',
+      contactPhone: '',
+      maintenanceMode: false
+    } as any;
+  });
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -134,6 +150,7 @@ export const BookingPage: React.FC = () => {
         if (setRes.success && setRes.value && Object.keys(setRes.value).length > 0) {
           const set = setRes.value;
           setSettings(set);
+          localStorage.setItem('citaPlannerLandingSettings', JSON.stringify(set));
           // Update document title
           if (set.businessName) {
             document.title = `Reserva Tu Experiencia | ${set.businessName}`;
@@ -141,7 +158,7 @@ export const BookingPage: React.FC = () => {
         } else {
           // Default fallback to prevent infinite loading
           setSettings({
-            businessName: 'Aurum Studio',
+            businessName: 'Shula Studio',
             primaryColor: '#D4AF37',
             secondaryColor: '#C5A028',
             slogan: 'Alta Tecnología en Belleza',
