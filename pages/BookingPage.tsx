@@ -81,7 +81,13 @@ const generateTimeSlots = (date: Date, professional: Professional, serviceDurati
 
 export const BookingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
+
+  const [showInlineLogin, setShowInlineLogin] = useState(false);
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [inlineLoading, setInlineLoading] = useState(false);
 
   const [settings, setSettings] = useState<LandingSettings>(() => {
     try {
@@ -215,6 +221,28 @@ export const BookingPage: React.FC = () => {
 
   const primaryColor = settings?.primaryColor || '#D4AF37';
   const secondaryColor = primaryColor + '10';
+
+  const handleInlineLogin = async () => {
+    setLoginError('');
+    if (!loginPhone || !loginPassword) {
+      setLoginError('Ingresa tus credenciales');
+      return;
+    }
+    setInlineLoading(true);
+    try {
+      const success = await login(loginPhone, loginPassword);
+      if (success) {
+        toast.success("Sesión iniciada con éxito");
+        setShowInlineLogin(false);
+      } else {
+        setLoginError('Credenciales incorrectas');
+      }
+    } catch (e) {
+      setLoginError('Error de red al conectar');
+    } finally {
+      setInlineLoading(false);
+    }
+  };
 
   const handleDateChange = (daysToAdd: number) => {
     const newDate = new Date(selectedDate);
@@ -426,6 +454,77 @@ export const BookingPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 max-w-5xl mx-auto">
         <div className="lg:col-span-3">
+          {/* Sleek inline login option */}
+          {!isAuthenticated && (
+            <div className="space-y-4 mb-6">
+              <div className="bg-white/5 border border-white/10 p-6 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-[#D4AF37]/10 rounded-2xl text-[#D4AF37]">
+                    <User size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest block">¿Ya tienes una cuenta con nosotros?</span>
+                    <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mt-0.5">Inicia sesión para cargar tus datos automáticamente.</span>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setShowInlineLogin(!showInlineLogin)}
+                  className="px-6 py-3 bg-white/10 hover:bg-white/15 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all border border-white/5 w-full sm:w-auto"
+                >
+                  {showInlineLogin ? 'Cerrar' : 'Ya tengo cuenta'}
+                </button>
+              </div>
+
+              {showInlineLogin && (
+                <div className="bg-zinc-900/60 border border-[#D4AF37]/20 p-8 rounded-[2.5rem] space-y-6 animate-entrance">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="text-[#D4AF37]" size={16} />
+                    <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Acceso de Socios</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-1">Teléfono / ID</label>
+                      <input 
+                        type="text" 
+                        placeholder="ID de Acceso"
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(e.target.value)}
+                        className="w-full px-5 py-4 bg-zinc-800/40 border border-white/5 rounded-xl outline-none focus:border-[#D4AF37] font-bold text-white text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-1">Contraseña</label>
+                      <input 
+                        type="password" 
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full px-5 py-4 bg-zinc-800/40 border border-white/5 rounded-xl outline-none focus:border-[#D4AF37] font-bold text-white text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {loginError && (
+                    <p className="text-rose-500 text-[8.5px] font-black uppercase tracking-widest text-center bg-rose-500/5 py-2.5 rounded-lg border border-rose-500/10">
+                      {loginError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleInlineLogin}
+                    disabled={inlineLoading}
+                    className="w-full py-4 bg-[#D4AF37] hover:bg-[#bfa032] text-black font-black text-[9px] uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[#D4AF37]/5 transition-all disabled:opacity-50"
+                  >
+                    {inlineLoading ? <Loader2 className="animate-spin" size={14} /> : 'Autenticar y Pre-llenar'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleBooking} className="space-y-6">
             <div className="bg-zinc-900/40 p-10 rounded-[3rem] border border-white/5 shadow-sm space-y-8">
               <div>
