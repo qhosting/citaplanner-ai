@@ -132,6 +132,7 @@ export interface User {
   relatedId?: string;
   email?: string;
   isImpersonated?: boolean;
+  exemptFromDeposit?: boolean;
 }
 
 export interface CartItem {
@@ -201,6 +202,7 @@ export interface Client {
   treatmentHistory: TreatmentRecord[];
   lashDiagnosis?: LashDiagnosis;
   createdAt?: string;
+  exemptFromDeposit?: boolean;
 }
 
 export interface InventoryMovement {

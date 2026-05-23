@@ -85,6 +85,7 @@ model Client {
   consentType       String?   @map("consent_type") @db.VarChar(100)
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   treatmentHistory  Json?     @default("[]")
+  exemptFromDeposit Boolean?  @default(false) @map("exempt_from_deposit")
 
   @@map("clients")
 }
@@ -281,6 +282,7 @@ model User {
   refreshToken      String?   @map("refresh_token")
   resetToken        String?   @map("reset_token")
   resetTokenExpiry  DateTime? @map("reset_token_expiry") @db.Timestamp(6)
+  exemptFromDeposit Boolean?  @default(false) @map("exempt_from_deposit")
   @@map("users")
 }
 

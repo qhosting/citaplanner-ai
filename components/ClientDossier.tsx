@@ -27,6 +27,11 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
   const [isEditingClinical, setIsEditingClinical] = useState(false);
   const [tempClientData, setTempClientData] = useState<Partial<Client>>(client);
 
+  // Sincronizar datos temporales cuando cambie el cliente prop
+  React.useEffect(() => {
+    setTempClientData(client);
+  }, [client]);
+
   const [newRecord, setNewRecord] = useState<Partial<TreatmentRecord>>({
     serviceName: '',
     notes: '',
@@ -315,6 +320,30 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
                             ) : (
                                 <p className="text-slate-400 text-xs sm:text-sm font-medium leading-relaxed">{client.medicalConditions || 'No se reportan condiciones especiales de salud.'}</p>
                             )}
+                         </div>
+                         <div className="pt-4 border-t border-white/5 space-y-3">
+                            <label className="text-[9px] font-black text-slate-600 uppercase tracking-wider block">Exención de Anticipo (Reserva sin pago previo)</label>
+                            <div className="flex items-center justify-between bg-black/30 p-3 rounded-xl border border-white/5">
+                               <div>
+                                  <p className="text-xs font-bold text-white uppercase tracking-tight">Exentar de Anticipo</p>
+                                  <p className="text-[9px] text-slate-500 font-medium">Permite al cliente agendar citas en /book sin cargar comprobante.</p>
+                               </div>
+                               {isEditingClinical ? (
+                                   <label className="relative inline-flex items-center cursor-pointer select-none">
+                                       <input 
+                                           type="checkbox" 
+                                           className="sr-only peer" 
+                                           checked={tempClientData.exemptFromDeposit || false} 
+                                           onChange={e => setTempClientData({...tempClientData, exemptFromDeposit: e.target.checked})} 
+                                       />
+                                       <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#D4AF37] peer-checked:after:bg-black peer-checked:after:border-transparent"></div>
+                                   </label>
+                               ) : (
+                                   <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${client.exemptFromDeposit ? 'bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37]' : 'bg-white/5 border border-white/5 text-slate-400'}`}>
+                                       {client.exemptFromDeposit ? 'EXENTO' : 'REQUERIDO'}
+                                   </span>
+                               )}
+                            </div>
                          </div>
                          <div className="pt-4 border-t border-white/5 flex items-center gap-3">
                             <div className="p-2 bg-[#D4AF37]/10 rounded-xl text-[#D4AF37] shrink-0"><Info size={14}/></div>

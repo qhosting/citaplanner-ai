@@ -104,6 +104,20 @@ async function ensureSchemaIntegrity() {
                         ALTER TABLE landing_settings ADD COLUMN product_ids JSONB DEFAULT '[]';
                     END IF;
                 END IF;
+
+                -- Solo intentar si la tabla existe en users
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='users') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='exempt_from_deposit') THEN
+                        ALTER TABLE users ADD COLUMN exempt_from_deposit BOOLEAN DEFAULT FALSE;
+                    END IF;
+                END IF;
+
+                -- Solo intentar si la tabla existe en clients
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='clients') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='exempt_from_deposit') THEN
+                        ALTER TABLE clients ADD COLUMN exempt_from_deposit BOOLEAN DEFAULT FALSE;
+                    END IF;
+                END IF;
             END $$;
         `);
         console.log("✅ [NEXUS] Database schema integrity verified.");
@@ -1463,6 +1477,16 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
 
         if (user) {
             console.log(`[AUTH DEBUG] Verifying password for user: ${user.phone} (Received length: ${password?.length || 0})`);
+            
+            if (!user.password || typeof user.password !== 'string') {
+                console.warn(`[AUTH DEBUG] User has no password set in database: ${user.phone}`);
+                return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+            }
+            if (!password || typeof password !== 'string') {
+                console.warn(`[AUTH DEBUG] Password parameter is invalid or empty`);
+                return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+            }
+
             const validPassword = await bcrypt.compare(password, user.password);
 
             if (!validPassword) {
@@ -1502,6 +1526,7 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
                 phone: user.phone,
                 role: user.role,
                 branchId: user.branchId,
+                exemptFromDeposit: user.exemptFromDeposit || false, // CRITICAL: Omit deposit pre-confirmation if true
                 relatedId: user.relatedId // CRITICAL: Frontend needs this to know its current tenant context
             };
 
@@ -2054,6 +2079,7 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
             consentDate: u.preferences?.consentDate || null,
             consentType: u.preferences?.consentType || null,
             lashDiagnosis: u.preferences?.lashDiagnosis || null,
+            exemptFromDeposit: u.exemptFromDeposit || false,
             treatmentHistory: [] // TODO: Fetch from appointments
         }));
 
@@ -2063,7 +2089,7 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
 
 app.post('/api/clients', authenticateToken, async (req, res) => {
     try {
-        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, lashDiagnosis } = req.body;
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, lashDiagnosis, exemptFromDeposit } = req.body;
 
         const newClient = await prisma.user.create({
             data: {
@@ -2074,6 +2100,7 @@ app.post('/api/clients', authenticateToken, async (req, res) => {
                 skinType,
                 allergies,
                 medicalConditions,
+                exemptFromDeposit: exemptFromDeposit || false,
                 preferences: {
                     notes,
                     birthDate,
@@ -2090,7 +2117,7 @@ app.post('/api/clients', authenticateToken, async (req, res) => {
 app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted, consentDate, consentType, lashDiagnosis } = req.body;
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted, consentDate, consentType, lashDiagnosis, exemptFromDeposit } = req.body;
 
         // Fetch existing to merge preferences
         const existing = await prisma.user.findUnique({ where: { id } });
@@ -2104,6 +2131,7 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
                 skinType,
                 allergies,
                 medicalConditions,
+                exemptFromDeposit: exemptFromDeposit !== undefined ? exemptFromDeposit : existing?.exemptFromDeposit,
                 preferences: {
                     ...(existing?.preferences || {}),
                     notes,
