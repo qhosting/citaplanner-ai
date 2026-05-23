@@ -279,6 +279,13 @@ export const api = {
     return res.ok ? await res.json() : [];
   },
 
+  getLashStats: async (): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/clients/stats`);
+      return res.ok ? await res.json() : null;
+    } catch { return null; }
+  },
+
   updateClient: async (c: Client): Promise<boolean> => {
     const res = await fetchWithAuth(`${API_URL}/clients/${c.id}`, {
       method: 'PUT',

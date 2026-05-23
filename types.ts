@@ -166,6 +166,23 @@ export interface TreatmentRecord {
   professionalName: string;
 }
 
+export interface LashDiagnosis {
+  direccion?: string;
+  preferenciaDiaHora?: string;
+  referralSource?: 'FACEBOOK' | 'REVISTA' | 'RECOMENDACION' | 'OTRO';
+  firstTime?: boolean;
+  previousTypes?: ('INDIVIDUALES' | 'TIRA' | 'RACIMO' | 'OTRAS')[];
+  permAndTint?: 'ENCHINADO' | 'TINTE' | 'AMBOS' | 'NINGUNO';
+  frequency?: 'OCASION_ESPECIAL' | 'USO_DIARIO';
+  contactLenses?: boolean;
+  touchesEyes?: boolean;
+  eyeDiseases?: boolean;
+  sleepSide?: 'DERECHO' | 'IZQUIERDO' | 'BOCA_ARRIBA';
+  eyeDrops?: string;
+  eyesClosedDuration?: boolean;
+  conditions?: Record<string, boolean>;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -180,6 +197,7 @@ export interface Client {
   notes?: string;
   birthDate?: string;
   treatmentHistory: TreatmentRecord[];
+  lashDiagnosis?: LashDiagnosis;
   createdAt?: string;
 }
 

@@ -3,12 +3,13 @@ import React, { useState, useRef } from 'react';
 import { 
   X, FileText, Activity, ShieldAlert, Sparkles, Plus, 
   Calendar, User, Beaker, Wand2, Loader2, History, TrendingUp, Info, Scale, ShieldCheck, Download, 
-  Camera, ChevronRight, Save, Eye, Scissors, Syringe, Droplet, ClipboardCheck
+  Camera, ChevronRight, Save, Eye, Scissors, Syringe, Droplet, ClipboardCheck, ScrollText
 } from 'lucide-react';
 import { Client, TreatmentRecord } from '../types';
 import { toast } from 'sonner';
 import { ConsentModal } from './ConsentModal';
 import { api } from '../services/api';
+import { LashDiagnosisForm } from './LashDiagnosisForm';
 
 interface ClientDossierProps {
   client: Client;
@@ -18,7 +19,7 @@ interface ClientDossierProps {
 }
 
 export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, onClose, onUpdateClient }) => {
-  const [activeTab, setActiveTab] = useState<'RECORDS' | 'CLINICAL' | 'AI' | 'LEGAL' | 'GALLERY'>('RECORDS');
+  const [activeTab, setActiveTab] = useState<'RECORDS' | 'CLINICAL' | 'DIAGNOSIS' | 'AI' | 'LEGAL' | 'GALLERY'>('RECORDS');
   const [isAddingRecord, setIsAddingRecord] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   
@@ -124,7 +125,14 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
               </div>
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight uppercase leading-none">{client.name}</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold text-white tracking-tight uppercase leading-none flex items-center gap-2">
+                {client.name}
+                {(client.lashDiagnosis?.conditions?.cyanoacrylateHypersensitivity || client.lashDiagnosis?.conditions?.glueAllergy) && (
+                  <span className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[8px] font-black uppercase tracking-wider rounded-md animate-pulse">
+                    Alergia Pegamento
+                  </span>
+                )}
+              </h2>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                 <p className="text-[8px] sm:text-[9px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1"><Activity size={9} className="text-[#D4AF37]/80"/> ID Red: {client.phone}</p>
                 <div className="hidden xs:block w-0.5 h-0.5 rounded-full bg-slate-800" />
@@ -142,6 +150,7 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
           {[
             { id: 'RECORDS', label: 'Protocolos', icon: History },
             { id: 'CLINICAL', label: 'Biometría', icon: Activity },
+            { id: 'DIAGNOSIS', label: 'Ficha Técnica', icon: ScrollText },
             { id: 'GALLERY', label: 'Galería Visual', icon: Camera },
             { id: 'AI', label: 'Estratega AI', icon: Wand2 },
             { id: 'LEGAL', label: 'Cumplimiento', icon: Scale }
@@ -317,6 +326,53 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
             </div>
           )}
 
+          {/* TAB: DIAGNOSIS (LASH DIAGNOSIS) */}
+          {activeTab === 'DIAGNOSIS' && (
+            <div className="animate-entrance space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-2">
+                <div>
+                    <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter">Ficha Técnica de Pestañas</h3>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Diagnóstico y consentimiento de salud integral</p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const selfLink = `${window.location.origin}/diagnostico/${client.id}`;
+                    navigator.clipboard.writeText(selfLink);
+                    toast.success("Enlace de autollenado copiado. Envíalo al cliente por WhatsApp.");
+                  }}
+                  className="bg-white/5 text-slate-400 hover:text-white border border-white/5 hover:border-white/10 px-5 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl self-start sm:self-auto"
+                >
+                  <Sparkles size={14} /> Compartir Ficha
+                </button>
+              </div>
+
+              <LashDiagnosisForm 
+                clientId={client.id}
+                initialData={client.lashDiagnosis}
+                onSave={async (updatedDiagnosis) => {
+                  try {
+                    const success = await api.updateClient({
+                      ...client,
+                      lashDiagnosis: updatedDiagnosis
+                    });
+                    if (success) {
+                      onUpdateClient({
+                        ...client,
+                        lashDiagnosis: updatedDiagnosis
+                      });
+                      toast.success("Ficha de pestañas guardada correctamente");
+                    } else {
+                      toast.error("Error al guardar la ficha técnica");
+                    }
+                  } catch (err) {
+                    toast.error("Error al guardar la ficha técnica");
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* TAB: GALLERY (NEW) */}
           {activeTab === 'GALLERY' && (
             <div className="animate-entrance space-y-8">
@@ -361,7 +417,7 @@ export const ClientDossier: React.FC<ClientDossierProps> = ({ client, isOpen, on
                         </div>
                         <div>
                           <h4 className="text-lg sm:text-xl font-black text-white uppercase tracking-tighter">Consultoría AI <span className="text-[#D4AF37] font-light italic">Master</span></h4>
-                          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">Análisis de patrones histopatológicos simulados</p>
+                          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-1">Análisis predictivo de evolución cutánea y retención folicular</p>
                         </div>
                     </div>
 

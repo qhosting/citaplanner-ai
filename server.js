@@ -1949,11 +1949,82 @@ app.delete('/api/services/:id', authenticateToken, async (req, res) => {
 
 // --- CLIENTS ENDPOINTS ---
 
+app.get('/api/clients/stats', authenticateToken, async (req, res) => {
+    try {
+        const clients = await prisma.user.findMany({
+            where: { role: 'CLIENT' }
+        });
+
+        let totalWithDiagnosis = 0;
+        const referralSources = { FACEBOOK: 0, REVISTA: 0, RECOMENDACION: 0, OTRO: 0 };
+        const firstTimeStats = { true: 0, false: 0 };
+        const sleepSides = { DERECHO: 0, IZQUIERDO: 0, BOCA_ARRIBA: 0 };
+        const criticalAllergies = { cyanoacrylate: 0, generalGlue: 0 };
+        const commonConditions = {
+            thyroid: 0,
+            alopecia: 0,
+            eyeSurgery: 0,
+            pregnancy: 0,
+            hormonalImbalance: 0,
+            extremeStress: 0
+        };
+
+        clients.forEach(u => {
+            const diagnosis = u.preferences?.lashDiagnosis;
+            if (diagnosis) {
+                totalWithDiagnosis++;
+                
+                // Acquisition source
+                const source = diagnosis.referralSource;
+                if (source && referralSources[source] !== undefined) {
+                    referralSources[source]++;
+                } else if (source) {
+                    referralSources.OTRO++;
+                }
+
+                // First time
+                if (diagnosis.firstTime === true) firstTimeStats.true++;
+                else if (diagnosis.firstTime === false) firstTimeStats.false++;
+
+                // Sleep side
+                const sleep = diagnosis.sleepSide;
+                if (sleep && sleepSides[sleep] !== undefined) {
+                    sleepSides[sleep]++;
+                }
+
+                // Conditions and Allergies
+                const cond = diagnosis.conditions || {};
+                if (cond.cyanoacrylateHypersensitivity === true) criticalAllergies.cyanoacrylate++;
+                if (cond.glueAllergy === true) criticalAllergies.generalGlue++;
+
+                if (cond.thyroid === true) commonConditions.thyroid++;
+                if (cond.alopecia === true) commonConditions.alopecia++;
+                if (cond.eyeSurgery === true) commonConditions.eyeSurgery++;
+                if (cond.pregnancy === true) commonConditions.pregnancy++;
+                if (cond.hormonalImbalance === true) commonConditions.hormonalImbalance++;
+                if (cond.extremeStress === true) commonConditions.extremeStress++;
+            }
+        });
+
+        res.json({
+            success: true,
+            totalClients: clients.length,
+            totalWithDiagnosis,
+            referralSources,
+            firstTimeStats,
+            sleepSides,
+            criticalAllergies,
+            commonConditions
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
         const clients = await prisma.user.findMany({
             where: {
-                
                 role: 'CLIENT'
             },
             orderBy: { name: 'asc' }
@@ -1971,6 +2042,9 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
             notes: u.preferences?.notes || '',
             birthDate: u.preferences?.birthDate || null,
             consentAccepted: u.preferences?.consentAccepted || false,
+            consentDate: u.preferences?.consentDate || null,
+            consentType: u.preferences?.consentType || null,
+            lashDiagnosis: u.preferences?.lashDiagnosis || null,
             treatmentHistory: [] // TODO: Fetch from appointments
         }));
 
@@ -1980,7 +2054,7 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
 
 app.post('/api/clients', authenticateToken, async (req, res) => {
     try {
-        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate } = req.body;
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, lashDiagnosis } = req.body;
 
         const newClient = await prisma.user.create({
             data: {
@@ -1988,14 +2062,14 @@ app.post('/api/clients', authenticateToken, async (req, res) => {
                 phone,
                 email,
                 role: 'CLIENT',
-                
                 skinType,
                 allergies,
                 medicalConditions,
                 preferences: {
                     notes,
                     birthDate,
-                    consentAccepted: false // Default
+                    consentAccepted: false, // Default
+                    lashDiagnosis: lashDiagnosis || null
                 }
             }
         });
@@ -2007,7 +2081,7 @@ app.post('/api/clients', authenticateToken, async (req, res) => {
 app.put('/api/clients/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted } = req.body;
+        const { name, phone, email, skinType, allergies, medicalConditions, notes, birthDate, consentAccepted, consentDate, consentType, lashDiagnosis } = req.body;
 
         // Fetch existing to merge preferences
         const existing = await prisma.user.findUnique({ where: { id } });
@@ -2025,7 +2099,10 @@ app.put('/api/clients/:id', authenticateToken, async (req, res) => {
                     ...(existing?.preferences || {}),
                     notes,
                     birthDate,
-                    consentAccepted
+                    consentAccepted,
+                    consentDate: consentDate || (existing?.preferences?.consentDate),
+                    consentType: consentType || (existing?.preferences?.consentType),
+                    lashDiagnosis: lashDiagnosis !== undefined ? lashDiagnosis : (existing?.preferences?.lashDiagnosis || null)
                 }
             }
         });
