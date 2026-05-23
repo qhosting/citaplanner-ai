@@ -157,7 +157,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <ScrollText size={12} /> Consentimiento de Pestañas (Eye Design)
+            <ScrollText size={12} /> Consentimiento de Pestañas (Shula Studio)
           </button>
           <button
             onClick={() => {
@@ -184,7 +184,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
               // Specific Lash Consent Clauses mapped from image
               <div className="space-y-4 text-[10.5px] sm:text-xs text-slate-400 leading-relaxed font-medium">
                 <p className="text-white font-bold uppercase tracking-wider text-[9px] border-b border-white/5 pb-2">
-                  Acuerdo de Aplicación de Extensiones de Pestañas - Eye Design
+                  Acuerdo de Aplicación de Extensiones de Pestañas - Shula Studio
                 </p>
                 <p>
                   Yo, <b className="text-white">{clientName}</b>, estoy de acuerdo en la aplicación y/o remoción de las extensiones de pestañas a mis pestañas naturales. La especialista técnica me ha explicado detalladamente el procedimiento y los riesgos que este implica.
@@ -198,10 +198,10 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
                     <Droplets size={12} /> Cuidados Posteriores y Mantenimiento:
                   </p>
                   <ul className="list-disc pl-4 space-y-2 text-[10.5px]">
-                    <li><b>Instrucciones de Cuidado:</b> Estoy de acuerdo en seguir rigurosamente las instrucciones proporcionadas por Eye Design. Si no son cuidadas correctamente, acepto que la durabilidad de las mismas será mi única responsabilidad.</li>
+                    <li><b>Instrucciones de Cuidado:</b> Estoy de acuerdo en seguir rigurosamente las instrucciones proporcionadas por Shula Studio. Si no son cuidadas correctamente, acepto que la durabilidad de las mismas será mi única responsabilidad.</li>
                     <li><b>Regla de 48 Horas:</b> Evitaré mojar mis extensiones las primeras 48 horas posteriores al servicio. Adicionalmente, durante los dos primeros días evitaré nadar, ingresar a saunas, vapores o fuentes de calor intenso.</li>
                     <li><b>Uso de Maquillaje:</b> Acepto evitar el uso de rímel a base de aceite (waterproof/a prueba de agua) y no utilizar rizadores mecánicos de pestañas, permanentes, tintes ni químicos agresivos en la zona.</li>
-                    <li><b>Contacto y Retiro:</b> Si llego a sentir cualquier tipo de irritación severa o picor, me comprometo a contactar de inmediato a Eye Design para que sean removidas profesionalmente. <b>Bajo ninguna circunstancia</b> intentaré quitármelas por mi cuenta, ya que podría causar la pérdida prematura de mis pestañas naturales.</li>
+                    <li><b>Contacto y Retiro:</b> Si llego a sentir cualquier tipo de irritación severa o picor, me comprometo a contactar de inmediato a Shula Studio para que sean removidas profesionalmente. <b>Bajo ninguna circunstancia</b> intentaré quitármelas por mi cuenta, ya que podría causar la pérdida prematura de mis pestañas naturales.</li>
                   </ul>
                 </div>
 
