@@ -357,8 +357,7 @@ const sendWhatsAppMessage = async (phone, text, branchId, organizationId) => {
                 payload: { chatId, text },
                 response: 'Sent',
                 status: 'SUCCESS',
-                branchId,
-                organizationId
+                branchId
             }
         });
     } catch (e) {
@@ -370,8 +369,7 @@ const sendWhatsAppMessage = async (phone, text, branchId, organizationId) => {
                 payload: { phone, text },
                 response: e.message,
                 status: 'ERROR',
-                branchId,
-                organizationId
+                branchId
             }
         });
     }
@@ -460,6 +458,69 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     // If we reach here, express.static didn't find the file
     res.status(404).send('Archivo no encontrado en el servidor de CitaPlanner');
 });
+
+const serveDynamicIndex = async (req, res) => {
+    try {
+        const distPath = path.join(__dirname, 'dist', 'index.html');
+        const rootPath = path.join(__dirname, 'index.html');
+        
+        let actualPath = distPath;
+        if (!fs.existsSync(actualPath)) {
+            actualPath = rootPath;
+        }
+        
+        if (!fs.existsSync(actualPath)) {
+            return res.status(404).send('index.html not found');
+        }
+
+        let html = fs.readFileSync(actualPath, 'utf8');
+
+        // Fetch landing settings from PostgreSQL database via Prisma
+        let data = await prisma.landingSetting.findFirst({
+            where: { templateId: 'shulastudio' }
+        });
+        if (!data) {
+            data = await prisma.landingSetting.findFirst({
+                where: { businessName: { contains: 'shula', mode: 'insensitive' } }
+            });
+        }
+        if (!data) {
+            data = await prisma.landingSetting.findFirst();
+        }
+
+        if (data) {
+            const title = data.seoTitle || data.businessName || "CitaPlanner Elite";
+            const desc = data.aboutText || data.slogan || "Plataforma elite para la gestión de servicios profesionales.";
+            const image = data.heroImageUrl || data.logoUrl || "https://citaplanner.com/og-image.png";
+
+            // Dynamic replacements for SEO & Open Graph Meta Tags ( WhatsApp / Social Link Sharing Unfurling )
+            html = html.replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`);
+            
+            // SEO Base Meta
+            html = html.replace(/<meta name="description" content=".*?"/gi, `<meta name="description" content="${desc}"`);
+            
+            // Open Graph (Facebook, WhatsApp, LinkedIn)
+            html = html.replace(/<meta property="og:title" content=".*?"/gi, `<meta property="og:title" content="${title}"`);
+            html = html.replace(/<meta property="og:description" content=".*?"/gi, `<meta property="og:description" content="${desc}"`);
+            html = html.replace(/<meta property="og:image" content=".*?"/gi, `<meta property="og:image" content="${image}"`);
+            html = html.replace(/<meta property="og:site_name" content=".*?"/gi, `<meta property="og:site_name" content="${data.businessName || 'CitaPlanner'}"`);
+            
+            // Twitter Cards
+            html = html.replace(/<meta name="twitter:title" content=".*?"/gi, `<meta name="twitter:title" content="${title}"`);
+            html = html.replace(/<meta name="twitter:description" content=".*?"/gi, `<meta name="twitter:description" content="${desc}"`);
+            html = html.replace(/<meta name="twitter:image" content=".*?"/gi, `<meta name="twitter:image" content="${image}"`);
+        }
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (err) {
+        console.error("❌ SEO Meta Injection Error:", err.message);
+        res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    }
+};
+
+app.get('/', serveDynamicIndex);
+app.get('/index.html', serveDynamicIndex);
 
 app.use(express.static(path.join(__dirname, 'dist')));
 
@@ -2546,6 +2607,424 @@ app.post('/api/settings/bridge/test', authenticateToken, async (req, res) => {
 });
 
 
+// --- WHATSAPP FLOWS INTEGRATION ENDPOINTS ---
+
+// Helper for generating available slots
+const generateTimeSlotsHelper = (date, professional, serviceDuration, appointments) => {
+    const dayOfWeek = date.getDay();
+    
+    let scheduleArray = [];
+    if (professional.weeklySchedule) {
+        if (Array.isArray(professional.weeklySchedule)) {
+            scheduleArray = professional.weeklySchedule;
+        } else if (typeof professional.weeklySchedule === 'string') {
+            try {
+                scheduleArray = JSON.parse(professional.weeklySchedule);
+            } catch (e) {
+                scheduleArray = [];
+            }
+        }
+    }
+    
+    const schedule = scheduleArray.find(d => d.dayOfWeek === dayOfWeek);
+    if (!schedule || !schedule.isEnabled || !schedule.slots) return [];
+
+    let exceptionsArray = [];
+    if (professional.exceptions) {
+        if (Array.isArray(professional.exceptions)) {
+            exceptionsArray = professional.exceptions;
+        } else if (typeof professional.exceptions === 'string') {
+            try {
+                exceptionsArray = JSON.parse(professional.exceptions);
+            } catch (e) {
+                exceptionsArray = [];
+            }
+        }
+    }
+
+    const isBlocked = exceptionsArray.some(exc => {
+        const start = new Date(exc.startDate);
+        const end = new Date(exc.endDate);
+        const checkDate = new Date(date);
+        checkDate.setHours(0, 0, 0, 0);
+        const excStart = new Date(start);
+        excStart.setHours(0, 0, 0, 0);
+        const excEnd = new Date(end);
+        excEnd.setHours(23, 59, 59, 999);
+        return checkDate >= excStart && checkDate <= excEnd;
+    });
+
+    if (isBlocked) return [];
+
+    const slots = [];
+
+    const dayAppointments = appointments.filter(a => {
+        if (!a.startDateTime) return false;
+        const aptDate = new Date(a.startDateTime);
+        return aptDate.getDate() === date.getDate() &&
+            aptDate.getMonth() === date.getMonth() &&
+            aptDate.getFullYear() === date.getFullYear() &&
+            a.status !== 'CANCELLED';
+    });
+
+    schedule.slots.forEach(range => {
+        const [startH, startM] = range.start.split(':').map(Number);
+        const [endH, endM] = range.end.split(':').map(Number);
+
+        let current = new Date(date);
+        current.setHours(startH, startM, 0, 0);
+
+        const endTime = new Date(date);
+        endTime.setHours(endH, endM, 0, 0);
+
+        const now = new Date();
+
+        while (current.getTime() + serviceDuration * 60000 <= endTime.getTime()) {
+            const slotEnd = new Date(current.getTime() + serviceDuration * 60000);
+
+            const isTaken = dayAppointments.some(apt => {
+                if (!apt.startDateTime || !apt.endDateTime) return false;
+                const aptStart = new Date(apt.startDateTime);
+                const aptEnd = new Date(apt.endDateTime);
+                return current < aptEnd && slotEnd > aptStart;
+            });
+
+            if (current.getTime() > now.getTime() && !isTaken) {
+                slots.push(current.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+            }
+            current.setMinutes(current.getMinutes() + 30);
+        }
+    });
+
+    return slots;
+};
+
+// Retrieve settings
+app.get('/api/settings/whatsapp-flows', authenticateToken, async (req, res) => {
+    try {
+        let setting = await prisma.setting.findUnique({
+            where: { key: 'whatsapp_flows' }
+        });
+        
+        if (!setting) {
+            setting = await prisma.setting.create({
+                data: {
+                    key: 'whatsapp_flows',
+                    value: {
+                        enabled: false,
+                        privateKey: '',
+                        publicKey: '',
+                        flowId: ''
+                    }
+                }
+            });
+        }
+        res.json({ success: true, settings: setting.value });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Update settings
+app.post('/api/settings/whatsapp-flows', authenticateToken, async (req, res) => {
+    try {
+        const { enabled, privateKey, publicKey, flowId } = req.body;
+        const setting = await prisma.setting.upsert({
+            where: { key: 'whatsapp_flows' },
+            update: {
+                value: { enabled, privateKey, publicKey, flowId }
+            },
+            create: {
+                key: 'whatsapp_flows',
+                value: { enabled, privateKey, publicKey, flowId }
+            }
+        });
+        res.json({ success: true, settings: setting.value });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Generate RSA Keys sync on-the-fly
+app.post('/api/settings/whatsapp-flows/generate-keys', authenticateToken, async (req, res) => {
+    try {
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048,
+            publicKeyEncoding: {
+                type: 'spki',
+                format: 'pem'
+            },
+            privateKeyEncoding: {
+                type: 'pkcs8',
+                format: 'pem'
+            }
+        });
+        res.json({ success: true, publicKey, privateKey });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Webhook GET validation / diagnostics
+app.get('/api/webhooks/whatsapp-flows', async (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === (process.env.WHATSAPP_VERIFY_TOKEN || 'citaplanner_flow_token')) {
+            console.log('✅ WhatsApp Flow Webhook Verified Successfully');
+            return res.send(challenge);
+        }
+        return res.status(403).send('Forbidden');
+    }
+    
+    // Friendly status page
+    res.send('CitaPlanner WhatsApp Flows dynamic secure endpoint is ACTIVE. Ready to parse AES-128-GCM Meta packets.');
+});
+
+// Webhook POST Meta packet handler
+app.post('/api/webhooks/whatsapp-flows', async (req, res) => {
+    let decryptedBody = null;
+    let aesKey = null;
+    let initial_vector = null;
+    let isEncrypted = false;
+
+    // Load configs
+    const flowsSetting = await prisma.setting.findUnique({ where: { key: 'whatsapp_flows' } });
+    const flowsConfig = flowsSetting?.value || {};
+
+    try {
+        const { encrypted_flow_data, encrypted_aes_key, initial_vector: iv } = req.body;
+
+        // Support clear text testing mode for developers / simulated phone requests
+        if (req.body.decrypted_body_test) {
+            decryptedBody = req.body.decrypted_body_test;
+            isEncrypted = false;
+        } else if (encrypted_flow_data && encrypted_aes_key && iv) {
+            if (!flowsConfig.privateKey) {
+                console.error("❌ WhatsApp Flows Private Key is missing");
+                return res.status(400).send("Private Key is not configured on CitaPlanner server.");
+            }
+
+            isEncrypted = true;
+            initial_vector = iv;
+
+            // 1. Decrypt AES Key using CitaPlanner's RSA Private Key (OAEP padding, SHA-256)
+            aesKey = crypto.privateDecrypt(
+                {
+                    key: flowsConfig.privateKey,
+                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                    oaepHash: 'sha256'
+                },
+                Buffer.from(encrypted_aes_key, 'base64')
+            );
+
+            // 2. Decrypt encrypted_flow_data using AES-128-GCM
+            const rawData = Buffer.from(encrypted_flow_data, 'base64');
+            const authTag = rawData.subarray(-16);
+            const encryptedData = rawData.subarray(0, -16);
+
+            const decipher = crypto.createDecipheriv(
+                'aes-128-gcm',
+                aesKey,
+                Buffer.from(iv, 'base64')
+            );
+            decipher.setAuthTag(authTag);
+
+            let decrypted = decipher.update(encryptedData, null, 'utf8');
+            decrypted += decipher.final('utf8');
+
+            decryptedBody = JSON.parse(decrypted);
+        } else {
+            return res.status(400).send("Invalid payload structure. Missing encrypted flows payload.");
+        }
+
+        console.log("📥 [WhatsApp Flows Webhook Payload]:", JSON.stringify(decryptedBody));
+
+        const { action, screen, data: payload, flow_token } = decryptedBody;
+
+        let responsePayload = {
+            version: "1.0",
+            status: "active"
+        };
+
+        if (action === 'ping') {
+            responsePayload = {
+                version: "1.0",
+                status: "active"
+            };
+        } else if (action === 'data_exchange') {
+            // Routing by screen
+            if (!screen || screen === 'SELECT_BRANCH') {
+                const branches = await prisma.branch.findMany({ where: { status: 'ACTIVE' } });
+                responsePayload = {
+                    version: "1.0",
+                    screen: "SELECT_BRANCH",
+                    data: {
+                        branches: branches.map(b => ({ id: b.id, title: b.name }))
+                    }
+                };
+            } else if (screen === 'SELECT_SERVICE') {
+                const services = await prisma.service.findMany({
+                    where: { branchId: payload.branch_id, status: 'ACTIVE' }
+                });
+                const activeServices = services.length > 0 ? services : await prisma.service.findMany({ where: { status: 'ACTIVE' } });
+                responsePayload = {
+                    version: "1.0",
+                    screen: "SELECT_SERVICE",
+                    data: {
+                        branch_id: payload.branch_id,
+                        services: activeServices.map(s => ({ id: s.id, title: `${s.name} - $${s.price}` }))
+                    }
+                };
+            } else if (screen === 'SELECT_PROFESSIONAL') {
+                const professionals = await prisma.professional.findMany({
+                    where: { branchId: payload.branch_id }
+                });
+                const activePros = professionals.length > 0 ? professionals : await prisma.professional.findMany();
+                const filtered = activePros.filter(p => {
+                    if (!p.serviceIds || p.serviceIds.trim() === '') return true;
+                    return p.serviceIds.includes(payload.service_id);
+                });
+                responsePayload = {
+                    version: "1.0",
+                    screen: "SELECT_PROFESSIONAL",
+                    data: {
+                        branch_id: payload.branch_id,
+                        service_id: payload.service_id,
+                        professionals: filtered.map(p => ({ id: p.id, title: p.name }))
+                    }
+                };
+            } else if (screen === 'SELECT_DATE_TIME') {
+                // If they changed the Date but haven't selected a time slot yet
+                if (!payload.time_slot) {
+                    const selectedDate = new Date(payload.date || new Date().toISOString().split('T')[0]);
+                    const service = await prisma.service.findUnique({ where: { id: payload.service_id } });
+                    const professional = await prisma.professional.findUnique({ where: { id: payload.professional_id } });
+                    const appts = await prisma.appointment.findMany({
+                        where: { professionalId: payload.professional_id }
+                    });
+                    const slots = generateTimeSlotsHelper(selectedDate, professional, service?.duration || 60, appts);
+                    responsePayload = {
+                        version: "1.0",
+                        screen: "SELECT_DATE_TIME",
+                        data: {
+                            branch_id: payload.branch_id,
+                            service_id: payload.service_id,
+                            professional_id: payload.professional_id,
+                            date: payload.date,
+                            time_slots: slots.map(t => ({ id: t, title: t }))
+                        }
+                    };
+                } else {
+                    // Transition to Confirmation Screen
+                    const branch = await prisma.branch.findUnique({ where: { id: payload.branch_id } });
+                    const service = await prisma.service.findUnique({ where: { id: payload.service_id } });
+                    const professional = await prisma.professional.findUnique({ where: { id: payload.professional_id } });
+                    
+                    responsePayload = {
+                        version: "1.0",
+                        screen: "CONFIRM_BOOKING",
+                        data: {
+                            branch_id: payload.branch_id,
+                            service_id: payload.service_id,
+                            professional_id: payload.professional_id,
+                            date: payload.date,
+                            time_slot: payload.time_slot,
+                            branch_name: branch?.name || "Sucursal Matriz",
+                            service_name: `${service?.name} ($${service?.price})`,
+                            professional_name: professional?.name || "Especialista Master"
+                        }
+                    };
+                }
+            }
+        } else if (action === 'complete') {
+            // Process booking completion
+            const { branch_id, service_id, professional_id, date, time_slot, client_name, client_phone } = payload;
+            
+            const startDateTime = new Date(`${date}T${time_slot}:00`);
+            const service = await prisma.service.findUnique({ where: { id: service_id } });
+            const endDateTime = new Date(startDateTime.getTime() + (service?.duration || 60) * 60000);
+            
+            // Create Appointment
+            const newAppointment = await prisma.appointment.create({
+                data: {
+                    title: service?.name || "Cita WhatsApp",
+                    startDateTime,
+                    endDateTime,
+                    clientName: client_name,
+                    clientPhone: client_phone,
+                    description: `Reservado vía WhatsApp Flow (Token: ${flow_token || 'MasterSim'})`,
+                    status: "SCHEDULED",
+                    professionalId: professional_id,
+                    serviceId: service_id,
+                    branchId: branch_id
+                }
+            });
+
+            // CRM Sync: Client capture
+            const phoneClean = client_phone.replace(/[^0-9]/g, '');
+            const clientExists = await prisma.client.findFirst({
+                where: { phone: { contains: phoneClean } }
+            });
+            
+            if (!clientExists) {
+                await prisma.client.create({
+                    data: {
+                        name: client_name,
+                        phone: phoneClean,
+                        notes: "Capturado automáticamente desde WhatsApp Flow"
+                    }
+                });
+            }
+
+            // Dispatch WhatsApp confirmation in the background
+            const waMessage = `✨ *Reserva Exitosa en WhatsApp:* Hola ${client_name}, tu cita para *${service?.name}* ha sido confirmada en nuestra sucursal. Te esperamos el *${date}* a las *${time_slot} hrs*.`;
+            sendWhatsAppMessage(phoneClean, waMessage, branch_id, null)
+                .catch(e => console.error("❌ WhatsApp Flow post-notify error:", e.message));
+
+            responsePayload = {
+                version: "1.0",
+                screen: "SUCCESS_SCREEN",
+                data: {
+                    appointment_id: newAppointment.id,
+                    message: "¡Cita Reservada con éxito! Revisa tu WhatsApp para la confirmación en vivo."
+                }
+            };
+        }
+
+        // Return encrypted package if request was encrypted
+        if (isEncrypted && aesKey && initial_vector) {
+            const decryptIv = Buffer.from(initial_vector, 'base64');
+            const responseIv = Buffer.alloc(decryptIv.length);
+            for (let i = 0; i < decryptIv.length; i++) {
+                responseIv[i] = ~decryptIv[i];
+            }
+
+            const cipher = crypto.createCipheriv('aes-128-gcm', aesKey, responseIv);
+            let encrypted = cipher.update(JSON.stringify(responsePayload), 'utf8');
+            encrypted = Buffer.concat([encrypted, cipher.final()]);
+
+            const authTag = cipher.getAuthTag();
+            const finalResponseBuffer = Buffer.concat([encrypted, authTag]);
+
+            return res.send(finalResponseBuffer.toString('base64'));
+        }
+
+        // Clear text fallback response (for simulated preview & direct postman tests)
+        res.json({ success: true, payload: responsePayload });
+
+    } catch (error) {
+        console.error("🚨 [WhatsApp Flows Endpoint Error]:", error);
+        if (isEncrypted) {
+            return res.status(421).send("Decryption/Encryption Failure in WhatsApp Flows Node");
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 app.post('/api/ai/visual-improve', authenticateToken, async (req, res) => {
     try {
         const { title, category } = req.body;
@@ -2972,9 +3451,7 @@ app.use('/api', (req, res) => {
     res.status(404).json({ error: 'Endpoint de API no encontrado' });
 });
 
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+app.get(/.*/, serveDynamicIndex);
 
 // --- AI AUTOMATIONS (WORKERS) ---
 
@@ -3021,19 +3498,27 @@ cron.schedule('30 * * * *', async () => {
                 status: 'COMPLETED',
                 careSent: false,
                 updatedAt: { lte: threeHoursAgo }
-            },
-            include: { service: true }
+            }
         });
 
         for (const app of apps) {
-            if (app.service?.careInstructions) {
-                const message = `🌸 Para prolongar los resultados de tu "${app.service.name}", te recomendamos:\n\n${app.service.careInstructions}\n\n¡Esperamos verte pronto!`;
-                await sendWhatsAppMessage(app.clientPhone, message, app.branchId, null);
-
+            try {
+                if (app.serviceId) {
+                    const service = await prisma.service.findUnique({
+                        where: { id: app.serviceId }
+                    });
+                    if (service && service.careInstructions) {
+                        const message = `🌸 Para prolongar los resultados de tu "${service.name}", te recomendamos:\n\n${service.careInstructions}\n\n¡Esperamos verte pronto!`;
+                        await sendWhatsAppMessage(app.clientPhone, message, app.branchId, null);
+                    }
+                }
+            } catch (err) {
+                console.error(`❌ Error sending care instructions for appointment ${app.id}:`, err.message);
+            } finally {
                 await prisma.appointment.update({
                     where: { id: app.id },
                     data: { careSent: true }
-                });
+                }).catch(err => console.error("❌ Failed to update careSent status:", err.message));
             }
         }
     } catch (e) { console.error("❌ Care Worker Error:", e); }

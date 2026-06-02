@@ -192,6 +192,32 @@ export const api = {
     } catch (e: any) { return { success: false, error: e.message }; }
   },
 
+  getWhatsappFlowsSettings: async (): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/settings/whatsapp-flows`);
+      return res.ok ? await res.json() : { success: false, settings: null };
+    } catch { return { success: false, settings: null }; }
+  },
+
+  updateWhatsappFlowsSettings: async (settings: any): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/settings/whatsapp-flows`, {
+        method: 'POST',
+        body: JSON.stringify(settings)
+      });
+      return res.ok ? await res.json() : { success: false };
+    } catch { return { success: false }; }
+  },
+
+  generateWhatsappFlowsKeys: async (): Promise<any> => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/settings/whatsapp-flows/generate-keys`, {
+        method: 'POST'
+      });
+      return res.ok ? await res.json() : { success: false };
+    } catch { return { success: false }; }
+  },
+
   getIntegrationLogs: async (): Promise<any[]> => {
     try {
       const res = await fetchWithAuth(`${API_URL}/integrations/status`);

@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import {
    Settings, Save, Globe, Zap, Building2, Loader2,
    ShieldCheck, Database, Key, BellRing, Sparkles, X, Check, Power, Eye, EyeOff, Terminal, Link as LinkIcon, RefreshCw, Server, ShieldAlert, Activity, Wifi, MapPin,
-   Calendar, Copy, ExternalLink, Send
+   Calendar, Copy, ExternalLink, Send, Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../services/api';
@@ -22,6 +21,32 @@ export const SettingsPage: React.FC = () => {
    const [wahaStatus, setWahaStatus] = useState<any>(null);
    const [testPhone, setTestPhone] = useState('');
    const [testingWaha, setTestingWaha] = useState(false);
+
+   // WhatsApp Flows States
+   const [integrationSubTab, setIntegrationSubTab] = useState<'CHANNELS' | 'FLOWS'>('CHANNELS');
+   const [flowsEnabled, setFlowsEnabled] = useState(false);
+   const [flowId, setFlowId] = useState('');
+   const [privateKey, setPrivateKey] = useState('');
+   const [publicKey, setPublicKey] = useState('');
+   const [generatingKeys, setGeneratingKeys] = useState(false);
+   const [savingFlows, setSavingFlows] = useState(false);
+   const [showPrivateKey, setShowPrivateKey] = useState(false);
+
+   // WhatsApp Flows Simulator States
+   const [simScreen, setSimScreen] = useState<'SELECT_BRANCH' | 'SELECT_SERVICE' | 'SELECT_PROFESSIONAL' | 'SELECT_DATE_TIME' | 'CONFIRM_BOOKING' | 'SUCCESS_SCREEN'>('SELECT_BRANCH');
+   const [simBranchId, setSimBranchId] = useState('');
+   const [simServiceId, setSimServiceId] = useState('');
+   const [simProfessionalId, setSimProfessionalId] = useState('');
+   const [simDate, setSimDate] = useState('');
+   const [simTimeSlot, setSimTimeSlot] = useState('');
+   const [simClientName, setSimClientName] = useState('');
+   const [simClientPhone, setSimClientPhone] = useState('');
+   const [simLoading, setSimLoading] = useState(false);
+   const [simBranches, setSimBranches] = useState<any[]>([]);
+   const [simServices, setSimServices] = useState<any[]>([]);
+   const [simProfessionals, setSimProfessionals] = useState<any[]>([]);
+   const [simTimeSlots, setSimTimeSlots] = useState<any[]>([]);
+   const [simSuccessMessage, setSimSuccessMessage] = useState('');
 
    useEffect(() => {
       loadData();
@@ -44,6 +69,142 @@ export const SettingsPage: React.FC = () => {
       }
    };
 
+   const handleSaveFlowsSettings = async () => {
+      setSavingFlows(true);
+      try {
+         const res = await api.updateWhatsappFlowsSettings({
+            enabled: flowsEnabled,
+            flowId,
+            privateKey,
+            publicKey
+         });
+         if (res.success) {
+            toast.success("Configuración de WhatsApp Flows guardada.");
+         } else {
+            toast.error("Error al guardar la configuración.");
+         }
+      } catch (e) {
+         toast.error("Error al conectar con el servidor.");
+      } finally {
+         setSavingFlows(false);
+      }
+   };
+
+   const handleGenerateFlowsKeys = async () => {
+      if (privateKey && !window.confirm("¿Reemplazar llaves existentes? Esto invalidará la clave pública anterior en el portal de Meta.")) return;
+      setGeneratingKeys(true);
+      try {
+         const res = await api.generateWhatsappFlowsKeys();
+         if (res.success && res.privateKey && res.publicKey) {
+            setPrivateKey(res.privateKey);
+            setPublicKey(res.publicKey);
+            toast.success("Nuevas llaves RSA generadas. No olvides guardar los cambios.");
+         } else {
+            toast.error("Error al generar las llaves.");
+         }
+      } catch (e) {
+         toast.error("Falla de red en generación.");
+      } finally {
+         setGeneratingKeys(false);
+      }
+   };
+
+   const handleStartSimulator = async () => {
+      setSimBranchId('');
+      setSimServiceId('');
+      setSimProfessionalId('');
+      setSimDate(new Date(Date.now() + 86400000).toISOString().split('T')[0]); // Tomorrow
+      setSimTimeSlot('');
+      setSimClientName('');
+      setSimClientPhone('');
+      setSimScreen('SELECT_BRANCH');
+      setSimSuccessMessage('');
+      
+      setSimLoading(true);
+      try {
+         const response = await fetch('/api/webhooks/whatsapp-flows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               decrypted_body_test: {
+                  action: 'data_exchange',
+                  screen: 'SELECT_BRANCH',
+                  flow_token: 'SimToken',
+                  data: {}
+               }
+            })
+         });
+         const data = await response.json();
+         if (data.success && data.payload) {
+            setSimBranches(data.payload.data.branches || []);
+            setSimScreen('SELECT_BRANCH');
+         }
+      } catch (e) {
+         toast.error("Error al iniciar simulador.");
+      } finally {
+         setSimLoading(false);
+      }
+   };
+
+   const handleSimulatorAction = async (nextScreen: string, customPayload: any = {}) => {
+      setSimLoading(true);
+      try {
+         const response = await fetch('/api/webhooks/whatsapp-flows', {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+               decrypted_body_test: {
+                  action: nextScreen === 'SUCCESS_SCREEN' ? 'complete' : 'data_exchange',
+                  screen: simScreen,
+                  flow_token: 'SimulatorMasterToken',
+                  data: {
+                     branch_id: simBranchId,
+                     service_id: simServiceId,
+                     professional_id: simProfessionalId,
+                     date: simDate,
+                     time_slot: simTimeSlot,
+                     client_name: simClientName,
+                     client_phone: simClientPhone,
+                     ...customPayload
+                  }
+               }
+            })
+         });
+         const data = await response.json();
+         if (data.success && data.payload) {
+            const payload = data.payload;
+            if (payload.screen === 'SELECT_BRANCH') {
+               setSimBranches(payload.data.branches || []);
+               setSimScreen('SELECT_BRANCH');
+            } else if (payload.screen === 'SELECT_SERVICE') {
+               setSimServices(payload.data.services || []);
+               setSimScreen('SELECT_SERVICE');
+            } else if (payload.screen === 'SELECT_PROFESSIONAL') {
+               setSimProfessionals(payload.data.professionals || []);
+               setSimScreen('SELECT_PROFESSIONAL');
+            } else if (payload.screen === 'SELECT_DATE_TIME') {
+               setSimTimeSlots(payload.data.time_slots || []);
+               setSimScreen('SELECT_DATE_TIME');
+               if (payload.data.date) setSimDate(payload.data.date);
+            } else if (payload.screen === 'CONFIRM_BOOKING') {
+               setSimScreen('CONFIRM_BOOKING');
+            } else if (payload.screen === 'SUCCESS_SCREEN') {
+               setSimSuccessMessage(payload.data.message || 'Cita reservada con éxito.');
+               setSimScreen('SUCCESS_SCREEN');
+               toast.success("¡Cita reservada en vivo desde el simulador!");
+            }
+         } else {
+            toast.error("Error al procesar flujo dinámico en el servidor");
+         }
+      } catch (e) {
+         toast.error("Error de conexión con el webhook");
+      } finally {
+         setSimLoading(false);
+      }
+   };
+
    const loadData = async () => {
       setLoading(true);
       try {
@@ -58,6 +219,14 @@ export const SettingsPage: React.FC = () => {
 
          const wStatus = await api.getWahaStatus();
          setWahaStatus(wStatus);
+
+         const flowsRes = await api.getWhatsappFlowsSettings();
+         if (flowsRes.success && flowsRes.settings) {
+            setFlowsEnabled(flowsRes.settings.enabled || false);
+            setFlowId(flowsRes.settings.flowId || '');
+            setPrivateKey(flowsRes.settings.privateKey || '');
+            setPublicKey(flowsRes.settings.publicKey || '');
+         }
       } catch (e) {
          toast.error("Falla en sincronización de consola.");
       } finally {
@@ -293,94 +462,560 @@ export const SettingsPage: React.FC = () => {
 
                {activeTab === 'INTEGRATIONS' && (
                   <div className="space-y-12 animate-entrance">
-                     <div>
-                        <h3 className="text-3xl font-black text-white tracking-tighter uppercase">Nexus <span className="gold-text-gradient italic">Integrations</span></h3>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-2">Gestión de Enlaces y Protocolos de Comunicación</p>
+                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/5 pb-8 gap-6">
+                        <div>
+                           <h3 className="text-3xl font-black text-white tracking-tighter uppercase">Nexus <span className="gold-text-gradient italic">Integrations</span></h3>
+                           <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-2">Gestión de Enlaces y Protocolos de Comunicación</p>
+                        </div>
+                        <div className="flex bg-black/60 p-2 rounded-2xl border border-white/5 shrink-0">
+                           <button onClick={() => setIntegrationSubTab('CHANNELS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${integrationSubTab === 'CHANNELS' ? 'bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/10' : 'text-zinc-500 hover:text-white'}`}>Canales de Salida</button>
+                           <button onClick={() => { setIntegrationSubTab('FLOWS'); handleStartSimulator(); }} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${integrationSubTab === 'FLOWS' ? 'bg-[#D4AF37] text-black shadow-lg shadow-[#D4AF37]/10' : 'text-zinc-500 hover:text-white'}`}>WhatsApp Flows (Meta)</button>
+                        </div>
                      </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 relative overflow-hidden group">
-                           <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                              <Wifi size={120} />
-                           </div>
-                           <div className="flex items-center gap-6 mb-10">
-                              <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-3xl border border-emerald-500/20">
-                                 <LinkIcon size={32} />
+                     {integrationSubTab === 'CHANNELS' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-entrance">
+                           <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                                 <Wifi size={120} />
                               </div>
-                              <div>
-                                 <h4 className="text-xl font-black text-white uppercase tracking-tight">WhatsApp Node (WAHA)</h4>
-                                 <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Motor de Mensajería y OTPs</p>
-                              </div>
-                           </div>
-
-                           <div className="space-y-6">
-                              <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
-                                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Sesión Activa</span>
-                                 <span className="text-sm font-mono font-black text-white">{wahaStatus?.sessionName || '---'}</span>
-                              </div>
-                              <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
-                                 <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Estado del Nodo</span>
-                                 <div className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${wahaStatus?.status === 'CONNECTED' ? 'bg-emerald-500 shadow-[0_0_10px_#10B981]' : 'bg-rose-500 shadow-[0_0_10px_#F43F5E]'}`} />
-                                    <span className={`text-[10px] font-black uppercase tracking-widest ${wahaStatus?.status === 'CONNECTED' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                       {wahaStatus?.status || 'OFFLINE'}
-                                    </span>
+                              <div className="flex items-center gap-6 mb-10">
+                                 <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-3xl border border-emerald-500/20">
+                                    <LinkIcon size={32} />
+                                 </div>
+                                 <div>
+                                    <h4 className="text-xl font-black text-white uppercase tracking-tight">WhatsApp Node (WAHA)</h4>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Motor de Mensajería y OTPs</p>
                                  </div>
                               </div>
-                              {wahaStatus?.details && (
-                                 <div className="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
-                                    <p className="text-[9px] text-emerald-500/70 font-bold uppercase leading-relaxed">
-                                       El nodo está operando correctamente bajo la sesión maestra. Todos los triggers de agenda están vinculados.
+
+                              <div className="space-y-6">
+                                 <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Sesión Activa</span>
+                                    <span className="text-sm font-mono font-black text-white">{wahaStatus?.sessionName || '---'}</span>
+                                 </div>
+                                 <div className="flex justify-between items-center p-6 bg-black/40 rounded-2xl border border-white/5">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Estado del Nodo</span>
+                                    <div className="flex items-center gap-3">
+                                       <div className={`w-2 h-2 rounded-full ${wahaStatus?.status === 'CONNECTED' ? 'bg-emerald-500 shadow-[0_0_10px_#10B981]' : 'bg-rose-500 shadow-[0_0_10px_#F43F5E]'}`} />
+                                       <span className={`text-[10px] font-black uppercase tracking-widest ${wahaStatus?.status === 'CONNECTED' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                          {wahaStatus?.status || 'OFFLINE'}
+                                       </span>
+                                    </div>
+                                 </div>
+                                 {wahaStatus?.details && (
+                                    <div className="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                                       <p className="text-[9px] text-emerald-500/70 font-bold uppercase leading-relaxed">
+                                          El nodo está operando correctamente bajo la sesión maestra. Todos los triggers de agenda están vinculados.
+                                       </p>
+                                    </div>
+                                 )}
+                                 <button 
+                                    onClick={loadData}
+                                    className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3"
+                                 >
+                                    <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Estado
+                                 </button>
+
+                                 <div className="pt-6 border-t border-white/5 space-y-4">
+                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Prueba de Envío (Diagnóstico)</p>
+                                    <div className="flex gap-3">
+                                       <input 
+                                          type="text" 
+                                          placeholder="521..." 
+                                          value={testPhone}
+                                          onChange={e => setTestPhone(e.target.value)}
+                                          className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500/50"
+                                       />
+                                       <button 
+                                          onClick={handleTestWaha}
+                                          disabled={testingWaha}
+                                          className="bg-emerald-500 text-black px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"
+                                       >
+                                          {testingWaha ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Probar
+                                       </button>
+                                    </div>
+                                    <p className="text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">
+                                       Asegúrate de incluir código de país (ej. 521 para México).
                                     </p>
                                  </div>
-                              )}
-                              <button 
-                                 onClick={loadData}
-                                 className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3"
-                              >
-                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualizar Estado
-                              </button>
+                              </div>
+                           </div>
 
-                              <div className="pt-6 border-t border-white/5 space-y-4">
-                                 <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Prueba de Envío (Diagnóstico)</p>
-                                 <div className="flex gap-3">
-                                    <input 
-                                       type="text" 
-                                       placeholder="521..." 
-                                       value={testPhone}
-                                       onChange={e => setTestPhone(e.target.value)}
-                                       className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-white outline-none focus:border-emerald-500/50"
-                                    />
-                                    <button 
-                                       onClick={handleTestWaha}
-                                       disabled={testingWaha}
-                                       className="bg-emerald-500 text-black px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-2"
-                                    >
-                                       {testingWaha ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Probar
+                           <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 opacity-40 grayscale pointer-events-none">
+                              <div className="flex items-center gap-6 mb-10">
+                                 <div className="p-4 bg-zinc-800 text-zinc-500 rounded-3xl">
+                                    <Building2 size={32} />
+                                 </div>
+                                 <div>
+                                    <h4 className="text-xl font-black text-white uppercase tracking-tight">Email SMTP (Direct)</h4>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Próximamente</p>
+                                 </div>
+                              </div>
+                              <p className="text-[10px] text-zinc-600 font-bold uppercase leading-relaxed">
+                                 La integración nativa de SMTP permitirá el envío de newsletters y recibos digitales sin dependencias externas.
+                              </p>
+                           </div>
+                        </div>
+                     )}
+
+                     {integrationSubTab === 'FLOWS' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start animate-entrance">
+                           <div className="lg:col-span-2 space-y-8">
+                              <div className="bg-white/5 p-10 rounded-[3rem] border border-white/5 space-y-8">
+                                 <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-6">
+                                       <div className="p-4 bg-[#D4AF37]/10 text-[#D4AF37] rounded-3xl border border-[#D4AF37]/20"><Power size={24} /></div>
+                                       <div>
+                                          <h4 className="text-lg font-black text-white uppercase tracking-tight">Estado de WhatsApp Flows</h4>
+                                          <p className="text-[9px] text-zinc-500 font-bold uppercase mt-1">Activa formularios interactivos nativos en WhatsApp</p>
+                                       </div>
+                                    </div>
+                                    <button onClick={() => setFlowsEnabled(!flowsEnabled)} className={`w-16 h-8 rounded-full transition-all relative ${flowsEnabled ? 'bg-[#D4AF37]' : 'bg-zinc-800'}`}>
+                                       <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${flowsEnabled ? 'left-9' : 'left-1'}`} />
                                     </button>
                                  </div>
-                                 <p className="text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">
-                                    Asegúrate de incluir código de país (ej. 521 para México).
-                                 </p>
-                              </div>
-                           </div>
-                        </div>
 
-                        <div className="glass-card p-10 rounded-[3rem] border-white/5 bg-black/40 opacity-40 grayscale pointer-events-none">
-                           <div className="flex items-center gap-6 mb-10">
-                              <div className="p-4 bg-zinc-800 text-zinc-500 rounded-3xl">
-                                 <Building2 size={32} />
+                                 <div className="h-px bg-white/5" />
+
+                                 <div className="space-y-6">
+                                    <div>
+                                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3 block ml-2">Meta Flow ID</label>
+                                       <input type="text" placeholder="Ingresa el ID del Flow provisto por Facebook" value={flowId} onChange={e => setFlowId(e.target.value)} className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-bold text-xs focus:border-[#D4AF37] outline-none" />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                       <div className="space-y-3">
+                                          <div className="flex justify-between items-center px-2">
+                                             <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Clave Privada RSA (PEM)</label>
+                                             <button onClick={() => setShowPrivateKey(!showPrivateKey)} className="text-zinc-500 hover:text-white transition-colors">{showPrivateKey ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                          </div>
+                                          <textarea rows={6} readOnly={generatingKeys} value={privateKey} onChange={e => setPrivateKey(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----..." className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-white font-mono text-[9px] focus:border-[#D4AF37] outline-none resize-none" style={{WebkitTextSecurity: showPrivateKey ? 'none' : 'disc'} as any} />
+                                       </div>
+                                       <div className="space-y-3">
+                                          <div className="flex justify-between items-center px-2">
+                                             <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Clave Pública RSA (PEM)</label>
+                                             <button onClick={() => { navigator.clipboard.writeText(publicKey); toast.success("Clave Pública copiada."); }} className="text-[#D4AF37] hover:underline text-[9px] font-black uppercase tracking-widest">Copiar PEM</button>
+                                          </div>
+                                          <textarea rows={6} readOnly value={publicKey} placeholder="-----BEGIN PUBLIC KEY-----..." className="w-full p-5 bg-black/40 border border-white/5 rounded-2xl text-zinc-500 font-mono text-[9px] outline-none resize-none" />
+                                       </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 pt-4">
+                                       <button onClick={handleGenerateFlowsKeys} disabled={generatingKeys} className="bg-white/5 hover:bg-white/10 text-white px-6 py-4 rounded-xl border border-white/10 text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                          {generatingKeys ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Generar Par de Llaves RSA
+                                       </button>
+                                       <button onClick={handleSaveFlowsSettings} disabled={savingFlows} className="bg-[#D4AF37] hover:scale-[1.02] text-black px-10 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#D4AF37]/10">
+                                          {savingFlows ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar Configuración
+                                       </button>
+                                    </div>
+                                 </div>
                               </div>
-                              <div>
-                                 <h4 className="text-xl font-black text-white uppercase tracking-tight">Email SMTP (Direct)</h4>
-                                 <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Próximamente</p>
+
+                              <div className="bg-black/40 p-10 rounded-[3rem] border border-white/5 space-y-6">
+                                 <div>
+                                    <h4 className="text-sm font-black text-[#D4AF37] uppercase tracking-widest mb-1 flex items-center gap-2"><Globe size={16} /> Configuración de Meta Webhook</h4>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Pasos para registrar en Meta App Dashboard</p>
+                                 </div>
+                                 <div className="space-y-4 text-xs text-zinc-400 font-semibold leading-relaxed">
+                                    <div className="flex gap-4 items-start">
+                                       <div className="w-6 h-6 rounded-full bg-white/5 text-white flex items-center justify-center shrink-0 font-bold">1</div>
+                                       <p className="pt-0.5">Establece la **URL de Endpoint** en: <code className="text-white font-mono text-[10px] bg-black px-2 py-1 rounded select-all">{window.location.origin}/api/webhooks/whatsapp-flows</code></p>
+                                    </div>
+                                    <div className="flex gap-4 items-start">
+                                       <div className="w-6 h-6 rounded-full bg-white/5 text-white flex items-center justify-center shrink-0 font-bold">2</div>
+                                       <p className="pt-0.5">Usa el **Verify Token**: <code className="text-[#D4AF37] font-mono text-[10px] bg-black px-2 py-1 rounded">citaplanner_flow_token</code></p>
+                                    </div>
+                                    <div className="flex gap-4 items-start">
+                                       <div className="w-6 h-6 rounded-full bg-white/5 text-white flex items-center justify-center shrink-0 font-bold">3</div>
+                                       <p className="pt-0.5">Copia la **Clave Pública RSA PEM** y pégala en los ajustes de encriptación del Flow en Meta.</p>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              <div className="bg-white/5 p-10 rounded-[3rem] border border-white/5 space-y-6">
+                                 <div className="flex justify-between items-center">
+                                    <div>
+                                       <h4 className="text-sm font-black text-white uppercase tracking-widest">WhatsApp Flow JSON Schema</h4>
+                                       <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1">Copia y pega este JSON en el editor oficial de Meta</p>
+                                    </div>
+                                    <button onClick={() => {
+                                       const json = `{
+  "version": "2.1",
+  "screens": [
+    {
+      "id": "SELECT_BRANCH",
+      "title": "Sucursal",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Agenda tu Cita"
+          },
+          {
+            "type": "Dropdown",
+            "label": "Sucursal",
+            "name": "branch_id",
+            "required": true,
+            "data-source": "branches"
+          },
+          {
+            "type": "Footer",
+            "label": "Ver Servicios",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "branch_id": "\\\${form.branch_id}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELECT_SERVICE",
+      "title": "Servicio",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Elige tu Servicio"
+          },
+          {
+            "type": "Dropdown",
+            "label": "Servicio",
+            "name": "service_id",
+            "required": true,
+            "data-source": "services"
+          },
+          {
+            "type": "Footer",
+            "label": "Ver Especialistas",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "branch_id": "\\\${data.branch_id}",
+                "service_id": "\\\${form.service_id}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELECT_PROFESSIONAL",
+      "title": "Especialista",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Elige tu Especialista"
+          },
+          {
+            "type": "Dropdown",
+            "label": "Atendido por",
+            "name": "professional_id",
+            "required": true,
+            "data-source": "professionals"
+          },
+          {
+            "type": "Footer",
+            "label": "Ver Horarios",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "branch_id": "\\\${data.branch_id}",
+                "service_id": "\\\${data.service_id}",
+                "professional_id": "\\\${form.professional_id}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "SELECT_DATE_TIME",
+      "title": "Fecha y Hora",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Elige la Fecha"
+          },
+          {
+            "type": "DatePicker",
+            "label": "Fecha de tu cita",
+            "name": "date",
+            "required": true
+          },
+          {
+            "type": "Dropdown",
+            "label": "Horarios Disponibles",
+            "name": "time_slot",
+            "required": true,
+            "data-source": "time_slots"
+          },
+          {
+            "type": "Footer",
+            "label": "Revisar Cita",
+            "on-click-action": {
+              "name": "data_exchange",
+              "payload": {
+                "branch_id": "\\\${data.branch_id}",
+                "service_id": "\\\${data.service_id}",
+                "professional_id": "\\\${data.professional_id}",
+                "date": "\\\${form.date}",
+                "time_slot": "\\\${form.time_slot}"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONFIRM_BOOKING",
+      "title": "Confirmación",
+      "terminal": true,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextHeading",
+            "text": "Confirmación de Reservación"
+          },
+          {
+            "type": "TextBody",
+            "text": "• Sucursal: \\\${data.branch_name}\\\\n• Servicio: \\\${data.service_name}\\\\n• Especialista: \\\${data.professional_name}\\\\n• Fecha: \\\${data.date}\\\\n• Hora: \\\${data.time_slot}"
+          },
+          {
+            "type": "TextInput",
+            "label": "Tu Nombre Completo",
+            "name": "client_name",
+            "required": true
+          },
+          {
+            "type": "TextInput",
+            "label": "Tu Teléfono de Contacto",
+            "name": "client_phone",
+            "required": true
+          },
+          {
+            "type": "Footer",
+            "label": "Confirmar Agendamiento",
+            "on-click-action": {
+              "name": "complete",
+              "payload": {
+                "branch_id": "\\\${data.branch_id}",
+                "service_id": "\\\${data.service_id}",
+                "professional_id": "\\\${data.professional_id}",
+                "date": "\\\${data.date}",
+                "time_slot": "\\\${data.time_slot}",
+                "client_name": "\\\${form.client_name}",
+                "client_phone": "\\\${form.client_phone}"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}`;
+                                       navigator.clipboard.writeText(json);
+                                       toast.success("Flow JSON Schema copiado.");
+                                    }} className="text-[#D4AF37] hover:underline text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5"><Copy size={12} /> Copiar Schema</button>
+                                 </div>
+                                 <div className="bg-black/50 p-6 rounded-2xl border border-white/5 text-[9px] font-mono text-zinc-500 overflow-x-auto max-h-60 custom-scrollbar select-all">
+                                    <pre>{`{
+  "version": "2.1",
+  "screens": [
+    {
+      "id": "SELECT_BRANCH",
+      "title": "Sucursal",
+      "terminal": false,
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextHeading", "text": "Agenda tu Cita" },
+          { "type": "Dropdown", "label": "Sucursal", "name": "branch_id", "required": true, "data-source": "branches" }
+        ]
+      }
+    },
+    ...
+  ]
+}`}</pre>
+                                 </div>
                               </div>
                            </div>
-                           <p className="text-[10px] text-zinc-600 font-bold uppercase leading-relaxed">
-                              La integración nativa de SMTP permitirá el envío de newsletters y recibos digitales sin dependencias externas.
-                           </p>
+
+                           <div className="sticky top-12 space-y-6">
+                              <div className="text-center">
+                                 <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center justify-center gap-2"><Smartphone size={16} className="text-[#D4AF37]" /> Live Simulator</h4>
+                                 <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Valida tu Flow dinámico de extremo a extremo</p>
+                              </div>
+
+                              <div className="w-full max-w-[340px] mx-auto bg-black rounded-[3rem] p-4 border border-zinc-800/80 shadow-2xl shadow-black relative overflow-hidden group">
+                                 <div className="absolute top-6 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-40 flex items-center justify-center">
+                                    <div className="w-3 h-3 bg-zinc-900 rounded-full mr-2" />
+                                    <div className="w-1.5 h-1.5 bg-zinc-900 rounded-full" />
+                                 </div>
+
+                                 <div className="relative w-full h-[580px] bg-[#0b141a] rounded-[2.5rem] overflow-hidden flex flex-col border border-zinc-900">
+                                    <div className="bg-[#075e54] p-4 text-white flex items-center gap-3 border-b border-[#128c7e]/10 pt-8 shrink-0">
+                                       <div className="w-8 h-8 rounded-full bg-[#128c7e] text-white flex items-center justify-center text-xs font-black select-none shadow">CP</div>
+                                       <div>
+                                          <span className="font-black text-[11px] block select-none">CitaPlanner Flows</span>
+                                          <span className="text-[8px] text-emerald-300 font-bold block mt-0.5 select-none flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> En línea</span>
+                                       </div>
+                                    </div>
+
+                                    <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-[#0b141a] relative custom-scrollbar">
+                                       {simLoading && (
+                                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                                             <Loader2 className="animate-spin text-[#D4AF37]" size={36} />
+                                          </div>
+                                       )}
+
+                                       {simScreen === 'SELECT_BRANCH' && simBranches.length === 0 ? (
+                                          <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                                             <div className="p-4 bg-white/5 rounded-full border border-white/5 text-[#D4AF37]"><Sparkles size={36} /></div>
+                                             <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest max-w-[200px] leading-relaxed font-medium">No se ha iniciado la conexión dinámica</p>
+                                             <button onClick={handleStartSimulator} className="px-6 py-3 bg-[#D4AF37] text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:scale-105 transition-all">Iniciar Simulador</button>
+                                          </div>
+                                       ) : (
+                                          <div className="space-y-4 animate-entrance">
+                                             <div className="bg-[#202c33] text-zinc-100 p-4 rounded-3xl rounded-tl-none max-w-[85%] text-[10.5px] font-medium leading-relaxed shadow border border-white/5">
+                                                ¡Hola! 🌸 Bienvenido al asistente de reservas nativo en WhatsApp de CitaPlanner AI.
+                                                <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-[#CE467B] font-black uppercase tracking-wider">
+                                                   📲 WhatsApp Flow Iniciado
+                                                </div>
+                                             </div>
+
+                                             <div className="bg-[#1f2c34] rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl mt-4">
+                                                <div className="bg-[#2a3942] px-4 py-3 flex justify-between items-center border-b border-white/5">
+                                                   <span className="text-[9px] font-black text-white uppercase tracking-widest select-none">
+                                                      {simScreen === 'SELECT_BRANCH' && 'Elija Sucursal'}
+                                                      {simScreen === 'SELECT_SERVICE' && 'Elija Servicio'}
+                                                      {simScreen === 'SELECT_PROFESSIONAL' && 'Elija Especialista'}
+                                                      {simScreen === 'SELECT_DATE_TIME' && 'Fecha y Hora'}
+                                                      {simScreen === 'CONFIRM_BOOKING' && 'Confirmar Reservación'}
+                                                      {simScreen === 'SUCCESS_SCREEN' && 'Éxito'}
+                                                   </span>
+                                                   <button onClick={handleStartSimulator} className="text-zinc-500 hover:text-white"><X size={12} /></button>
+                                                </div>
+
+                                                <div className="p-4 space-y-4">
+                                                   {simScreen === 'SELECT_BRANCH' && (
+                                                      <div className="space-y-4">
+                                                         <div>
+                                                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block ml-1 select-none">Selecciona Sucursal:</label>
+                                                            <select value={simBranchId} onChange={e => setSimBranchId(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3.5 px-4 rounded-xl text-[10px] outline-none">
+                                                               <option value="">-- Sucursal --</option>
+                                                               {simBranches.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+                                                            </select>
+                                                         </div>
+                                                         <button onClick={() => handleSimulatorAction('SELECT_SERVICE')} disabled={!simBranchId} className="w-full py-3.5 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30">Ver Servicios</button>
+                                                      </div>
+                                                   )}
+
+                                                   {simScreen === 'SELECT_SERVICE' && (
+                                                      <div className="space-y-4">
+                                                         <div>
+                                                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block ml-1 select-none">Selecciona Servicio:</label>
+                                                            <select value={simServiceId} onChange={e => setSimServiceId(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3.5 px-4 rounded-xl text-[10px] outline-none">
+                                                               <option value="">-- Servicio --</option>
+                                                               {simServices.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                                                            </select>
+                                                         </div>
+                                                         <button onClick={() => handleSimulatorAction('SELECT_PROFESSIONAL')} disabled={!simServiceId} className="w-full py-3.5 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30">Ver Especialistas</button>
+                                                      </div>
+                                                   )}
+
+                                                   {simScreen === 'SELECT_PROFESSIONAL' && (
+                                                      <div className="space-y-4">
+                                                         <div>
+                                                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block ml-1 select-none">Selecciona Atiende:</label>
+                                                            <select value={simProfessionalId} onChange={e => setSimProfessionalId(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3.5 px-4 rounded-xl text-[10px] outline-none">
+                                                               <option value="">-- Especialista --</option>
+                                                               {simProfessionals.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                                                            </select>
+                                                         </div>
+                                                         <button onClick={() => handleSimulatorAction('SELECT_DATE_TIME')} disabled={!simProfessionalId} className="w-full py-3.5 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30">Ver Horarios</button>
+                                                      </div>
+                                                   )}
+
+                                                   {simScreen === 'SELECT_DATE_TIME' && (
+                                                      <div className="space-y-4">
+                                                         <div>
+                                                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block ml-1 select-none">Fecha de cita:</label>
+                                                            <input type="date" value={simDate} onChange={e => { setSimDate(e.target.value); handleSimulatorAction('SELECT_DATE_TIME', { date: e.target.value, time_slot: '' }); }} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3 px-4 rounded-xl text-[10px] outline-none" />
+                                                         </div>
+                                                         <div>
+                                                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block ml-1 select-none">Horarios en Vivo:</label>
+                                                            <select value={simTimeSlot} onChange={e => setSimTimeSlot(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3.5 px-4 rounded-xl text-[10px] outline-none">
+                                                               <option value="">-- Horario --</option>
+                                                               {simTimeSlots.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                                                            </select>
+                                                         </div>
+                                                         <button onClick={() => handleSimulatorAction('CONFIRM_BOOKING')} disabled={!simTimeSlot} className="w-full py-3.5 bg-[#D4AF37] text-black font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30">Revisar Cita</button>
+                                                      </div>
+                                                   )}
+
+                                                   {simScreen === 'CONFIRM_BOOKING' && (
+                                                      <div className="space-y-4 text-white text-[10px] font-semibold leading-relaxed">
+                                                         <div className="bg-[#111b21] p-4 rounded-2xl border border-white/5 space-y-1.5">
+                                                            <p>• Sucursal: <span className="text-[#D4AF37]">
+                                                               {simBranches.find(b => b.id === simBranchId)?.title || 'Cargando...'}
+                                                            </span></p>
+                                                            <p>• Servicio: <span className="text-[#D4AF37]">
+                                                               {simServices.find(s => s.id === simServiceId)?.title || 'Cargando...'}
+                                                            </span></p>
+                                                            <p>• Atiende: <span className="text-[#D4AF37]">
+                                                               {simProfessionals.find(p => p.id === simProfessionalId)?.title || 'Cargando...'}
+                                                            </span></p>
+                                                            <p>• Fecha: <span className="text-[#D4AF37]">{simDate}</span></p>
+                                                            <p>• Hora: <span className="text-[#D4AF37]">{simTimeSlot} hrs</span></p>
+                                                         </div>
+
+                                                         <div className="space-y-2">
+                                                            <input type="text" placeholder="Tu Nombre" value={simClientName} onChange={e => setSimClientName(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3 px-4 rounded-xl text-[10px] outline-none" />
+                                                            <input type="text" placeholder="Tu Teléfono" value={simClientPhone} onChange={e => setSimClientPhone(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3 px-4 rounded-xl text-[10px] outline-none" />
+                                                         </div>
+
+                                                         <button onClick={() => handleSimulatorAction('SUCCESS_SCREEN')} disabled={!simClientName || !simClientPhone} className="w-full py-3.5 bg-[#CE467B] text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30 shadow-lg shadow-[#CE467B]/20">Confirmar Cita Real</button>
+                                                      </div>
+                                                   )}
+
+                                                   {simScreen === 'SUCCESS_SCREEN' && (
+                                                      <div className="text-center py-6 space-y-4 animate-entrance">
+                                                         <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow"><Check size={28} /></div>
+                                                         <div>
+                                                            <h5 className="text-[11px] font-black text-white uppercase tracking-widest">Reserva Exitosa</h5>
+                                                            <p className="text-[9px] text-zinc-500 font-bold uppercase mt-1 leading-relaxed">{simSuccessMessage}</p>
+                                                         </div>
+                                                         <button onClick={handleStartSimulator} className="w-full py-3.5 bg-white/5 text-white border border-white/10 font-black text-[9px] uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">Agendar Otra Cita</button>
+                                                      </div>
+                                                   )}
+                                                </div>
+                                             </div>
+                                          </div>
+                                       )}
+                                    </div>
+                                    <div className="bg-[#050505] p-3 text-center text-[7px] text-zinc-700 font-mono select-none">
+                                       SMARTPHONE SIMULATOR • POWERED BY CITAPLANNER
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
                         </div>
-                     </div>
+                     )}
                   </div>
                )}
 

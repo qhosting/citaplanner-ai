@@ -10,13 +10,35 @@ describe('Server API Checks', () => {
     let testService;
     let testProduct;
     let testAppointment;
+    let testBranch;
+    let flowAppointmentId;
 
     beforeAll(async () => {
+        // Create test branch
+        testBranch = await prisma.branch.create({
+            data: {
+                name: 'Test Branch Flows',
+                address: 'Calle Falsa 123',
+                phone: '1234567890',
+                status: 'ACTIVE'
+            }
+        });
+
         // Create test professional
         testProfessional = await prisma.professional.create({
             data: {
                 name: 'Test Pro Integration',
-                email: 'testpro@integration.com'
+                email: 'testpro@integration.com',
+                branchId: testBranch.id,
+                weeklySchedule: JSON.stringify([
+                    { dayOfWeek: 1, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 2, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 3, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 4, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 5, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 6, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] },
+                    { dayOfWeek: 0, isEnabled: true, slots: [{ start: '09:00', end: '18:00' }] }
+                ])
             }
         });
 
@@ -26,7 +48,9 @@ describe('Server API Checks', () => {
                 name: 'Test Service Integration',
                 price: 100.0,
                 duration: 60,
-                category: 'Cabello'
+                category: 'Cabello',
+                branchId: testBranch.id,
+                status: 'ACTIVE'
             }
         });
 
@@ -46,6 +70,9 @@ describe('Server API Checks', () => {
 
     afterAll(async () => {
         // Teardown all test records in reverse order
+        if (flowAppointmentId) {
+            await prisma.appointment.deleteMany({ where: { id: flowAppointmentId } });
+        }
         if (testAppointment) {
             await prisma.appointment.deleteMany({ where: { id: testAppointment.id } });
         }
@@ -58,6 +85,9 @@ describe('Server API Checks', () => {
         }
         if (testProfessional) {
             await prisma.professional.deleteMany({ where: { id: testProfessional.id } });
+        }
+        if (testBranch) {
+            await prisma.branch.deleteMany({ where: { id: testBranch.id } });
         }
         await prisma.$disconnect();
     });
@@ -161,8 +191,197 @@ describe('Server API Checks', () => {
         });
         expect(checkAppt).toBeNull();
         
-        // Reset reference so teardown doesn't fail
-        testAppointment = null;
+    });
+
+    describe('Dynamic SEO Meta Injection', () => {
+        it('GET / dynamically injects LandingSetting SEO values into HTML', async () => {
+            let landing = await prisma.landingSetting.findFirst({
+                where: { templateId: 'shulastudio' }
+            });
+            if (!landing) {
+                landing = await prisma.landingSetting.findFirst({
+                    where: { businessName: { contains: 'shula', mode: 'insensitive' } }
+                });
+            }
+            if (!landing) {
+                landing = await prisma.landingSetting.findFirst();
+            }
+
+            const res = await request(app).get('/');
+            expect(res.status).toBe(200);
+            expect(res.text).toContain('<title>');
+            if (landing) {
+                const expectedTitle = landing.seoTitle || landing.businessName;
+                expect(res.text).toContain(expectedTitle);
+                
+                const expectedDesc = landing.aboutText || landing.slogan;
+                if (expectedDesc) {
+                    expect(res.text).toContain(expectedDesc);
+                }
+            }
+        });
+    });
+
+    describe('WhatsApp Flows Webhook Logic', () => {
+        it('GET /api/webhooks/whatsapp-flows returns active status page', async () => {
+            const res = await request(app).get('/api/webhooks/whatsapp-flows');
+            expect(res.status).toBe(200);
+            expect(res.text).toContain('ACTIVE');
+        });
+
+        it('POST /api/webhooks/whatsapp-flows handles ping action', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'ping'
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.status).toBe('active');
+        });
+
+        it('POST /api/webhooks/whatsapp-flows routes screen SELECT_BRANCH', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'data_exchange',
+                        screen: 'SELECT_BRANCH'
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('SELECT_BRANCH');
+            expect(res.body.payload.data.branches).toBeDefined();
+            const found = res.body.payload.data.branches.find(b => b.id === testBranch.id);
+            expect(found).toBeDefined();
+            expect(found.title).toBe(testBranch.name);
+        });
+
+        it('POST /api/webhooks/whatsapp-flows routes screen SELECT_SERVICE', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'data_exchange',
+                        screen: 'SELECT_SERVICE',
+                        data: {
+                            branch_id: testBranch.id
+                        }
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('SELECT_SERVICE');
+            const found = res.body.payload.data.services.find(s => s.id === testService.id);
+            expect(found).toBeDefined();
+            expect(found.title).toContain(testService.name);
+        });
+
+        it('POST /api/webhooks/whatsapp-flows routes screen SELECT_PROFESSIONAL', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'data_exchange',
+                        screen: 'SELECT_PROFESSIONAL',
+                        data: {
+                            branch_id: testBranch.id,
+                            service_id: testService.id
+                        }
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('SELECT_PROFESSIONAL');
+            const found = res.body.payload.data.professionals.find(p => p.id === testProfessional.id);
+            expect(found).toBeDefined();
+            expect(found.title).toBe(testProfessional.name);
+        });
+
+        it('POST /api/webhooks/whatsapp-flows routes screen SELECT_DATE_TIME for slot listing', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'data_exchange',
+                        screen: 'SELECT_DATE_TIME',
+                        data: {
+                            branch_id: testBranch.id,
+                            service_id: testService.id,
+                            professional_id: testProfessional.id,
+                            date: '2026-06-15'
+                        }
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('SELECT_DATE_TIME');
+            expect(res.body.payload.data.time_slots).toBeDefined();
+            expect(res.body.payload.data.time_slots.length).toBeGreaterThan(0);
+        });
+
+        it('POST /api/webhooks/whatsapp-flows routes screen SELECT_DATE_TIME for confirmation screen transition', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'data_exchange',
+                        screen: 'SELECT_DATE_TIME',
+                        data: {
+                            branch_id: testBranch.id,
+                            service_id: testService.id,
+                            professional_id: testProfessional.id,
+                            date: '2026-06-15',
+                            time_slot: '10:00'
+                        }
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('CONFIRM_BOOKING');
+            expect(res.body.payload.data.branch_name).toBe(testBranch.name);
+            expect(res.body.payload.data.professional_name).toBe(testProfessional.name);
+            expect(res.body.payload.data.service_name).toContain(testService.name);
+        });
+
+        it('POST /api/webhooks/whatsapp-flows processes action complete to book real appointment', async () => {
+            const res = await request(app)
+                .post('/api/webhooks/whatsapp-flows')
+                .send({
+                    decrypted_body_test: {
+                        action: 'complete',
+                        flow_token: 'TestFlowToken123',
+                        data: {
+                            branch_id: testBranch.id,
+                            service_id: testService.id,
+                            professional_id: testProfessional.id,
+                            date: '2026-06-15',
+                            time_slot: '10:00',
+                            client_name: 'Flow Tester Client',
+                            client_phone: '521555555555'
+                        }
+                    }
+                });
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.payload.screen).toBe('SUCCESS_SCREEN');
+            expect(res.body.payload.data.appointment_id).toBeDefined();
+
+            flowAppointmentId = res.body.payload.data.appointment_id;
+
+            // Verify booking exists in real PostgreSQL database via Prisma
+            const appointment = await prisma.appointment.findUnique({
+                where: { id: flowAppointmentId }
+            });
+            expect(appointment).not.toBeNull();
+            expect(appointment.clientName).toBe('Flow Tester Client');
+            expect(appointment.clientPhone).toBe('521555555555');
+            expect(appointment.status).toBe('SCHEDULED');
+            expect(appointment.description).toContain('WhatsApp Flow');
+        });
     });
 });
 
