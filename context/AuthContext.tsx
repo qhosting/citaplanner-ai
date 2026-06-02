@@ -44,10 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (phone: string, pass: string): Promise<User | null> => {
     setIsLoading(true);
-    console.log('[AUTH CONTEXT] Login started for:', phone);
     try {
       const apiUser = await api.login(phone, pass);
-      console.log('[AUTH CONTEXT] API Response:', apiUser);
 
       if (apiUser) {
         try {

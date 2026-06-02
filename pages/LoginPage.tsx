@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, ArrowRight, Loader2, Sparkles, ShieldCheck, Mail, ShieldAlert } from 'lucide-react';
 import { Role } from '../types';
@@ -21,20 +21,20 @@ export const LoginPage: React.FC = () => {
     } catch {}
     return 'Shula Studio';
   });
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMaintenance = false;
 
   useEffect(() => {
-    console.log('[LOGIN PAGE] Auth State Change:', { isAuthenticated, user });
+    if (isLoading) return;
     if (isAuthenticated && user) {
-      console.log('[LOGIN PAGE] Redirecting based on role:', user.role);
-      if (user.role === 'ADMIN' || user.role === 'STUDIO_OWNER') navigate('/admin');
-      else if (user.role === 'PROFESSIONAL' || user.role === 'STAFF') navigate('/professional-dashboard');
-      else if (user.role === 'CLIENT' || user.role === 'MEMBER') navigate('/client-portal');
-      else if (user.role === 'GOD_MODE') navigate('/nexus');
+      const redirect = location.state?.from?.pathname;
+      if (user.role === 'ADMIN' || user.role === 'STUDIO_OWNER') navigate(redirect || '/admin', { replace: true });
+      else if (user.role === 'PROFESSIONAL' || user.role === 'STAFF') navigate(redirect || '/professional-dashboard', { replace: true });
+      else if (user.role === 'CLIENT' || user.role === 'MEMBER') navigate(redirect || '/client-portal', { replace: true });
+      else if (user.role === 'GOD_MODE') navigate(redirect || '/nexus', { replace: true });
       else {
-        console.warn('[LOGIN PAGE] Unknown role, defaulting to home');
         navigate('/');
       }
     }

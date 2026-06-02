@@ -56,6 +56,39 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
+    },
+    build: {
+      chunkSizeWarningLimit: 700,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            // React core — always needed, cache long-term
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
+              return 'vendor-react';
+            }
+            // UI libraries: lucide, sonner, framer-motion
+            if (id.includes('node_modules/lucide-react') || id.includes('node_modules/sonner') || id.includes('node_modules/framer-motion')) {
+              return 'vendor-ui';
+            }
+            // Data & query: tanstack, zod
+            if (id.includes('node_modules/@tanstack') || id.includes('node_modules/zod')) {
+              return 'vendor-data';
+            }
+            // Charts: recharts
+            if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
+              return 'vendor-charts';
+            }
+            // Heavy utilities: xlsx (Excel), date-fns
+            if (id.includes('node_modules/xlsx') || id.includes('node_modules/date-fns')) {
+              return 'vendor-heavy';
+            }
+            // Supabase and API clients
+            if (id.includes('node_modules/@supabase') || id.includes('node_modules/@google')) {
+              return 'vendor-cloud';
+            }
+          }
+        }
+      }
     }
   }
-});
+});

@@ -1495,9 +1495,8 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
     password = password?.trim();
 
     // --- DEVELOPMENT MODE BYPASS ---
-    // If not in production, verify static dev credentials to avoid DB dependency for login
-    if (process.env.NODE_ENV !== 'production' && phone === 'dev' && password === 'dev') {
-        console.log("⚡ DEV MODE: Bypassing DB Login");
+    // Requires: NODE_ENV !== 'production' AND DEV_BYPASS_ENABLED=true in .env
+    if (process.env.NODE_ENV !== 'production' && process.env.DEV_BYPASS_ENABLED === 'true' && phone === 'dev' && password === 'dev') {
         return res.json({
             success: true,
             user: {
@@ -1514,7 +1513,6 @@ app.post('/api/login', loginLimiter, validateRequest(loginSchema), async (req, r
     // --------------------------------
 
     try {
-        console.log(`[AUTH DEBUG] Login Attempt: ${phone} | Tenant: ${req.tenantId} `);
 
         // Search by phone OR email
         let user = await prisma.user.findFirst({

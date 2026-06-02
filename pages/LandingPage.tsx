@@ -20,7 +20,6 @@ import {
 } from '../components/LandingTemplates';
 import { LogoCitaplanner } from '../components/LogoCitaplanner';
 import { WhatsAppButton } from '../components/WhatsAppButton';
-import { SYSTEM_VERSION } from '../src/version';
 import { Footer } from '../components/Footer';
 import { LegalModal } from '../components/LegalModal';
 import { ContactModal } from '../components/ContactModal';
@@ -77,7 +76,6 @@ export const LandingPage: React.FC = () => {
   }, [settings.heroSlides]);
 
   useEffect(() => {
-    console.log(`%c CitaPlanner SaaS %c v${SYSTEM_VERSION} `, "background:#6366f1;color:#fff;padding:4px;border-radius:4px 0 0 4px;font-weight:bold;", "background:#1e293b;color:#fff;padding:4px;border-radius:0 4px 4px 0;");
     const init = async () => {
       try {
         const [s, sv, pv] = await Promise.allSettled([
@@ -88,7 +86,6 @@ export const LandingPage: React.FC = () => {
 
         let finalSettings = DEFAULT_SETTINGS;
         if (s.status === 'fulfilled' && s.value && s.value.success) {
-          console.log(`[LANDING DEBUG] Settings extracted for tenant:`, s.value.value);
           finalSettings = { ...DEFAULT_SETTINGS, ...s.value.value };
           setSettings(finalSettings);
         }
@@ -113,7 +110,6 @@ export const LandingPage: React.FC = () => {
       if (event.data?.type === 'LANDING_PREVIEW_UPDATE') {
         const newSettings = event.data.settings;
         setSettings(prev => ({ ...prev, ...newSettings }));
-        console.log("⚡ [PREVIEW] Settings updated via Architect");
       }
     };
 
