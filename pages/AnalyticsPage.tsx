@@ -30,7 +30,7 @@ export const AnalyticsPage: React.FC = () => {
 
   const { data: appointments = [] } = useQuery({
     queryKey: ['appointments'],
-    queryFn: api.getAppointments
+    queryFn: () => api.getAppointments()
   });
 
   const kpis = useMemo(() => {
@@ -82,7 +82,7 @@ export const AnalyticsPage: React.FC = () => {
               Intelligence <span className="gold-text-gradient font-light">Hub</span>
             </h1>
           </div>
-          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Financial Metrics & Network Analytics</p>
+          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Financial Metrics &amp; Network Analytics</p>
         </div>
         <div className="flex gap-4">
            <div className="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5">

@@ -21,7 +21,7 @@ export const ClientsPage: React.FC = () => {
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients'],
-    queryFn: api.getClients
+    queryFn: () => api.getClients()
   });
 
   const mutation = useMutation({

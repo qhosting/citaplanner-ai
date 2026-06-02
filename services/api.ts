@@ -300,9 +300,17 @@ export const api = {
   },
 
   // Clients CRUD
-  getClients: async (): Promise<Client[]> => {
-    const res = await fetchWithAuth(`${API_URL}/clients`);
-    return res.ok ? await res.json() : [];
+  getClients: async (params?: { page?: number; limit?: number; search?: string }): Promise<Client[]> => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.search) qs.set('search', params.search);
+    const url = `${API_URL}/clients${qs.toString() ? '?' + qs.toString() : ''}`;
+    const res = await fetchWithAuth(url);
+    if (!res.ok) return [];
+    const json = await res.json();
+    // Handle both paginated { data, pagination } and legacy array responses
+    return Array.isArray(json) ? json : (json.data ?? []);
   },
 
   getLashStats: async (): Promise<any> => {
@@ -385,9 +393,18 @@ export const api = {
   },
 
   // Appointments CRUD
-  getAppointments: async (): Promise<Appointment[]> => {
-    const res = await fetchWithAuth(`${API_URL}/appointments`);
-    return res.ok ? await res.json() : [];
+  getAppointments: async (params?: { page?: number; limit?: number; from?: string; to?: string }): Promise<Appointment[]> => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const url = `${API_URL}/appointments${qs.toString() ? '?' + qs.toString() : ''}`;
+    const res = await fetchWithAuth(url);
+    if (!res.ok) return [];
+    const json = await res.json();
+    // Handle both paginated { data, pagination } and legacy array responses
+    return Array.isArray(json) ? json : (json.data ?? []);
   },
 
   createAppointment: async (a: Omit<Appointment, 'id'>) => {

@@ -26,7 +26,7 @@ export const Dashboard: React.FC = () => {
   // Agenda Real
   const { data: appointments = [], isLoading: isLoadingAppointments } = useQuery({
     queryKey: ['appointments'],
-    queryFn: api.getAppointments,
+    queryFn: () => api.getAppointments(),
   });
 
   const { data: professionals = [] } = useQuery({

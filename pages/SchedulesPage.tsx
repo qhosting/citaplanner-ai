@@ -62,7 +62,7 @@ export const SchedulesPage: React.FC = () => {
 
    const { data: appointments = [] } = useQuery({
       queryKey: ['appointments'],
-      queryFn: api.getAppointments
+      queryFn: () => api.getAppointments()
    });
 
    const createMutation = useMutation({

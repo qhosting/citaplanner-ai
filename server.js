@@ -718,21 +718,48 @@ app.post('/api/integrations/whatsapp/webhook', async (req, res) => {
     }
 });
 
+/**
+ * @route GET /api/appointments
+ * @desc List appointments with optional pagination and date filters
+ * @access Public (branch-scoped)
+ * @query {number} [page=1] - Page number
+ * @query {number} [limit=100] - Results per page (max 500)
+ * @query {string} [from] - ISO date filter start
+ * @query {string} [to] - ISO date filter end
+ * @returns {200} { data: Appointment[], pagination: { page, limit, total, pages } }
+ */
 app.get('/api/appointments', async (req, res) => {
     try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 100));
+        const skip = (page - 1) * limit;
+
         const where = {};
-        if (req.branchId) {
-            where.branchId = req.branchId;
+        if (req.branchId) where.branchId = req.branchId;
+        if (req.query.from || req.query.to) {
+            where.startDateTime = {};
+            if (req.query.from) where.startDateTime.gte = new Date(req.query.from);
+            if (req.query.to) where.startDateTime.lte = new Date(req.query.to);
         }
 
-        const appointments = await prisma.appointment.findMany({
-            where,
-            orderBy: { startDateTime: 'desc' }
-        });
+        const [appointments, total] = await Promise.all([
+            prisma.appointment.findMany({
+                where,
+                orderBy: { startDateTime: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.appointment.count({ where })
+        ]);
 
-        // Prisma returns camelCase fields matching the schema, which matches the API response format
-        res.json(appointments);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        res.json({
+            data: appointments,
+            pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+        });
+    } catch (e) {
+        console.error('[API] GET /api/appointments error:', e);
+        res.status(500).json({ error: 'Error al obtener citas' });
+    }
 });
 
 app.post('/api/appointments', validateRequest(appointmentSchema), async (req, res) => {
@@ -2047,8 +2074,12 @@ app.delete('/api/services/:id', authenticateToken, async (req, res) => {
             await redisClient.del(`services:${req.tenantId}`);
         }
 
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        // 204 No Content — correct HTTP status for successful DELETE
+        res.status(204).send();
+    } catch (e) {
+        console.error('[API] DELETE /api/services/:id error:', e);
+        res.status(500).json({ error: 'Error al eliminar servicio' });
+    }
 });
 
 // --- CLIENTS ENDPOINTS ---
@@ -2125,17 +2156,42 @@ app.get('/api/clients/stats', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @route GET /api/clients
+ * @desc List clients with pagination and optional search
+ * @access Private (authenticateToken)
+ * @query {number} [page=1] - Page number
+ * @query {number} [limit=50] - Results per page (max 200)
+ * @query {string} [search] - Filter by name or phone
+ * @returns {200} { data: Client[], pagination: { page, limit, total, pages } }
+ */
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
-        const clients = await prisma.user.findMany({
-            where: {
-                role: 'CLIENT'
-            },
-            orderBy: { name: 'asc' }
-        });
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+        const skip = (page - 1) * limit;
 
-        // Map User to Client interface
-        const mappedClients = clients.map(u => ({
+        const where = { role: 'CLIENT' };
+        if (req.query.search) {
+            const term = req.query.search.trim();
+            where.OR = [
+                { name: { contains: term, mode: 'insensitive' } },
+                { phone: { contains: term } },
+                { email: { contains: term, mode: 'insensitive' } }
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                orderBy: { name: 'asc' },
+                skip,
+                take: limit
+            }),
+            prisma.user.count({ where })
+        ]);
+
+        const data = users.map(u => ({
             id: u.id,
             name: u.name,
             phone: u.phone,
@@ -2150,11 +2206,17 @@ app.get('/api/clients', authenticateToken, async (req, res) => {
             consentType: u.preferences?.consentType || null,
             lashDiagnosis: u.preferences?.lashDiagnosis || null,
             exemptFromDeposit: u.exemptFromDeposit || false,
-            treatmentHistory: [] // TODO: Fetch from appointments
+            treatmentHistory: []
         }));
 
-        res.json(mappedClients);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        res.json({
+            data,
+            pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+        });
+    } catch (e) {
+        console.error('[API] GET /api/clients error:', e);
+        res.status(500).json({ error: 'Error al obtener clientes' });
+    }
 });
 
 app.post('/api/clients', authenticateToken, async (req, res) => {
@@ -3452,12 +3514,28 @@ app.post('/api/sales', authenticateToken, async (req, res) => {
         res.json({ success: true, saleId: sale.id, date: sale.createdAt });
     } catch (e) {
         console.error("❌ POS Sale Error:", e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Error al procesar la venta' });
     }
 });
 
 app.use('/api', (req, res) => {
     res.status(404).json({ error: 'Endpoint de API no encontrado' });
+});
+
+/**
+ * @middleware Global Error Handler
+ * @desc Catches errors passed via next(err). Prevents stack traces from leaking
+ *       in production. Returns sanitized messages in prod, full detail in dev.
+ */
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    const status = err.status || err.statusCode || 500;
+    const isProd = process.env.NODE_ENV === 'production';
+    console.error(`[GLOBAL ERROR] ${req.method} ${req.path}:`, err);
+    res.status(status).json({
+        error: isProd ? 'Error interno del servidor' : (err.message || 'Error desconocido'),
+        ...(isProd ? {} : { stack: err.stack })
+    });
 });
 
 app.get(/.*/, serveDynamicIndex);

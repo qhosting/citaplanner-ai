@@ -24,7 +24,7 @@ export const ClientPortal: React.FC = () => {
     // Queries Reales
     const { data: allAppointments = [], isLoading } = useQuery({
         queryKey: ['appointments'],
-        queryFn: api.getAppointments
+        queryFn: () => api.getAppointments()
     });
 
     useEffect(() => {

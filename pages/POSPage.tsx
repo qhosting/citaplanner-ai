@@ -34,7 +34,7 @@ export const POSPage: React.FC = () => {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: api.getClients
+    queryFn: () => api.getClients()
   });
 
   const [lastSale, setLastSale] = useState<{ id: string, date: string, items: CartItem[], total: number, paymentMethod: PaymentMethod | 'MERCADOPAGO', change: number, clientName?: string } | null>(null);
