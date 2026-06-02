@@ -1,11 +1,8 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const SHULA_DATABASE_URL = "postgres://postgres:fdmabh6f8sy2dvssvhxi@100.75.220.89:1070/shulastudio-db?sslmode=disable";
-
-const prisma = new PrismaClient({
-  datasources: { db: { url: SHULA_DATABASE_URL } },
-});
+const prisma = new PrismaClient();
 
 // Configure who you want to update
 const USER_PHONE = "4425060999";
