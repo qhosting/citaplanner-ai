@@ -211,11 +211,13 @@ describe('Server API Checks', () => {
             expect(res.status).toBe(200);
             expect(res.text).toContain('<title>');
             if (landing) {
-                const expectedTitle = landing.seoTitle || landing.businessName;
+                let expectedTitle = landing.seoTitle || landing.businessName;
+                expectedTitle = expectedTitle.replace(/^["'\s\\]+|["'\s\\]+$/g, '');
                 expect(res.text).toContain(expectedTitle);
                 
-                const expectedDesc = landing.aboutText || landing.slogan;
+                let expectedDesc = landing.seoDescription || landing.slogan || landing.aboutText;
                 if (expectedDesc) {
+                    expectedDesc = expectedDesc.replace(/^["'\s\\]+|["'\s\\]+$/g, '');
                     expect(res.text).toContain(expectedDesc);
                 }
             }

@@ -489,9 +489,20 @@ const serveDynamicIndex = async (req, res) => {
         }
 
         if (data) {
-            const title = data.seoTitle || data.businessName || "CitaPlanner Elite";
-            const desc = data.aboutText || data.slogan || "Plataforma elite para la gestión de servicios profesionales.";
-            const image = data.heroImageUrl || data.logoUrl || "https://citaplanner.com/og-image.png";
+            let title = data.seoTitle || data.businessName || "CitaPlanner Elite";
+            title = title.replace(/^["'\s\\]+|["'\s\\]+$/g, ''); // Clean leading/trailing quotes or backslashes
+
+            let desc = data.seoDescription || data.slogan || data.aboutText || "Plataforma elite para la gestión de servicios profesionales.";
+            desc = desc.replace(/^["'\s\\]+|["'\s\\]+$/g, ''); // Clean leading/trailing quotes or backslashes
+
+            let image = data.heroImageUrl || data.logoUrl || "";
+            if (image && image.startsWith('/')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+                const host = req.headers.host;
+                image = `${protocol}://${host}${image}`;
+            } else if (!image) {
+                image = "https://citaplanner.com/og-image.png";
+            }
 
             // Dynamic replacements for SEO & Open Graph Meta Tags ( WhatsApp / Social Link Sharing Unfurling )
             html = html.replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`);
@@ -503,7 +514,7 @@ const serveDynamicIndex = async (req, res) => {
             html = html.replace(/<meta property="og:title" content=".*?"/gi, `<meta property="og:title" content="${title}"`);
             html = html.replace(/<meta property="og:description" content=".*?"/gi, `<meta property="og:description" content="${desc}"`);
             html = html.replace(/<meta property="og:image" content=".*?"/gi, `<meta property="og:image" content="${image}"`);
-            html = html.replace(/<meta property="og:site_name" content=".*?"/gi, `<meta property="og:site_name" content="${data.businessName || 'CitaPlanner'}"`);
+            html = html.replace(/<meta property="og:site_name" content=".*?"/gi, `<meta property="og:site_name" content="${title}"`);
             
             // Twitter Cards
             html = html.replace(/<meta name="twitter:title" content=".*?"/gi, `<meta name="twitter:title" content="${title}"`);

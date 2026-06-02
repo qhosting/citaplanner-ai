@@ -7,9 +7,7 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-    const s = await prisma.landingSetting.findFirst({
-        where: { templateId: 'shulastudio' }
-    });
+    const s = await prisma.landingSetting.findMany();
     console.log(JSON.stringify(s, null, 2));
 }
 
