@@ -94,7 +94,7 @@ export const BranchesPage: React.FC = () => {
         </div>
         <button
           onClick={() => { setEditingBranch(undefined); setIsModalOpen(true); }}
-          className="gold-btn text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all"
+          className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20 hover:scale-[1.02] active:scale-95 transition-all"
         >
           <Plus size={18} /> Integrar Nueva Sede
         </button>

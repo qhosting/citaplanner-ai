@@ -436,7 +436,7 @@ export const LandingPage: React.FC = () => {
                 key={item} 
                 href={`#${item.toLowerCase()}`} 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#CE4676] transition-colors animate-entrance"
+                className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#D4AF37] transition-colors animate-entrance"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
                 {item}
@@ -447,7 +447,7 @@ export const LandingPage: React.FC = () => {
                 setMobileMenuOpen(false);
                 setContactModalOpen(true);
               }}
-              className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#CE4676] transition-colors text-left"
+              className="text-4xl font-black text-white uppercase tracking-tighter hover:text-[#D4AF37] transition-colors text-left"
             >
               Contacto
             </button>

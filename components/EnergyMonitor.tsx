@@ -6,7 +6,7 @@ export const EnergyMonitor: React.FC = () => {
     { label: 'Macro Salvación', code: '319817318', icon: Globe, color: 'text-blue-400/60' },
     { label: 'Protección Aurum', code: '8888', icon: ShieldCheck, color: 'text-indigo-400/60' },
     { label: 'Flujo Abundancia', code: '520 71427321893', icon: TrendingUp, color: 'text-emerald-400/60' },
-    { label: 'Crecimiento Exponencial', code: '419 488 71', icon: Zap, color: 'text-[#CE4676]/60' },
+    { label: 'Crecimiento Exponencial', code: '419 488 71', icon: Zap, color: 'text-[#D4AF37]/60' },
   ];
 
   return (

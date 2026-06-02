@@ -57,15 +57,15 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
             <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl" onClick={onClose} />
 
-            <div className="relative w-full h-full max-w-none bg-zinc-950 border border-white/10 sm:rounded-[2.5rem] overflow-hidden shadow-[0_0_150px_rgba(206,70,118,0.2)] animate-entrance flex flex-col">
+            <div className="relative w-full h-full max-w-none bg-zinc-950 border border-white/10 sm:rounded-[2.5rem] overflow-hidden shadow-[0_0_150px_rgba(212,175,55,0.2)] animate-entrance flex flex-col">
                 {/* Header Decoration */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#CE4676] to-transparent opacity-50" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-50" />
 
                 <div className="flex justify-between items-center p-8 sm:p-12 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent shrink-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-[#CE4676]/10 rounded-xl">
-                                <Zap size={18} className="text-[#CE4676]" />
+                            <div className="p-2 bg-[#D4AF37]/10 rounded-xl">
+                                <Zap size={18} className="text-[#D4AF37]" />
                             </div>
                             <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
                                 {initialData ? 'Sincronizar Lead' : 'Inyectar Prospecto'} <span className="gold-text-gradient italic font-light">Nexus</span>
@@ -89,7 +89,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                                 type="text"
                                 required
                                 placeholder="Nombre completo... "
-                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#CE4676]/40 focus:ring-4 ring-[#CE4676]/5 transition-all shadow-inner"
+                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#D4AF37]/40 focus:ring-4 ring-[#D4AF37]/5 transition-all shadow-inner"
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                             />
@@ -103,7 +103,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                                 type="text"
                                 required
                                 placeholder="+52... "
-                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#CE4676]/40 transition-all font-mono shadow-inner"
+                                className="w-full px-8 py-6 bg-black border border-white/5 rounded-[2.5rem] text-white font-black text-xs outline-none focus:border-[#D4AF37]/40 transition-all font-mono shadow-inner"
                                 value={formData.phone}
                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                             />
@@ -177,7 +177,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                         <div className="space-y-4 bg-white/2 p-6 rounded-[2.5rem] border border-white/5">
                             <label className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] block text-center mb-2">Fase del Embudo</label>
                             <select
-                                className="w-full bg-black border border-white/5 rounded-2xl py-3 px-4 text-[9px] font-black text-white uppercase tracking-widest outline-none focus:border-[#CE4676]"
+                                className="w-full bg-black border border-white/5 rounded-2xl py-3 px-4 text-[9px] font-black text-white uppercase tracking-widest outline-none focus:border-[#D4AF37]"
                                 value={formData.status}
                                 onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}
                             >
@@ -197,7 +197,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, i
                         <textarea
                             rows={4}
                             placeholder="Antecedentes, necesidades y próximos pasos... "
-                            className="w-full px-8 py-6 bg-black border border-white/5 rounded-[3rem] text-white font-medium text-xs outline-none focus:border-[#CE4676]/30 transition-all resize-none shadow-inner"
+                            className="w-full px-8 py-6 bg-black border border-white/5 rounded-[3rem] text-white font-medium text-xs outline-none focus:border-[#D4AF37]/30 transition-all resize-none shadow-inner"
                             value={formData.notes}
                             onChange={e => setFormData({ ...formData, notes: e.target.value })}
                         />

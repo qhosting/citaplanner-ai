@@ -381,7 +381,7 @@ export const BookingPage: React.FC = () => {
             <div className="flex justify-center text-[#D4AF37] mb-8 gap-1">
               <Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" /><Star size={14} fill="currentColor" />
             </div>
-            <div style={{ backgroundColor: '#CE467B' }} className="py-4 rounded-full text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-black/10 group-hover:translate-y-[-2px] transition-all">
+            <div className="py-4 rounded-full text-black font-black text-[10px] uppercase tracking-widest shadow-lg shadow-black/10 group-hover:translate-y-[-2px] transition-all bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]">
               Reservar con {pro.name.split(' ')[0]}
             </div>
           </button>
@@ -415,10 +415,10 @@ export const BookingPage: React.FC = () => {
                 key={time}
                 onClick={() => setSelectedTime(time)}
                 className={`py-5 rounded-3xl font-black text-sm transition-all border-2 ${selectedTime === time
-                  ? 'text-white shadow-2xl scale-105'
+                  ? 'text-black shadow-2xl scale-105'
                   : 'border-white/5 bg-zinc-900/40 text-zinc-500 hover:border-[#D4AF37]/30'
                   }`}
-                style={selectedTime === time ? { backgroundColor: '#CE467B', borderColor: '#CE467B' } : {}}
+                style={selectedTime === time ? { backgroundColor: '#D4AF37', borderColor: '#D4AF37' } : {}}
               >
                 {time}
               </button>
@@ -434,8 +434,7 @@ export const BookingPage: React.FC = () => {
         {selectedTime && (
           <button
             onClick={() => setStep(4)}
-            style={{ backgroundColor: '#CE467B' }}
-            className="w-full mt-12 py-6 rounded-full text-white font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform"
+            className="w-full mt-12 py-6 rounded-full text-black font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]"
           >
             Siguiente Paso <ArrowRight size={20} />
           </button>
@@ -703,8 +702,7 @@ export const BookingPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting || (!user?.exemptFromDeposit && !paymentReceiptUrl)}
-              style={{ backgroundColor: '#CE467B' }}
-              className="w-full py-7 rounded-full text-white font-black text-[14px] uppercase tracking-[0.5em] shadow-[0_30px_60px_-15px_rgba(206,70,123,0.3)] flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform disabled:opacity-30 disabled:pointer-events-none"
+              className="w-full py-7 rounded-full text-black font-black text-[14px] uppercase tracking-[0.5em] shadow-[0_30px_60px_-15px_rgba(212,175,55,0.3)] flex items-center justify-center gap-4 hover:scale-[1.02] transition-transform disabled:opacity-30 disabled:pointer-events-none bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]"
             >
               {submitting ? <Loader2 className="animate-spin" size={24} /> : <><ShieldCheck size={28} /> Confirmar Mi Cita</>}
             </button>
@@ -778,8 +776,7 @@ export const BookingPage: React.FC = () => {
       <div className="space-y-6">
         <Link 
           to="/" 
-          className="block w-full py-6 text-white rounded-full font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4"
-          style={{ backgroundColor: '#CE467B' }}
+          className="block w-full py-6 text-black rounded-full font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-4 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]"
         >
           <Home size={20} /> Finalizar y Salir
         </Link>

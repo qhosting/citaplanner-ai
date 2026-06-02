@@ -131,13 +131,13 @@ export const ServicesPage: React.FC = () => {
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
           <input
             type="text" placeholder="Filtrar por identidad de servicio..."
-            className="w-full pl-14 pr-6 py-4 bg-input-theme border border-theme rounded-2xl text-main outline-none focus:border-[#CE4676]/30 transition-all font-medium"
+            className="w-full pl-14 pr-6 py-4 bg-input-theme border border-theme rounded-2xl text-main outline-none focus:border-[#D4AF37]/30 transition-all font-medium"
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
           <select
-            className="w-full md:w-64 px-6 py-4 bg-input-theme border border-theme rounded-2xl text-main text-[10px] font-black uppercase outline-none focus:border-[#CE4676] cursor-pointer"
+            className="w-full md:w-64 px-6 py-4 bg-input-theme border border-theme rounded-2xl text-main text-[10px] font-black uppercase outline-none focus:border-[#D4AF37] cursor-pointer"
             value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
           >
             <option value="ALL">Todas las Ramas</option>
@@ -145,13 +145,13 @@ export const ServicesPage: React.FC = () => {
           </select>
 
           <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme">
-            <button onClick={() => setViewMode('GRID')} title="Vista Cuadrícula" className={`p-2.5 rounded-xl transition-all ${viewMode === 'GRID' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><LayoutGrid size={18} /></button>
-            <button onClick={() => setViewMode('TABLE')} title="Vista Tabla" className={`p-2.5 rounded-xl transition-all ${viewMode === 'TABLE' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-slate-500 hover:text-main'}`}><List size={18} /></button>
+            <button onClick={() => setViewMode('GRID')} title="Vista Cuadrícula" className={`p-2.5 rounded-xl transition-all ${viewMode === 'GRID' ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20' : 'text-zinc-500 hover:text-white'}`}><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('TABLE')} title="Vista Tabla" className={`p-2.5 rounded-xl transition-all ${viewMode === 'TABLE' ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20' : 'text-zinc-500 hover:text-white'}`}><List size={18} /></button>
           </div>
 
           <div className="flex bg-input-theme p-1.5 rounded-2xl border border-theme gap-1">
-            <button onClick={handleExport} title="Exportar Servicios XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all"><Download size={18} /></button>
-            <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#CE4676] hover:bg-[#CE4676]/10 transition-all cursor-pointer">
+            <button onClick={handleExport} title="Exportar Servicios XLSX" className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all"><Download size={18} /></button>
+            <label className="p-2.5 rounded-xl text-slate-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all cursor-pointer">
               <Upload size={18} />
               <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleImport} />
             </label>
@@ -171,7 +171,7 @@ export const ServicesPage: React.FC = () => {
                 <img src={service.imageUrl || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=600'} className="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-80 transition-all duration-700" alt={service.name} />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
                 <div className="absolute bottom-6 left-8 flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-[#D4AF37] text-black font-black text-[8px] uppercase tracking-widest">${service.price}</span>
+                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black font-black text-[8px] uppercase tracking-widest">${service.price}</span>
                   <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white font-black text-[8px] uppercase tracking-widest flex items-center gap-1"><Clock size={10} /> {service.duration}m</span>
                 </div>
               </div>
@@ -179,7 +179,7 @@ export const ServicesPage: React.FC = () => {
                 <h3 className="text-2xl font-black text-main tracking-tighter uppercase mb-4">{service.name}</h3>
                 <p className="text-muted text-xs leading-relaxed mb-10 line-clamp-2">{service.description || 'Sin descripción técnica registrada.'}</p>
                 <div className="flex gap-3 pt-6 border-t border-theme">
-                  <button onClick={() => { setEditingService(service); setIsModalOpen(true); }} className="flex-1 bg-card p-4 rounded-xl font-black text-[9px] uppercase tracking-widest text-muted hover:bg-[#CE4676]/10 hover:text-[#CE4676] transition-all">Configurar</button>
+                  <button onClick={() => { setEditingService(service); setIsModalOpen(true); }} className="flex-1 bg-card p-4 rounded-xl font-black text-[9px] uppercase tracking-widest text-muted hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] transition-all">Configurar</button>
                   <button onClick={() => handleDelete(service.id)} className="p-4 bg-card text-slate-500 hover:text-red-500 rounded-xl transition-all"><Trash2 size={16} /></button>
                 </div>
               </div>
@@ -207,7 +207,7 @@ export const ServicesPage: React.FC = () => {
                         <img src={service.imageUrl} className="w-full h-full object-cover opacity-60" alt="" />
                       </div>
                       <div>
-                        <p className="font-black text-main group-hover:text-[#CE4676] transition-colors">{service.name}</p>
+                        <p className="font-black text-main group-hover:text-[#D4AF37] transition-colors">{service.name}</p>
                         <p className="text-[9px] text-muted font-bold uppercase">{service.category}</p>
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export const ServicesPage: React.FC = () => {
       <div className="fixed bottom-10 right-10 z-[600]">
         <button
           onClick={() => { setEditingService(undefined); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-3 bugambilia-btn text-white px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(206,70,118,0.3)] hover:shadow-[0_15px_40px_rgba(206,70,118,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+          className="flex items-center justify-center gap-3 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
           <span>Nuevo</span>

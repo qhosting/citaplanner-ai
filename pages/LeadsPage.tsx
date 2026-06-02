@@ -89,7 +89,7 @@ export const LeadsPage: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
                 <div>
                     <div className="flex items-center gap-4 mb-3">
-                        <div className="w-1 h-10 bg-[#CE4676] rounded-full shadow-[0_0_20px_#CE4676]"></div>
+                        <div className="w-1 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_20px_#D4AF37]"></div>
                         <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
                             Leads <span className="gold-text-gradient font-light">Nexus</span>
                         </h1>
@@ -117,7 +117,7 @@ export const LeadsPage: React.FC = () => {
                     </button>
                     <button
                         onClick={() => { setEditingLead(undefined); setIsModalOpen(true); }}
-                        className="gold-btn text-black px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest shadow-2xl transition-all active:scale-95"
+                        className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black hover:scale-[1.02] shadow-lg shadow-[#D4AF37]/20 px-10 py-5 rounded-2xl flex items-center gap-3 font-black text-[9px] uppercase tracking-widest transition-all active:scale-95"
                     >
                         <Plus size={18} /> Agregar Lead Manual
                     </button>
@@ -130,7 +130,7 @@ export const LeadsPage: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Buscar por nombre, teléfono o canal de origen..."
-                        className="w-full pl-16 pr-6 py-6 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#CE4676]/30 transition-all font-medium"
+                        className="w-full pl-16 pr-6 py-6 bg-black/20 border border-white/5 rounded-3xl text-white outline-none focus:border-[#D4AF37]/30 transition-all font-medium"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
@@ -141,7 +141,7 @@ export const LeadsPage: React.FC = () => {
                 {filteredLeads.map(lead => {
                     const status = getStatusInfo(lead.status);
                     return (
-                        <div key={lead.id} className="glass-card p-10 rounded-[4rem] border-white/5 hover:border-[#CE4676]/20 transition-all group flex flex-col relative overflow-hidden">
+                        <div key={lead.id} className="glass-card p-10 rounded-[4rem] border-white/5 hover:border-[#D4AF37]/20 transition-all group flex flex-col relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000">
                                 {getSourceIcon(lead.source)}
                             </div>
@@ -159,7 +159,7 @@ export const LeadsPage: React.FC = () => {
                             </div>
 
                             <div className="mb-10 relative z-10">
-                                <h3 className="font-black text-2xl text-white tracking-tighter uppercase leading-tight group-hover:text-[#CE4676] transition-colors">{lead.name}</h3>
+                                <h3 className="font-black text-2xl text-white tracking-tighter uppercase leading-tight group-hover:text-[#D4AF37] transition-colors">{lead.name}</h3>
                                 <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.3em] mt-2">{lead.phone}</p>
                             </div>
 

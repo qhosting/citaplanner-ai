@@ -56,9 +56,9 @@ export const AIConciergeWidget: React.FC = () => {
                     onClick={() => setIsOpen(true)}
                     className="bg-main text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-all group relative overflow-hidden"
                 >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-[#CE4676] to-[#630E14] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-[#D4AF37] to-[#AA7C11] opacity-0 group-hover:opacity-100 transition-opacity" />
                     <MessageSquare className="relative z-10" />
-                    <span className="absolute -top-2 -right-2 bg-bugambilia text-[8px] font-black px-2 py-1 rounded-full animate-bounce">AI</span>
+                    <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-[8px] font-black text-black px-2 py-1 rounded-full animate-bounce">AI</span>
                 </button>
             ) : (
                 <div className="bg-card-theme w-[380px] h-[600px] rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.4)] flex flex-col border border-theme overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-500">

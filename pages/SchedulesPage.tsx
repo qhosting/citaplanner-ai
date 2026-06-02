@@ -238,18 +238,18 @@ export const SchedulesPage: React.FC = () => {
     setSelectedDate(d);
   };
 
-   if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
+   if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#D4AF37]" size={48} /></div>;
 
    return (
       <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
       <div className="flex flex-col md:flex-row justify-end items-start md:items-center mb-12 gap-8">
         <div className="flex flex-wrap gap-4">
           <div className="flex bg-card-theme p-1 rounded-2xl border border-theme">
-            <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Operaciones</button>
-            <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Base</button>
-            <button onClick={() => setActiveTab('EXCEPTIONS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'EXCEPTIONS' ? 'bg-[#CE4676] text-white shadow-lg' : 'text-muted hover:text-main'}`}>Bloqueos</button>
+            <button onClick={() => setActiveTab('MATRIX')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'MATRIX' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-muted hover:text-main'}`}>Operaciones</button>
+            <button onClick={() => setActiveTab('WEEKLY')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'WEEKLY' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-muted hover:text-main'}`}>Base</button>
+            <button onClick={() => setActiveTab('EXCEPTIONS')} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'EXCEPTIONS' ? 'bg-[#D4AF37] text-black shadow-lg' : 'text-muted hover:text-main'}`}>Bloqueos</button>
           </div>
-          <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-8 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl flex items-center gap-2">
+          <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bg-[#D4AF37] hover:bg-[#AA7C11] text-black px-8 py-4 rounded-2xl text-[9px] uppercase tracking-widest font-black shadow-2xl flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all duration-300">
             <Plus size={16} /> Nodo Maestro
           </button>
         </div>
@@ -270,7 +270,7 @@ export const SchedulesPage: React.FC = () => {
                           <p className="text-[9px] font-black text-muted uppercase tracking-widest">No hay nodos activos</p>
                         </div>
                     ) : professionals.map(pro => (
-                        <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#CE4676]/5 border-[#CE4676]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
+                        <div key={pro.id} className={`p-6 cursor-pointer border-l-4 transition-all ${selectedProId === pro.id ? 'bg-[#D4AF37]/5 border-[#D4AF37]' : 'border-transparent hover:bg-input-theme'}`} onClick={() => setSelectedProId(pro.id)}>
                           <div className="flex justify-between items-start">
                               <div>
                                 <p className={`font-black text-sm uppercase ${selectedProId === pro.id ? 'text-main' : 'text-muted'}`}>{pro.name}</p>
@@ -281,7 +281,7 @@ export const SchedulesPage: React.FC = () => {
                               </button>
                           </div>
                           {selectedProId === pro.id && (
-                              <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#CE4676] uppercase hover:underline flex items-center gap-2">
+                              <button onClick={(e) => { e.stopPropagation(); setProFormData(pro); setIsEditProModalOpen(true); }} className="mt-4 text-[9px] font-black text-[#D4AF37] uppercase hover:underline flex items-center gap-2">
                                 <Settings size={12} /> Configurar Perfil
                               </button>
                           )}
@@ -294,14 +294,14 @@ export const SchedulesPage: React.FC = () => {
             <div className={`${activeTab === 'MATRIX' ? 'lg:col-span-12' : 'lg:col-span-9'}`}>
                {professionals.length === 0 ? (
                   <div className="glass-card rounded-[3.5rem] border-theme p-20 flex flex-col items-center justify-center text-center animate-entrance">
-                     <div className="w-24 h-24 bg-[#CE4676]/10 rounded-full flex items-center justify-center mb-8">
-                        <Briefcase className="text-[#CE4676]" size={40} />
+                     <div className="w-24 h-24 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mb-8">
+                        <Briefcase className="text-[#D4AF37]" size={40} />
                      </div>
                      <h2 className="text-2xl font-black text-main uppercase tracking-tighter mb-4">Arquitectura Vacía</h2>
                      <p className="text-xs text-muted font-medium max-w-md mb-10 uppercase tracking-widest leading-loose text-center">
                         No se han detectado especialistas vinculados a este nodo. Integra tu primer "Nodo Maestro" para comenzar a gestionar horarios y citas.
                      </p>
-                     <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bugambilia-btn text-white px-12 py-5 rounded-2xl text-[10px] uppercase tracking-widest font-black shadow-2xl">
+                     <button onClick={() => { setProFormData({ name: '', role: '', email: '', aurumEmployeeId: '' }); setIsCreateProModalOpen(true); }} className="bg-[#D4AF37] hover:bg-[#AA7C11] text-black px-12 py-5 rounded-2xl text-[10px] uppercase tracking-widest font-black shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300">
                         Integrar Especialista Ahora
                      </button>
                   </div>
@@ -311,7 +311,7 @@ export const SchedulesPage: React.FC = () => {
                          <div className="flex items-center gap-6">
                             <button onClick={() => changeDate(-1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronLeft size={20} /></button>
                             <div className="text-center min-w-[200px]">
-                               <p className="text-[9px] font-black text-[#CE4676] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
+                               <p className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest mb-1">{selectedDate.toLocaleDateString('es-ES', { weekday: 'long' })}</p>
                                <p className="text-xl font-black text-main uppercase tracking-tighter">{selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                             </div>
                             <button onClick={() => changeDate(1)} className="p-3 bg-card rounded-xl text-muted hover:text-main border border-theme shadow-sm"><ChevronRight size={20} /></button>
@@ -346,11 +346,10 @@ export const SchedulesPage: React.FC = () => {
                            <div className="divide-y border-theme">
                               {HOURS.map(hour => {
                                  const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                                 
-                                 return (
+                                                              return (
                                     <div key={hour} className="grid grid-cols-[100px_repeat(auto-fit,minmax(200px,1fr))] group hover:bg-white/[0.02] transition-colors">
                                        <div className="p-6 border-r border-theme flex items-center justify-center">
-                                          <span className="text-xs font-black text-muted group-hover:text-[#CE4676] transition-colors">{timeStr}</span>
+                                          <span className="text-xs font-black text-muted group-hover:text-[#D4AF37] transition-colors">{timeStr}</span>
                                        </div>
                                        
                                        {professionals.map(pro => {
@@ -363,7 +362,7 @@ export const SchedulesPage: React.FC = () => {
                                           });
                                           const blocked = isDateBlocked(selectedDate, pro);
                                           const isAvailable = isWorking && !blocked;
-
+ 
                                           const apt = appointments.find(a => {
                                              if (a.professionalId !== pro.id || a.status === 'CANCELLED') return false;
                                              const start = new Date(a.startDateTime);
@@ -374,7 +373,7 @@ export const SchedulesPage: React.FC = () => {
                                              currentHourEnd.setHours(hour + 1, 0, 0, 0);
                                              return start < currentHourEnd && end > currentHourStart;
                                           });
-
+ 
                                           return (
                                              <div
                                                 key={pro.id}
@@ -386,18 +385,18 @@ export const SchedulesPage: React.FC = () => {
                                                       setIsAptModalOpen(true);
                                                    }
                                                 }}
-                                                className={`p-1 border-r border-theme last:border-0 min-h-[90px] relative transition-all ${apt ? 'bg-input-theme/50 cursor-pointer' : isAvailable ? 'hover:bg-[#CE4676]/5 cursor-pointer' : 'bg-black/10'}`}
+                                                className={`p-1 border-r border-theme last:border-0 min-h-[90px] relative transition-all ${apt ? 'bg-input-theme/50 cursor-pointer' : isAvailable ? 'hover:bg-[#D4AF37]/5 cursor-pointer' : 'bg-black/10'}`}
                                              >
                                                 {apt ? (
-                                                   <div className={`absolute inset-1.5 bg-gradient-to-tr ${apt.status === 'PRECONFIRMED' ? 'from-[#D4AF37] to-[#b3922e] border-[#D4AF37]/50 shadow-[#D4AF37]/10 animate-pulse' : 'from-[#CE4676] to-[#9D2D51] border-white/10 shadow-lg'} rounded-xl p-3 shadow-lg flex flex-col justify-center border z-10 group/apt overflow-hidden`}>
+                                                   <div className={`absolute inset-1.5 bg-gradient-to-tr ${apt.status === 'PRECONFIRMED' ? 'from-[#D4AF37] to-[#b3922e] border-[#D4AF37]/50 shadow-[#D4AF37]/10 animate-pulse text-black' : 'from-[#D4AF37] to-[#AA7C11] border-white/10 shadow-lg text-black'} rounded-xl p-3 shadow-lg flex flex-col justify-center border z-10 group/apt overflow-hidden`}>
                                                       <div className="absolute top-0 right-0 p-2 opacity-10 scale-150">
                                                          <Calendar size={32} />
                                                       </div>
-                                                      <p className="text-[8px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">
+                                                      <p className="text-[8px] font-black text-black/50 uppercase tracking-widest leading-none mb-1">
                                                          {apt.status === 'PRECONFIRMED' ? 'Pre-Confirmada (Anticipo)' : 'Confirmada'}
                                                       </p>
-                                                      <h4 className="text-[10px] font-black text-white uppercase truncate">{apt.title}</h4>
-                                                      <p className="text-[9px] font-bold text-white/80 truncate mt-0.5">{apt.clientName}</p>
+                                                      <h4 className="text-[10px] font-black text-black uppercase truncate">{apt.title}</h4>
+                                                      <p className="text-[9px] font-bold text-black/80 truncate mt-0.5">{apt.clientName}</p>
                                                    </div>
                                                 ) : blocked ? (
                                                    <div className="h-full w-full flex items-center justify-center opacity-20">
@@ -405,7 +404,7 @@ export const SchedulesPage: React.FC = () => {
                                                    </div>
                                                 ) : isWorking ? (
                                                    <div className="h-full w-full rounded-xl border border-dashed border-theme flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                                      <Plus size={16} className="text-[#CE4676]/40" />
+                                                      <Plus size={16} className="text-[#D4AF37]/40" />
                                                    </div>
                                                 ) : null}
                                              </div>
@@ -433,7 +432,7 @@ export const SchedulesPage: React.FC = () => {
                               setSaving(false);
                            }}
                            disabled={saving}
-                           className="bugambilia-btn text-white px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl"
+                           className="bg-[#D4AF37] hover:bg-[#AA7C11] text-black px-8 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-300"
                         >
                            {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                            Sincronizar Cambios
@@ -491,7 +490,7 @@ export const SchedulesPage: React.FC = () => {
                            return (
                               <div key={day.id} className={`p-6 rounded-[2rem] border transition-all flex flex-col justify-between ${schedule.isEnabled ? 'bg-input-theme border-theme shadow-sm' : 'bg-transparent border-theme/20 opacity-40'}`}>
                                  <div className="flex items-center gap-4 mb-6">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-all ${schedule.isEnabled ? 'bg-[#CE4676] text-white shadow-[0_0_15px_#CE4676]/30' : 'bg-card text-muted'}`}>
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-all ${schedule.isEnabled ? 'bg-[#D4AF37] text-black shadow-[0_0_15px_#D4AF37]/30' : 'bg-card text-muted'}`}>
                                        {day.name.substring(0, 1)}
                                     </div>
                                     <div>
@@ -504,7 +503,7 @@ export const SchedulesPage: React.FC = () => {
                                     {schedule.isEnabled ? (
                                        <div className="flex flex-col gap-2">
                                           <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-theme">
-                                             <Clock size={12} className="text-[#CE4676]" />
+                                             <Clock size={12} className="text-[#D4AF37]" />
                                              <input
                                                 type="time"
                                                 value={schedule.slots[0]?.start || '09:00'}
@@ -522,7 +521,7 @@ export const SchedulesPage: React.FC = () => {
                                              />
                                           </div>
                                           <div className="flex items-center gap-3 bg-card p-3 rounded-xl border border-theme">
-                                             <Clock size={12} className="text-[#CE4676]" />
+                                             <Clock size={12} className="text-[#D4AF37]" />
                                              <input
                                                 type="time"
                                                 value={schedule.slots[0]?.end || '18:00'}
@@ -586,7 +585,7 @@ export const SchedulesPage: React.FC = () => {
                                        type="date"
                                        value={exceptionFormData.startDate}
                                        onChange={e => setExceptionFormData({ ...exceptionFormData, startDate: e.target.value })}
-                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#D4AF37]"
                                     />
                                  </div>
                                  <div className="md:col-span-1">
@@ -595,7 +594,7 @@ export const SchedulesPage: React.FC = () => {
                                        type="date"
                                        value={exceptionFormData.endDate}
                                        onChange={e => setExceptionFormData({ ...exceptionFormData, endDate: e.target.value })}
-                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#D4AF37]"
                                     />
                                  </div>
                                  <div className="md:col-span-1">
@@ -603,7 +602,7 @@ export const SchedulesPage: React.FC = () => {
                                     <select
                                        value={exceptionFormData.type}
                                        onChange={e => setExceptionFormData({ ...exceptionFormData, type: e.target.value as ExceptionType })}
-                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#D4AF37]"
                                     >
                                        {EXCEPTION_TYPES.map(t => (
                                           <option key={t.value} value={t.value}>{t.label}</option>
@@ -614,7 +613,7 @@ export const SchedulesPage: React.FC = () => {
                                     <button
                                        onClick={handleAddException}
                                        disabled={saving}
-                                       className="w-full bugambilia-btn text-white py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+                                       className="w-full bg-[#D4AF37] hover:bg-[#AA7C11] text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all duration-300"
                                     >
                                        {saving ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
                                        Programar Bloqueo
@@ -627,7 +626,7 @@ export const SchedulesPage: React.FC = () => {
                                        placeholder="Ej: Congreso de Microblading"
                                        value={exceptionFormData.note}
                                        onChange={e => setExceptionFormData({ ...exceptionFormData, note: e.target.value })}
-                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#CE4676]"
+                                       className="w-full bg-card p-4 rounded-xl text-xs font-bold text-white border border-theme outline-none focus:border-[#D4AF37]"
                                     />
                                  </div>
                               </div>
@@ -647,7 +646,7 @@ export const SchedulesPage: React.FC = () => {
                                  const Icon = typeInfo.icon;
 
                                  return (
-                                    <div key={ex.id} className="glass-card p-6 border-theme rounded-3xl flex items-center justify-between group hover:border-[#CE4676]/30 transition-all">
+                                    <div key={ex.id} className="glass-card p-6 border-theme rounded-3xl flex items-center justify-between group hover:border-[#D4AF37]/30 transition-all">
                                        <div className="flex items-center gap-6">
                                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white ${typeInfo.color} shadow-lg shadow-black/20`}>
                                              <Icon size={20} />

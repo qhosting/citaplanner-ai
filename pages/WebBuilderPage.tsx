@@ -205,7 +205,7 @@ export const WebBuilderPage: React.FC = () => {
     const accentSecondary = settings.secondaryColor || '#C5A028';
     const isDarkTemplate = settings.templateId === 'shula_dark';
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#CE4676]" size={48} /></div>;
+    if (loading) return <div className="h-screen flex items-center justify-center bg-main"><Loader2 className="animate-spin text-[#D4AF37]" size={48} /></div>;
 
     return (
         <div className="h-[calc(100vh-80px)] flex bg-main overflow-hidden font-inter">
@@ -213,13 +213,13 @@ export const WebBuilderPage: React.FC = () => {
             <div className="w-[480px] border-r border-theme flex flex-col bg-card-theme">
                 <div className="p-6 border-b border-theme flex justify-between items-center bg-input-theme">
                     <div>
-                        <h1 className="text-2xl font-black text-main tracking-tighter uppercase leading-none mb-1">Web <span className="bugambilia-text-gradient">Architect</span></h1>
+                        <h1 className="text-2xl font-black text-main tracking-tighter uppercase leading-none mb-1">Web <span className="gold-text-gradient">Architect</span></h1>
                         <p className="text-[9px] text-muted font-bold uppercase tracking-[0.4em]">Aurum Builder v2.0 • Pro Edition</p>
                     </div>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="bugambilia-btn px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl"
+                        className="gold-btn px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl"
                     >
                         {saving ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
                         Publicar
@@ -237,7 +237,7 @@ export const WebBuilderPage: React.FC = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActivePanel(tab.id as any)}
-                            className={`py-3 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all ${activePanel === tab.id ? 'bg-card text-[#CE4676] border border-[#CE4676]/20 shadow-lg' : 'text-muted hover:text-main'}`}
+                            className={`py-3 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all ${activePanel === tab.id ? 'bg-card text-[#D4AF37] border border-[#D4AF37]/20 shadow-lg' : 'text-muted hover:text-main'}`}
                         >
                             <tab.icon size={14} />
                             <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
@@ -300,7 +300,7 @@ export const WebBuilderPage: React.FC = () => {
                                             value={settings.slogan || ''}
                                             onChange={e => setSettings({ ...settings, slogan: e.target.value })}
                                             placeholder="Ej: Elegancia en cada detalle"
-                                            className="w-full p-4 bg-input-theme text-main font-bold text-xs outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl"
+                                            className="w-full p-4 bg-input-theme text-main font-bold text-xs outline-none focus:ring-1 ring-[#D4AF37]/30 border border-theme rounded-2xl"
                                         />
                                     </div>
                                 </div>
@@ -308,11 +308,11 @@ export const WebBuilderPage: React.FC = () => {
 
                             {/* Logo Upload */}
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Sparkles size={16} /> Logo
                                 </h3>
                                 <div
-                                    className="group relative w-28 h-28 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all mx-auto"
+                                    className="group relative w-28 h-28 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/40 transition-all mx-auto"
                                     onClick={() => document.getElementById('logo-upload')?.click()}
                                 >
                                     {settings.logoUrl ? (
@@ -334,11 +334,11 @@ export const WebBuilderPage: React.FC = () => {
 
                             {/* Hero Image */}
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <ImageIcon size={16} /> Imagen Hero Principal
                                 </h3>
                                 <div
-                                    className="group relative w-full h-40 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#CE4676]/40 transition-all"
+                                    className="group relative w-full h-40 rounded-2xl bg-input-theme border border-dashed border-theme overflow-hidden flex items-center justify-center cursor-pointer hover:border-[#D4AF37]/40 transition-all"
                                     onClick={() => document.getElementById('hero-upload')?.click()}
                                 >
                                     {settings.heroImageUrl ? (
@@ -392,7 +392,7 @@ export const WebBuilderPage: React.FC = () => {
                             </section>
 
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Type size={16} /> Acerca de Nosotros
                                 </h3>
                                 <textarea
@@ -400,14 +400,14 @@ export const WebBuilderPage: React.FC = () => {
                                     value={settings.aboutText || ''}
                                     onChange={e => setSettings({ ...settings, aboutText: e.target.value })}
                                     placeholder="Describe tu negocio para los clientes..."
-                                    className="w-full p-4 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#CE4676]/30 border border-theme rounded-2xl resize-none"
+                                    className="w-full p-4 bg-input-theme text-main text-xs font-medium leading-relaxed outline-none focus:ring-1 ring-[#D4AF37]/30 border border-theme rounded-2xl resize-none"
                                 />
                             </section>
 
                             {/* Services & Products Selection */}
                             <section className="space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                    <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                         <Sparkles size={16} /> Servicios en Landing (Producción)
                                     </h3>
                                     <span className="text-[8px] font-black text-muted uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
@@ -430,13 +430,13 @@ export const WebBuilderPage: React.FC = () => {
                                                         : [...currentIds, service.id];
                                                     setSettings({ ...settings, serviceIds: newIds });
                                                 }}
-                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#CE4676]/10 border-[#CE4676]' : 'bg-input-theme border-theme hover:border-muted'}`}
+                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-input-theme border-theme hover:border-muted'}`}
                                             >
                                                 <div className="flex-1 min-w-0">
-                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#CE4676]' : 'text-main'}`}>{service.name}</p>
+                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#D4AF37]' : 'text-main'}`}>{service.name}</p>
                                                     <p className="text-[8px] text-muted font-bold">${service.price} • {service.duration} min</p>
                                                 </div>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#CE4676] border-[#CE4676]' : 'border-theme'}`}>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#D4AF37] border-[#D4AF37]' : 'border-theme'}`}>
                                                     {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
                                                 </div>
                                             </div>
@@ -445,7 +445,7 @@ export const WebBuilderPage: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center justify-between pt-4">
-                                    <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                    <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                         <Layers size={16} /> Productos en Landing (Producción)
                                     </h3>
                                     <span className="text-[8px] font-black text-muted uppercase tracking-widest bg-zinc-800 px-2 py-0.5 rounded-full">
@@ -468,13 +468,13 @@ export const WebBuilderPage: React.FC = () => {
                                                         : [...currentIds, product.id];
                                                     setSettings({ ...settings, productIds: newIds });
                                                 }}
-                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#CE4676]/10 border-[#CE4676]' : 'bg-input-theme border-theme hover:border-muted'}`}
+                                                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'bg-input-theme border-theme hover:border-muted'}`}
                                             >
                                                 <div className="flex-1 min-w-0">
-                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#CE4676]' : 'text-main'}`}>{product.name}</p>
+                                                    <p className={`text-[10px] font-black uppercase tracking-tight truncate ${isSelected ? 'text-[#D4AF37]' : 'text-main'}`}>{product.name}</p>
                                                     <p className="text-[8px] text-muted font-bold">${product.price} • {product.category}</p>
                                                 </div>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#CE4676] border-[#CE4676]' : 'border-theme'}`}>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-[#D4AF37] border-[#D4AF37]' : 'border-theme'}`}>
                                                     {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
                                                 </div>
                                             </div>
@@ -485,7 +485,7 @@ export const WebBuilderPage: React.FC = () => {
 
                             {/* Gallery */}
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <ImageIcon size={16} /> Galería Visual
                                 </h3>
                                 <div className="grid grid-cols-3 gap-2">
@@ -506,7 +506,7 @@ export const WebBuilderPage: React.FC = () => {
                                     ))}
                                     <div
                                         onClick={() => document.getElementById('gallery-upload')?.click()}
-                                        className="aspect-square bg-input-theme border border-dashed border-theme rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#CE4676] hover:text-[#CE4676] transition-all"
+                                        className="aspect-square bg-input-theme border border-dashed border-theme rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#D4AF37] hover:text-[#D4AF37] transition-all"
                                     >
                                         <Cloud size={18} className="mb-1 text-muted" />
                                         <span className="text-[8px] font-black text-muted uppercase tracking-widest">Subir</span>
@@ -538,7 +538,7 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'DESIGN' && (
                         <div className="space-y-8 animate-entrance">
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Paleta de Colores</h3>
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Paleta de Colores</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-[8px] font-black text-muted uppercase tracking-widest block ml-1">Color Principal</label>
@@ -566,7 +566,7 @@ export const WebBuilderPage: React.FC = () => {
 
                             <section className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Plantilla Visual</h3>
+                                    <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Plantilla Visual</h3>
                                     <button
                                         onClick={loadDemoData}
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border border-indigo-500/20 active:scale-95"
@@ -583,7 +583,7 @@ export const WebBuilderPage: React.FC = () => {
                                         <button
                                             key={template.id}
                                             onClick={() => handleTemplateChange(template.id)}
-                                            className={`w-full p-4 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template.id ? 'border-[#CE4676] shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main hover:bg-input-theme/50'}`}
+                                            className={`w-full p-4 rounded-2xl border flex items-center justify-between group transition-all ${settings.templateId === template.id ? 'border-[#D4AF37] shadow-xl' : 'bg-input-theme border-theme text-muted hover:text-main hover:bg-input-theme/50'}`}
                                             style={settings.templateId === template.id ? { backgroundColor: `${accent}15`, borderColor: accent } : {}}
                                         >
                                             <div className="text-left">
@@ -607,7 +607,7 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'PAGES' && (
                         <div className="space-y-8 animate-entrance">
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">URL Activa</h3>
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">URL Activa</h3>
                                 <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl">
                                     <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 flex items-center gap-2">
                                         <Check size={12} /> Certificado SSL Activo
@@ -615,9 +615,9 @@ export const WebBuilderPage: React.FC = () => {
                                     <p className="text-xs font-bold text-main font-mono break-all">{settings.subdomain || 'demo'}.citaplanner.com</p>
                                 </div>
                             </section>
-
+ 
                             <section className="space-y-4 pt-6 border-t border-theme">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Phone size={16} /> Contacto
                                 </h3>
                                 <div className="space-y-3">
@@ -625,7 +625,7 @@ export const WebBuilderPage: React.FC = () => {
                                         <label className="text-[9px] font-black text-muted uppercase tracking-widest ml-1 mb-1 block">Teléfono de Contacto</label>
                                         <div className="relative">
                                             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={14} />
-                                            <input type="tel" placeholder="+52 55 1234 5678" value={settings.contactPhone || ''} onChange={e => setSettings({ ...settings, contactPhone: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-[#CE4676]/30" />
+                                            <input type="tel" placeholder="+52 55 1234 5678" value={settings.contactPhone || ''} onChange={e => setSettings({ ...settings, contactPhone: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-input-theme border border-theme rounded-2xl text-main font-bold text-xs focus:ring-1 ring-[#D4AF37]/30" />
                                         </div>
                                     </div>
                                     <div>
@@ -646,7 +646,7 @@ export const WebBuilderPage: React.FC = () => {
                             </section>
 
                             <section className="space-y-4 pt-6 border-t border-theme">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Share2 size={16} /> Footer & Redes
                                 </h3>
                                 <div className="space-y-3">
@@ -669,7 +669,7 @@ export const WebBuilderPage: React.FC = () => {
                     {activePanel === 'SEO' && (
                         <div className="space-y-8 animate-entrance">
                             <section className="space-y-4">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Search size={16} /> SEO & Meta Tags
                                 </h3>
                                 <div className="space-y-3">
@@ -689,10 +689,10 @@ export const WebBuilderPage: React.FC = () => {
                                     </div>
                                 </div>
                             </section>
-
+ 
                             {/* Google Preview */}
                             <section className="space-y-3">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest">Vista Previa en Google</h3>
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">Vista Previa en Google</h3>
                                 <div className="bg-white rounded-2xl p-4 border border-zinc-200">
                                     <p className="text-[10px] text-emerald-700 font-medium mb-0.5">{settings.subdomain || 'demo'}.citaplanner.com</p>
                                     <p className="text-blue-800 text-sm font-medium mb-1 hover:underline cursor-pointer">{settings.seoTitle || settings.businessName || 'Sin Título'}</p>
@@ -701,7 +701,7 @@ export const WebBuilderPage: React.FC = () => {
                             </section>
 
                             <section className="space-y-4 pt-6 border-t border-theme">
-                                <h3 className="text-[10px] font-black text-[#CE4676] uppercase tracking-widest flex items-center gap-3">
+                                <h3 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest flex items-center gap-3">
                                     <Compass size={16} /> Geolocalización
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
@@ -734,7 +734,7 @@ export const WebBuilderPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => { if (iframeRef.current) iframeRef.current.src = iframeRef.current.src; }}
-                            className="p-1.5 text-muted hover:text-[#CE4676] transition-colors rounded-lg hover:bg-input-theme"
+                            className="p-1.5 text-muted hover:text-[#D4AF37] transition-colors rounded-lg hover:bg-input-theme"
                             title="Recargar vista previa"
                         >
                             <RefreshCw size={13} />

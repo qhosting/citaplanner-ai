@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Megaphone, Mail, MessageCircle, Send, Plus, Users, Zap, Clock, CheckCircle2, AlertCircle, Play, Loader2 } from 'lucide-react';
+import { Megaphone, Mail, MessageCircle, Send, Plus, Users, Zap, Clock, CheckCircle2, AlertCircle, Play, Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Campaign, AutomationRule, MarketingChannel } from '../types';
 import { launchCampaign, saveAutomationRule } from '../services/integrationService';
@@ -128,107 +128,96 @@ export const MarketingPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-12 animate-entrance">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Megaphone className="text-indigo-600" />
-            Marketing y Comunicaciones
-          </h1>
-          <p className="text-slate-500 mt-1">Crea campañas, envía newsletters y automatiza la fidelización.</p>
+          <div className="flex items-center gap-4 mb-3">
+            <div className="w-1 h-10 bg-[#D4AF37] rounded-full shadow-[0_0_20px_#D4AF37]"></div>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
+              Marketing <span className="gold-text-gradient font-light">Engine</span>
+            </h1>
+          </div>
+          <p className="text-slate-600 font-bold uppercase tracking-[0.4em] text-[10px] ml-5">Automations & Elite Outreach Hub</p>
         </div>
-        <div className="text-xs text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-200 flex items-center gap-1">
-            <Zap size={12} /> Conectado a N8N
+        <div className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-5 py-2.5 rounded-full border border-emerald-500/20 flex items-center gap-1.5 shrink-0 uppercase tracking-widest">
+          <Zap size={14} className="animate-pulse" /> Conectado a N8N
         </div>
       </div>
 
-      <div className="flex border-b border-slate-200 mb-6">
-        <button
-          onClick={() => setActiveTab('CAMPAIGNS')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'CAMPAIGNS' 
-              ? 'border-indigo-600 text-indigo-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Mail size={18} /> Campañas Masivas
-        </button>
-        <button
-          onClick={() => setActiveTab('AUTOMATIONS')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'AUTOMATIONS' 
-              ? 'border-indigo-600 text-indigo-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Zap size={18} /> Automatizaciones
-        </button>
-        <button
-          onClick={() => setActiveTab('TEMPLATES')}
-          className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'TEMPLATES' 
-              ? 'border-indigo-600 text-indigo-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Plus size={18} /> Plantillas
-        </button>
+      <div className="flex gap-2 mb-10 overflow-x-auto no-scrollbar pb-2">
+        {[
+          { id: 'CAMPAIGNS', label: 'Campañas Masivas', icon: Mail },
+          { id: 'AUTOMATIONS', label: 'Automatizaciones', icon: Zap },
+          { id: 'TEMPLATES', label: 'Biblioteca de Plantillas', icon: Plus }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center gap-3 whitespace-nowrap border ${activeTab === tab.id ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black border-transparent shadow-lg shadow-[#D4AF37]/20' : 'bg-white/[0.02] text-zinc-500 border-white/5 hover:border-[#D4AF37]/20 hover:text-white'}`}
+          >
+            <tab.icon size={16} /> {tab.label}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'CAMPAIGNS' && (
-        <div className="animate-fade-in-up">
-           <div className="flex justify-between items-center mb-6">
-             <h2 className="font-bold text-slate-700">Campañas Recientes</h2>
+        <div className="animate-entrance">
+           <div className="flex justify-between items-center mb-10">
+             <h2 className="font-black text-[10px] text-zinc-500 uppercase tracking-[0.3em]">Campañas Recientes</h2>
              <button 
                onClick={() => setIsCampaignModalOpen(true)}
-               className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"
+               className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-[1.5rem] flex items-center gap-2 hover:scale-[1.02] transition-all font-black text-[9px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20"
              >
-               <Plus size={18} /> Crear Campaña
+               <Plus size={16} /> Crear Campaña
              </button>
            </div>
 
            {campaigns.length === 0 ? (
-             <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-               <Megaphone className="mx-auto text-slate-400 mb-4" size={48} />
-               <p className="text-slate-500 font-medium">No hay campañas registradas</p>
+             <div className="text-center py-40 glass-card rounded-[4rem] border-dashed border-white/10 opacity-30">
+               <Megaphone className="mx-auto text-[#D4AF37] mb-6 animate-pulse" size={64} />
+               <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-[10px]">No hay campañas registradas</p>
              </div>
            ) : (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {campaigns.map(campaign => (
-                  <div key={campaign.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-3">
-                        <div className={`p-2 rounded-lg ${campaign.channel === 'WHATSAPP' ? 'bg-green-100 text-green-600' : campaign.channel === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                  <div key={campaign.id} className="glass-card p-8 rounded-[3.5rem] border-white/5 hover:border-[#D4AF37]/20 transition-all group flex flex-col relative overflow-hidden h-full bg-black/40">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000">
+                      {getChannelIcon(campaign.channel)}
+                    </div>
+                    
+                    <div className="flex justify-between items-start mb-8 relative z-10">
+                        <div className={`p-4 rounded-2xl border ${campaign.channel === 'WHATSAPP' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : campaign.channel === 'EMAIL' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
                           {getChannelIcon(campaign.channel)}
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                          campaign.status === 'SENT' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
+                        <span className={`text-[8px] font-black px-3 py-1.5 rounded-full border ${
+                          campaign.status === 'SENT' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-slate-500 border-white/5'
                         }`}>
                           {campaign.status === 'SENT' ? 'ENVIADA' : 'BORRADOR'}
                         </span>
                     </div>
                     
-                    <h3 className="font-bold text-slate-800 mb-1">{campaign.name}</h3>
-                    <p className="text-xs text-slate-500 mb-4 flex items-center gap-1">
-                      <Users size={12} /> 
-                      Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (&gt;90 días)'}
+                    <h3 className="font-black text-2xl text-white tracking-tighter uppercase leading-tight mb-2 group-hover:text-[#D4AF37] transition-colors">{campaign.name}</h3>
+                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-6 flex items-center gap-1.5">
+                      <Users size={12} className="text-[#D4AF37]" /> 
+                      Audiencia: {campaign.targetSegment === 'ALL' ? 'Todos los Clientes' : 'Inactivos (>90 días)'}
                     </p>
                     
-                    <div className="bg-slate-50 p-3 rounded-lg text-sm text-slate-600 mb-4 flex-grow italic border border-slate-100">
+                    <div className="bg-black/50 p-6 rounded-[2rem] text-sm text-zinc-300 mb-8 flex-grow italic border border-white/5 leading-relaxed">
                       "{campaign.content}"
                     </div>
 
-                    <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <div className="mt-auto pt-6 border-t border-white/5 flex justify-between items-center relative z-10">
                       {campaign.status === 'SENT' ? (
-                        <div className="text-sm text-green-600 flex items-center gap-1">
+                        <div className="text-[10px] font-black text-emerald-500 flex items-center gap-2 uppercase tracking-widest">
                           <CheckCircle2 size={16} /> Enviado a {campaign.sentCount || 0}
                         </div>
                       ) : (
                         <button 
                           onClick={() => handleSendCampaign(campaign.id)}
                           disabled={sendingId === campaign.id}
-                          className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 flex items-center justify-center gap-2 disabled:opacity-70"
+                          className="w-full bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
                         >
-                          {sendingId === campaign.id ? 'Enviando...' : <><Send size={14} /> Enviar Ahora</>}
+                          {sendingId === campaign.id ? <Loader2 size={14} className="animate-spin text-black" /> : <><Send size={14} /> Enviar Ahora</>}
                         </button>
                       )}
                     </div>
@@ -240,44 +229,48 @@ export const MarketingPage: React.FC = () => {
       )}
 
       {activeTab === 'TEMPLATES' && (
-         <div className="animate-fade-in-up">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-slate-700">Biblioteca de Plantillas</h2>
+         <div className="animate-entrance">
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="font-black text-[10px] text-zinc-500 uppercase tracking-[0.3em]">Biblioteca de Plantillas</h2>
               <button 
                 onClick={() => setIsTemplateModalOpen(true)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"
+                className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-[1.5rem] flex items-center gap-2 hover:scale-[1.02] transition-all font-black text-[9px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20"
               >
-                <Plus size={18} /> Nueva Plantilla
+                <Plus size={16} /> Nueva Plantilla
               </button>
             </div>
 
             {templates.length === 0 ? (
-              <div className="text-center py-20 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                <Mail className="mx-auto text-slate-400 mb-4" size={48} />
-                <p className="text-slate-500 font-medium">No hay plantillas guardadas</p>
+              <div className="text-center py-40 glass-card rounded-[4rem] border-dashed border-white/10 opacity-30">
+                <Mail className="mx-auto text-[#D4AF37] mb-6 animate-pulse" size={64} />
+                <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-[10px]">No hay plantillas guardadas</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                  {templates.map((template: any) => (
-                   <div key={template.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col h-full hover:shadow-md transition-shadow">
-                     <div className="flex justify-between items-start mb-3">
-                        <div className={`p-2 rounded-lg ${template.channel === 'WHATSAPP' ? 'bg-green-100 text-green-600' : template.channel === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                   <div key={template.id} className="glass-card p-8 rounded-[3.5rem] border-white/5 hover:border-[#D4AF37]/20 transition-all group flex flex-col relative overflow-hidden h-full bg-black/40">
+                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000">
+                       {getChannelIcon(template.channel as MarketingChannel)}
+                     </div>
+
+                     <div className="flex justify-between items-start mb-8 relative z-10">
+                        <div className={`p-4 rounded-2xl border ${template.channel === 'WHATSAPP' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : template.channel === 'EMAIL' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
                           {getChannelIcon(template.channel as MarketingChannel)}
                         </div>
-                        <button onClick={() => deleteTemplateMutation.mutate(template.id)} className="text-slate-300 hover:text-rose-500 p-2">
-                           <Send size={14} className="rotate-45" /> 
+                        <button onClick={() => deleteTemplateMutation.mutate(template.id)} className="text-zinc-500 hover:text-rose-500 p-2 border border-white/5 rounded-xl bg-white/5 hover:bg-rose-500/10 transition-colors">
+                           <Trash2 size={14} /> 
                         </button>
                      </div>
                      
-                     <h3 className="font-bold text-slate-800 mb-1">{template.name}</h3>
-                     {template.subject && <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Asunto: {template.subject}</p>}
+                     <h3 className="font-black text-2xl text-white tracking-tighter uppercase leading-tight mb-2 group-hover:text-[#D4AF37] transition-colors">{template.name}</h3>
+                     {template.subject && <p className="text-[9px] text-[#D4AF37] font-black uppercase tracking-widest mb-4">Asunto: {template.subject}</p>}
                      
-                     <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-600 mb-4 flex-grow border border-slate-100 line-clamp-4">
+                     <div className="bg-black/50 p-6 rounded-[2rem] text-sm text-zinc-300 mb-8 flex-grow border border-white/5 leading-relaxed italic animate-entrance">
                        {template.content}
                      </div>
 
-                     <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{template.channel}</span>
+                     <div className="mt-auto pt-6 border-t border-white/5 flex justify-between items-center relative z-10">
+                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{template.channel}</span>
                         <button onClick={() => {
                            setNewCampaign({
                               name: `Campaña: ${template.name}`,
@@ -287,7 +280,7 @@ export const MarketingPage: React.FC = () => {
                            });
                            setActiveTab('CAMPAIGNS');
                            setIsCampaignModalOpen(true);
-                        }} className="text-[10px] font-black text-indigo-600 uppercase hover:underline">
+                        }} className="text-[10px] font-black text-[#D4AF37] uppercase hover:underline tracking-widest">
                            Usar en Campaña
                         </button>
                      </div>
@@ -299,48 +292,48 @@ export const MarketingPage: React.FC = () => {
        )}
 
       {activeTab === 'AUTOMATIONS' && (
-        <div className="animate-fade-in-up">
-           <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl mb-6 flex gap-3 items-start">
-              <AlertCircle className="text-indigo-600 mt-0.5" size={20} />
+        <div className="animate-entrance">
+           <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-8 rounded-[2.5rem] mb-10 flex gap-5 items-start">
+              <AlertCircle className="text-[#D4AF37] mt-0.5 shrink-0" size={20} />
               <div>
-                <h4 className="font-bold text-indigo-900 text-sm">¿Cómo funciona?</h4>
-                <p className="text-sm text-indigo-700 mt-1">
+                <h4 className="font-black text-[#D4AF37] uppercase tracking-widest text-[10px] mb-1">Motor de Reglas Automatizadas</h4>
+                <p className="text-xs text-zinc-400 font-semibold leading-relaxed">
                   Estas reglas se ejecutan automáticamente en segundo plano (vía N8N/Cron). 
                   Activa los interruptores para habilitar el comportamiento deseado.
                 </p>
               </div>
            </div>
 
-           <div className="space-y-4">
+           <div className="space-y-6">
               {automations.map(rule => (
-                <div key={rule.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                   <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-full ${rule.isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                <div key={rule.id} className="glass-card p-8 rounded-[3rem] border-white/5 bg-black/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:border-[#D4AF37]/10 transition-all">
+                   <div className="flex items-start gap-5">
+                      <div className={`p-4 rounded-3xl border transition-all ${rule.isActive ? 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20' : 'bg-white/5 text-slate-600 border-white/5'}`}>
                          <Zap size={24} />
                       </div>
                       <div>
-                         <h3 className="font-bold text-slate-800 text-lg">{rule.name}</h3>
-                         <div className="flex flex-wrap gap-3 mt-1 text-sm text-slate-500">
-                            <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                               <Clock size={12} /> Retraso: {rule.delayHours}h
+                         <h3 className="font-black text-xl text-white uppercase tracking-tight mb-2">{rule.name}</h3>
+                         <div className="flex flex-wrap gap-3 text-xs text-slate-500 font-semibold">
+                            <span className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 uppercase text-[9px] tracking-widest text-zinc-400">
+                               <Clock size={12} className="text-[#D4AF37]" /> Retraso: {rule.delayHours}h
                             </span>
-                            <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                            <span className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 uppercase text-[9px] tracking-widest text-zinc-400">
                                {getChannelIcon(rule.channel)} Canal: {rule.channel}
                             </span>
                          </div>
-                         <p className="text-sm text-slate-400 mt-2 font-mono bg-slate-50 p-2 rounded inline-block border border-slate-100">
+                         <p className="text-[10px] text-[#D4AF37] font-mono mt-4 bg-black/60 px-4 py-2.5 rounded-xl border border-white/5 inline-block select-all">
                             Plantilla: {rule.templateMessage}
                          </p>
                       </div>
                    </div>
 
-                   <div className="flex items-center gap-3">
-                      <span className={`text-sm font-medium ${rule.isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                   <div className="flex items-center gap-4 shrink-0 bg-black/40 px-6 py-4 rounded-2xl border border-white/5">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${rule.isActive ? 'text-emerald-500' : 'text-slate-500'}`}>
                         {rule.isActive ? 'ACTIVO' : 'INACTIVO'}
                       </span>
                       <button 
                         onClick={() => toggleAutomation(rule.id)}
-                        className={`w-14 h-7 rounded-full transition-colors relative ${rule.isActive ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                        className={`w-14 h-7 rounded-full transition-all relative ${rule.isActive ? 'bg-[#D4AF37]' : 'bg-zinc-800'}`}
                       >
                          <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-sm ${rule.isActive ? 'left-8' : 'left-1'}`} />
                       </button>
@@ -352,29 +345,29 @@ export const MarketingPage: React.FC = () => {
       )}
 
       {isCampaignModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-scale-in">
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                 <h3 className="font-bold text-slate-800">Nueva Campaña</h3>
-                 <button onClick={() => setIsCampaignModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Play className="rotate-45" size={20}/></button>
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+           <div className="glass-card rounded-[3.5rem] shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border-white/10 bg-black">
+              <div className="p-8 border-b border-white/5 flex justify-between items-center bg-black/40">
+                 <h3 className="font-black text-sm text-white uppercase tracking-widest">Nueva Campaña</h3>
+                 <button onClick={() => setIsCampaignModalOpen(false)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
               </div>
-              <form onSubmit={handleCreateCampaign} className="p-6 space-y-4">
+              <form onSubmit={handleCreateCampaign} className="p-8 space-y-6">
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Campaña</label>
+                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Nombre de la Campaña</label>
                     <input 
                       required
-                      className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
                       placeholder="Ej: Promo Navidad"
                       value={newCampaign.name}
                       onChange={e => setNewCampaign({...newCampaign, name: e.target.value})}
                     />
                  </div>
                  
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Canal</label>
+                        <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Canal</label>
                         <select 
-                           className="w-full p-2 border border-slate-300 rounded-lg"
+                           className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-black text-xs outline-none focus:border-[#D4AF37] cursor-pointer"
                            value={newCampaign.channel}
                            onChange={e => setNewCampaign({...newCampaign, channel: e.target.value as MarketingChannel})}
                         >
@@ -384,9 +377,9 @@ export const MarketingPage: React.FC = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Segmento</label>
+                        <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Segmento</label>
                         <select 
-                           className="w-full p-2 border border-slate-300 rounded-lg"
+                           className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-black text-xs outline-none focus:border-[#D4AF37] cursor-pointer"
                            value={newCampaign.targetSegment}
                            onChange={e => setNewCampaign({...newCampaign, targetSegment: e.target.value as any})}
                         >
@@ -399,9 +392,9 @@ export const MarketingPage: React.FC = () => {
 
                  {newCampaign.channel === 'EMAIL' && (
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Asunto</label>
+                        <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Asunto</label>
                         <input 
-                        className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
                         placeholder="Asunto del correo..."
                         value={newCampaign.subject}
                         onChange={e => setNewCampaign({...newCampaign, subject: e.target.value})}
@@ -410,30 +403,31 @@ export const MarketingPage: React.FC = () => {
                  )}
 
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Contenido / Mensaje</label>
+                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Contenido / Mensaje</label>
                     <textarea 
                       required
-                      className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-24 resize-none"
+                      rows={4}
+                      className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-medium text-xs outline-none focus:border-[#D4AF37] transition-all resize-none"
                       placeholder="Escribe el contenido de tu mensaje aquí..."
                       value={newCampaign.content}
                       onChange={e => setNewCampaign({...newCampaign, content: e.target.value})}
                     />
                  </div>
 
-                 <div className="flex justify-end gap-3 pt-2">
+                 <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
                     <button 
                       type="button" 
                       onClick={() => setIsCampaignModalOpen(false)}
-                      className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                      className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors px-4 py-2"
                     >
                        Cancelar
                     </button>
                     <button 
                       type="submit"
                       disabled={createMutation.isPending}
-                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2"
+                      className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20 flex items-center gap-2 hover:scale-[1.02] transition-all"
                     >
-                       {createMutation.isPending && <Loader2 className="animate-spin" size={14} />}
+                       {createMutation.isPending && <Loader2 className="animate-spin text-black" size={14} />}
                        Guardar Borrador
                     </button>
                  </div>
@@ -443,21 +437,21 @@ export const MarketingPage: React.FC = () => {
       )}
 
       {isTemplateModalOpen && (
-         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-scale-in">
-               <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <h3 className="font-bold text-slate-800">Nueva Plantilla Maestro</h3>
-                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-600"><Play className="rotate-45" size={20}/></button>
+         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+            <div className="glass-card rounded-[3.5rem] shadow-2xl max-w-lg w-full overflow-hidden animate-scale-in border-white/10 bg-black">
+               <div className="p-8 border-b border-white/5 flex justify-between items-center bg-black/40">
+                  <h3 className="font-black text-sm text-white uppercase tracking-widest">Nueva Plantilla Maestro</h3>
+                  <button onClick={() => setIsTemplateModalOpen(false)} className="text-zinc-500 hover:text-white"><X size={20}/></button>
                </div>
                <form onSubmit={(e) => {
                   e.preventDefault();
                   createTemplateMutation.mutate(newTemplate);
-               }} className="p-6 space-y-4">
+               }} className="p-8 space-y-6">
                   <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-1">Nombre de la Plantilla</label>
+                     <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Nombre de la Plantilla</label>
                      <input 
                        required
-                       className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                       className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
                        placeholder="Ej: Recordatorio VIP"
                        value={newTemplate.name}
                        onChange={e => setNewTemplate({...newTemplate, name: e.target.value})}
@@ -465,9 +459,9 @@ export const MarketingPage: React.FC = () => {
                   </div>
                   
                   <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Canal de Comunicación</label>
+                      <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Canal de Comunicación</label>
                       <select 
-                         className="w-full p-2 border border-slate-300 rounded-lg"
+                         className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-black text-xs outline-none focus:border-[#D4AF37] cursor-pointer"
                          value={newTemplate.channel}
                          onChange={e => setNewTemplate({...newTemplate, channel: e.target.value as any})}
                       >
@@ -479,9 +473,9 @@ export const MarketingPage: React.FC = () => {
 
                   {newTemplate.channel === 'EMAIL' && (
                      <div>
-                         <label className="block text-sm font-medium text-slate-700 mb-1">Asunto Predeterminado</label>
+                         <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Asunto Predeterminado</label>
                          <input 
-                         className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                         className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-bold text-xs outline-none focus:border-[#D4AF37] transition-all"
                          placeholder="Asunto del correo..."
                          value={newTemplate.subject}
                          onChange={e => setNewTemplate({...newTemplate, subject: e.target.value})}
@@ -490,14 +484,14 @@ export const MarketingPage: React.FC = () => {
                   )}
 
                   <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-1">Cuerpo del Mensaje</label>
-                     <div className="mb-2 flex gap-2">
+                     <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2.5 ml-2">Cuerpo del Mensaje</label>
+                     <div className="mb-3 flex gap-2 flex-wrap">
                         {['{{NAME}}', '{{DATE}}', '{{BUSINESS}}'].map(tag => (
                            <button 
                               key={tag}
                               type="button"
                               onClick={() => setNewTemplate({...newTemplate, content: newTemplate.content + ' ' + tag})}
-                              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded border border-slate-200 font-mono"
+                              className="text-[9px] font-black bg-white/5 hover:bg-[#D4AF37] text-slate-400 hover:text-black px-3 py-1.5 rounded-xl border border-white/5 transition-colors font-mono uppercase tracking-widest"
                            >
                               {tag}
                            </button>
@@ -505,27 +499,28 @@ export const MarketingPage: React.FC = () => {
                      </div>
                      <textarea 
                        required
-                       className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none h-32 resize-none"
+                       rows={4}
+                       className="w-full p-5 bg-black border border-white/5 rounded-2xl text-white font-medium text-xs outline-none focus:border-[#D4AF37] transition-all resize-none"
                        placeholder="Escribe el contenido aquí..."
                        value={newTemplate.content}
                        onChange={e => setNewTemplate({...newTemplate, content: e.target.value})}
                      />
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-2">
+                  <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
                      <button 
                        type="button" 
                        onClick={() => setIsTemplateModalOpen(false)}
-                       className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                       className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors px-4 py-2"
                      >
                         Cancelar
                      </button>
                      <button 
                        type="submit"
                        disabled={createTemplateMutation.isPending}
-                       className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2"
+                       className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20 flex items-center gap-2 hover:scale-[1.02] transition-all"
                      >
-                        {createTemplateMutation.isPending && <Loader2 className="animate-spin" size={14} />}
+                        {createTemplateMutation.isPending && <Loader2 className="animate-spin text-black" size={14} />}
                         Guardar Plantilla
                      </button>
                   </div>

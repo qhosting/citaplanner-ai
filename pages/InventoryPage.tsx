@@ -176,7 +176,7 @@ export const InventoryPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center gap-3 whitespace-nowrap border ${activeTab === tab.id ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-2xl' : 'bg-white/5 text-slate-500 border-white/5 hover:border-white/10'}`}
+              className={`px-10 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center gap-3 whitespace-nowrap border ${activeTab === tab.id ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black border-transparent shadow-lg shadow-[#D4AF37]/20' : 'bg-white/[0.02] text-zinc-500 border-white/5 hover:border-[#D4AF37]/20 hover:text-white'}`}
             >
               <tab.icon size={16} /> {tab.label}
             </button>
@@ -331,7 +331,7 @@ export const InventoryPage: React.FC = () => {
       <div className="fixed bottom-10 right-10 z-[600]">
         <button
           onClick={handleCreate}
-          className="flex items-center justify-center gap-3 gold-btn text-black px-6 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
+          className="flex items-center justify-center gap-3 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(212,175,55,0.3)] hover:shadow-[0_15px_40px_rgba(212,175,55,0.5)] hover:scale-105 active:scale-95 transition-all duration-300 font-extrabold text-[10px] uppercase tracking-widest group"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
           <span>Integrar Activo</span>

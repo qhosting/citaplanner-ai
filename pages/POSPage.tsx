@@ -222,9 +222,9 @@ export const POSPage: React.FC = () => {
               />
             </div>
             <div className="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0 scrollbar-hide">
-              <button onClick={() => setActiveTab('ALL')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${activeTab === 'ALL' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}>Todo</button>
-              <button onClick={() => setActiveTab('PRODUCTS')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'PRODUCTS' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><Package size={12} /> Activos</button>
-              <button onClick={() => setActiveTab('SERVICES')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'SERVICES' ? 'bg-[#D4AF37] text-black shadow-lg' : 'bg-white/5 text-muted hover:text-main border border-main'}`}><BriefcaseMedical size={12} /> Rituales</button>
+              <button onClick={() => setActiveTab('ALL')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${activeTab === 'ALL' ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20' : 'bg-white/[0.02] text-zinc-400 hover:text-white border border-white/5 hover:border-[#D4AF37]/20'}`}>Todo</button>
+              <button onClick={() => setActiveTab('PRODUCTS')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'PRODUCTS' ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20' : 'bg-white/[0.02] text-zinc-400 hover:text-white border border-white/5 hover:border-[#D4AF37]/20'}`}><Package size={12} /> Activos</button>
+              <button onClick={() => setActiveTab('SERVICES')} className={`whitespace-nowrap px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'SERVICES' ? 'bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black shadow-lg shadow-[#D4AF37]/20' : 'bg-white/[0.02] text-zinc-400 hover:text-white border border-white/5 hover:border-[#D4AF37]/20'}`}><BriefcaseMedical size={12} /> Rituales</button>
             </div>
           </div>
         </div>
@@ -269,7 +269,7 @@ export const POSPage: React.FC = () => {
                       <span className="block text-2xl font-black text-main tracking-tighter">${formatPrice(item.price)}</span>
                       {isProduct && <span className="text-[9px] font-black uppercase tracking-widest text-muted">Stock: {item.stock}</span>}
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted group-hover:bg-[#D4AF37] group-hover:text-black transition-all shadow-xl"><Plus size={24} /></div>
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-muted group-hover:bg-gradient-to-r group-hover:from-[#D4AF37] group-hover:to-[#AA7C11] group-hover:text-black transition-all shadow-xl"><Plus size={24} /></div>
                   </div>
                 </div>
               </button>
@@ -317,7 +317,7 @@ export const POSPage: React.FC = () => {
           <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted"><span>Subtotal</span><span className="text-main">${formatPrice(subtotal)}</span></div>
           {totalDiscount > 0 && (<div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-[#D4AF37]"><span>Descuentos Red</span><span>-${formatPrice(totalDiscount)}</span></div>)}
           <div className="flex justify-between text-3xl font-black text-main tracking-tighter pt-4 border-t border-main"><span>Total</span><span>${formatPrice(total)}</span></div>
-          <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full gold-btn py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl mt-4 flex items-center justify-center gap-3"><CreditCard size={18} /> Procesar Cobro</button>
+          <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black hover:scale-[1.01] transition-all py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-lg shadow-[#D4AF37]/25 mt-4 flex items-center justify-center gap-3"><CreditCard size={18} /> Procesar Cobro</button>
         </div>
       </div>
 
@@ -394,7 +394,7 @@ export const POSPage: React.FC = () => {
 
             <div className="p-8 bg-black/40 border-t border-white/5 flex justify-end gap-6">
               <button onClick={() => setIsPaymentModalOpen(false)} className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Abortar</button>
-              <button onClick={processPayment} disabled={(paymentMethod === 'CASH' && (Number(amountTendered) < total)) || isProcessing} className="gold-btn px-10 py-4 rounded-2xl text-black font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 disabled:opacity-30">
+              <button onClick={processPayment} disabled={(paymentMethod === 'CASH' && (Number(amountTendered) < total)) || isProcessing} className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] hover:scale-[1.02] transition-all px-10 py-4 rounded-2xl text-black font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#D4AF37]/20 flex items-center gap-3 disabled:opacity-30">
                 {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
                 Confirmar Venta
               </button>

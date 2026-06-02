@@ -13,7 +13,7 @@ import { WhatsAppButton } from './WhatsAppButton';
 import { SYSTEM_VERSION } from '../src/version';
 
 const gold = '#D4AF37';
-const magenta = '#CE4676';
+const magenta = '#D4AF37';
 
 interface TemplateProps {
     settings: LandingSettings;
@@ -323,8 +323,8 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
             {/* WhatsApp Floating Button */}
             <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
-            {/* 1. Navbar Fijo con Glassmorphism y Estilo Bugambilia Premium */}
-            <nav className="fixed w-full z-50 bg-black/60 backdrop-blur-xl border-b border-[#CE4676]/20 shadow-[0_4px_30px_rgba(206,70,123,0.15)] transition-all duration-300">
+            {/* 1. Navbar Fijo con Glassmorphism y Estilo Dorado Premium */}
+            <nav className="fixed w-full z-50 bg-black/60 backdrop-blur-xl border-b border-[#D4AF37]/20 shadow-[0_4px_30px_rgba(212,175,55,0.15)] transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center h-24">
                     <Link to="/" className="flex items-center group">
                         <LogoCitaplanner size={32} color={magenta} businessName={settings.businessName} customUrl={settings.logoUrl} />
@@ -335,14 +335,14 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                             <a 
                                 key={t} 
                                 href={`#${t.toLowerCase()}`} 
-                                className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                                className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#D4AF37] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#D4AF37] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
                             >
                                 {t}
                             </a>
                         ))}
                         <button 
                             onClick={onContactClick} 
-                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#D4AF37] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#D4AF37] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
                         >
                             Contacto
                         </button>
@@ -351,8 +351,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                     <div className="flex items-center gap-6">
                         <Link 
                             to="/book" 
-                            className="hidden md:inline-block px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-white hover:scale-105 hover:bg-[#b0305c] transition-all duration-300 shadow-[0_0_20px_rgba(206,70,123,0.45)] hover:shadow-[0_0_30px_rgba(206,70,123,0.7)]" 
-                            style={{ backgroundColor: magenta }}
+                            className="hidden md:inline-block px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-black hover:scale-105 hover:bg-[#AA7C11] transition-all duration-300 shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:shadow-[0_0_30px_rgba(212,175,55,0.7)] bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]"
                         >
                             Agendar Cita
                         </Link>
@@ -387,7 +386,7 @@ export const TemplateShulaStudio: React.FC<TemplateProps> = ({ settings, service
                     <span className="block text-[10px] font-black uppercase tracking-[0.4em] mb-4 text-[#D4AF37]">{slides?.[currentSlide || 0]?.subtitle || 'Alta Estética de Lujo'}</span>
                     <h1 className="text-4xl md:text-7xl font-playfair font-black text-white uppercase tracking-tighter mb-6 leading-none">{slides?.[currentSlide || 0]?.title || settings.businessName || 'Shula Studio'}</h1>
                     <p className="text-zinc-400 font-light italic text-sm md:text-base max-w-2xl mb-10 leading-relaxed">{slides?.[currentSlide || 0]?.text || settings.slogan || 'Elegancia en cada detalle de tu mirada.'}</p>
-                    <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-white font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(206,70,123,0.3)]" style={{ backgroundColor: magenta }}>
+                    <Link to="/book" className="inline-flex items-center gap-3 px-10 py-5 text-black font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform rounded-sm shadow-[0_10px_40px_rgba(212,175,55,0.3)] bg-gradient-to-r from-[#D4AF37] to-[#AA7C11]">
                         Reserva Tu Cita <ArrowRight size={16} />
                     </Link>
                 </div>
@@ -676,7 +675,7 @@ export const TemplateClassic: React.FC<TemplateProps & {
     <div className="min-h-screen bg-[#050505] font-inter selection:text-white overflow-x-hidden scroll-smooth">
         <WhatsAppButton phone={settings.whatsappPhone || settings.contactPhone} />
 
-        <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#CE4676]/20 shadow-[0_4px_30px_rgba(206,70,123,0.15)]' : 'bg-transparent py-8'}`}>
+        <nav className={`fixed top-0 w-full z-[500] transition-all duration-700 ${scrolled ? 'bg-black/90 backdrop-blur-2xl py-4 border-b border-[#D4AF37]/20 shadow-[0_4px_30px_rgba(212,175,55,0.15)]' : 'bg-transparent py-8'}`}>
             <div className="max-w-7xl mx-auto px-8 flex justify-between items-center">
                 <LogoCitaplanner color={accent === gold || accent === '#C5A028' ? magenta : accent} customUrl={settings.logoUrl} businessName={settings.businessName} />
                 <div className="hidden lg:flex items-center gap-10">
@@ -684,20 +683,20 @@ export const TemplateClassic: React.FC<TemplateProps & {
                         <a 
                             key={item} 
                             href={`#${item.toLowerCase()}`} 
-                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                            className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#D4AF37] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#D4AF37] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
                         >
                             {item}
                         </a>
                     ))}
                     <button 
                         onClick={onContactClick} 
-                        className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#CE4676] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#CE4676] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
+                        className="text-[11px] font-extrabold uppercase tracking-[0.25em] text-zinc-100 hover:text-[#D4AF37] transition-all duration-300 relative py-2 after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-[2px] after:bg-[#D4AF37] hover:after:w-full after:transition-all after:duration-300 hover:scale-105"
                     >
                         Contacto
                     </button>
                     <Link 
                         to="/book" 
-                        className="px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-white hover:scale-105 hover:bg-[#b0305c] transition-all duration-300 shadow-[0_0_20px_rgba(206,70,123,0.45)] hover:shadow-[0_0_30px_rgba(206,70,123,0.7)]" 
+                        className="px-8 py-3 rounded-full font-extrabold text-[11px] uppercase tracking-[0.2em] text-black hover:scale-105 hover:bg-[#AA7C11] transition-all duration-300 shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:shadow-[0_0_30px_rgba(212,175,55,0.7)]" 
                         style={{ backgroundColor: magenta }}
                     >
                         Mi Cita <ArrowRight size={14} className="inline ml-1" />

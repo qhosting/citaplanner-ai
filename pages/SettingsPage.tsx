@@ -893,7 +893,7 @@ export const SettingsPage: React.FC = () => {
                                           <div className="space-y-4 animate-entrance">
                                              <div className="bg-[#202c33] text-zinc-100 p-4 rounded-3xl rounded-tl-none max-w-[85%] text-[10.5px] font-medium leading-relaxed shadow border border-white/5">
                                                 ¡Hola! 🌸 Bienvenido al asistente de reservas nativo en WhatsApp de CitaPlanner AI.
-                                                <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-[#CE467B] font-black uppercase tracking-wider">
+                                                <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-[#D4AF37] font-black uppercase tracking-wider">
                                                    📲 WhatsApp Flow Iniciado
                                                 </div>
                                              </div>
@@ -989,7 +989,7 @@ export const SettingsPage: React.FC = () => {
                                                             <input type="text" placeholder="Tu Teléfono" value={simClientPhone} onChange={e => setSimClientPhone(e.target.value)} className="w-full bg-[#111b21] border border-white/5 text-white font-bold py-3 px-4 rounded-xl text-[10px] outline-none" />
                                                          </div>
 
-                                                         <button onClick={() => handleSimulatorAction('SUCCESS_SCREEN')} disabled={!simClientName || !simClientPhone} className="w-full py-3.5 bg-[#CE467B] text-white font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30 shadow-lg shadow-[#CE467B]/20">Confirmar Cita Real</button>
+                                                         <button onClick={() => handleSimulatorAction('SUCCESS_SCREEN')} disabled={!simClientName || !simClientPhone} className="w-full py-3.5 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black font-black text-[9px] uppercase tracking-widest rounded-xl hover:scale-102 transition-all disabled:opacity-30 shadow-lg shadow-[#D4AF37]/20">Confirmar Cita Real</button>
                                                       </div>
                                                    )}
 
@@ -1084,15 +1084,15 @@ export const SettingsPage: React.FC = () => {
                            <button
                               onClick={handleActivateMasterIcal}
                               disabled={generatingToken}
-                              className="bugambilia-btn text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3"
+                              className="bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black hover:scale-[1.02] transition-all shadow-lg shadow-[#D4AF37]/20 px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3"
                            >
-                              {generatingToken ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                              {generatingToken ? <Loader2 size={18} className="animate-spin text-black" /> : <Sparkles size={18} />}
                               Activar Calendario Maestro
                            </button>
                         ) : (
                            <div className="space-y-6 animate-entrance">
-                              <div className="bg-black/60 p-6 rounded-[2.5rem] border border-[#CE4676]/20">
-                                 <label className="text-[8px] font-black text-[#CE4676] uppercase tracking-[0.3em] mb-4 block ml-2">Feed URL de suscripción (Público Seguro)</label>
+                              <div className="bg-black/60 p-6 rounded-[2.5rem] border border-[#D4AF37]/20">
+                                 <label className="text-[8px] font-black text-[#D4AF37] uppercase tracking-[0.3em] mb-4 block ml-2">Feed URL de suscripción (Público Seguro)</label>
                                  <div className="flex gap-4">
                                     <input
                                        type="text"
@@ -1105,7 +1105,7 @@ export const SettingsPage: React.FC = () => {
                                           navigator.clipboard.writeText(`${window.location.origin}/api/calendar/tenant/feed/${masterIcalToken}.ics`);
                                           toast.success("Enlace maestro copiado.");
                                        }}
-                                       className="p-4 bg-[#CE4676] text-white rounded-xl hover:scale-105 transition-transform"
+                                       className="p-4 bg-gradient-to-r from-[#D4AF37] to-[#AA7C11] text-black rounded-xl hover:scale-105 transition-transform"
                                     >
                                        <Copy size={18} />
                                     </button>

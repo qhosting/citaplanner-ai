@@ -17,7 +17,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     icon: Icon,
     trend,
     trendPositive,
-    color = '#CE4676'
+    color = '#D4AF37'
 }) => {
     return (
         <div className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 border-theme bg-card-theme">
@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             />
 
             <div className="flex justify-between items-start mb-6">
-                <div className="p-4 rounded-2xl bg-input-theme border border-theme group-hover:border-[#CE4676]/30 transition-all">
+                <div className="p-4 rounded-2xl bg-input-theme border border-theme group-hover:border-[#D4AF37]/30 transition-all">
                     <Icon size={24} style={{ color }} />
                 </div>
                 {trend && (

@@ -179,36 +179,36 @@ export const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ isOpen, onClose,
         <button onClick={onClose} className="absolute top-8 right-8 text-muted hover:text-main transition-colors"><X size={24} /></button>
 
         <div className="mb-10 text-center">
-          <div className="inline-flex p-4 rounded-[1.5rem] bg-[#CE4676]/10 text-[#CE4676] mb-6">
+          <div className="inline-flex p-4 rounded-[1.5rem] bg-[#D4AF37]/10 text-[#D4AF37] mb-6">
             <Sparkles size={32} />
           </div>
-          <h2 className="text-3xl font-black text-main uppercase tracking-tighter">CitaPlanner <span className="bugambilia-text-gradient">Voice</span></h2>
+          <h2 className="text-3xl font-black text-main uppercase tracking-tighter">CitaPlanner <span className="gold-text-gradient">Voice</span></h2>
           <p className="text-muted text-[10px] font-bold uppercase tracking-widest mt-2 px-10">Inteligencia Artificial Pro activa para tu negocio</p>
         </div>
 
         <div className="relative flex items-center justify-center w-52 h-52 mb-12">
           {/* Visual Waves */}
           {isActive && status === 'LISTENING' && (
-            <div className="absolute inset-0 bg-[#CE4676]/20 rounded-full animate-ping opacity-30" />
+            <div className="absolute inset-0 bg-[#D4AF37]/20 rounded-full animate-ping opacity-30" />
           )}
           {isActive && status === 'SPEAKING' && (
-            <div className="absolute inset-0 bg-[#CE4676]/20 rounded-full animate-pulse opacity-40 shadow-[0_0_50px_#CE4676]/20" />
+            <div className="absolute inset-0 bg-[#D4AF37]/20 rounded-full animate-pulse opacity-40 shadow-[0_0_50px_rgba(212,175,55,0.2)]" />
           )}
 
           <button
             onClick={isActive ? stopAssistant : startAssistant}
             disabled={isConnecting}
-            className={`z-10 w-36 h-36 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-95 border-4 ${isActive ? 'bg-[#CE4676] text-white border-white/20' : 'bg-input-theme text-muted hover:text-main border-theme'
+            className={`z-10 w-36 h-36 rounded-full flex items-center justify-center transition-all shadow-2xl active:scale-95 border-4 ${isActive ? 'bg-[#D4AF37] text-black border-white/20' : 'bg-input-theme text-muted hover:text-main border-theme'
               }`}
           >
             {isConnecting ? <Loader2 size={40} className="animate-spin" /> :
-              isActive ? <Mic size={56} /> : <MicOff size={56} />}
+              isActive ? <Mic size={56} className="text-black" /> : <MicOff size={56} />}
           </button>
         </div>
 
         <div className="w-full bg-input-theme rounded-2xl p-5 border border-theme flex items-center justify-center gap-4">
-          <div className={`w-3 h-3 rounded-full ${status === 'LISTENING' ? 'bg-[#CE4676] animate-pulse shadow-[0_0_10px_#CE4676]' :
-              status === 'SPEAKING' ? 'bg-[#CE4676]' :
+          <div className={`w-3 h-3 rounded-full ${status === 'LISTENING' ? 'bg-[#D4AF37] animate-pulse shadow-[0_0_10px_#D4AF37]' :
+              status === 'SPEAKING' ? 'bg-[#D4AF37]' :
                 status === 'THINKING' ? 'bg-amber-500 animate-bounce' : 'bg-muted'
             }`} />
           <span className="text-[10px] font-black text-main uppercase tracking-[0.3em]">

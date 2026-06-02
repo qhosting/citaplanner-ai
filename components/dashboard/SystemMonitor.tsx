@@ -26,7 +26,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({ logs }) => {
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                                 {(log.event_type || '').includes('AI') ? (
-                                    <BrainCircuit size={16} className="text-[#CE4676]" />
+                                    <BrainCircuit size={16} className="text-[#D4AF37]" />
                                 ) : (
                                     <MessageSquare size={16} className="text-emerald-500" />
                                 )}

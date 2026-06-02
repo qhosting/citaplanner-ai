@@ -68,10 +68,10 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
 
   return (
     <div className="bg-card-theme rounded-[3rem] shadow-sm border border-theme p-10 mb-8 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#CE4676]/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700" />
 
       <div className="flex items-center gap-5 mb-8">
-        <div className="bg-[#CE4676] p-3 rounded-2xl text-white shadow-lg">
+        <div className="bg-[#D4AF37] p-3 rounded-2xl text-black shadow-lg">
           <Wand2 size={24} />
         </div>
         <div>
@@ -86,13 +86,13 @@ export const SmartScheduler: React.FC<SmartSchedulerProps> = ({ onAddAppointment
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ej: Retoque de Microblading para Valeria mañana a las 5pm"
-          className="w-full pl-6 pr-40 py-6 bg-input-theme border border-theme rounded-3xl focus:outline-none focus:ring-2 focus:ring-[#CE4676] transition-all text-lg font-medium text-main placeholder-muted"
+          className="w-full pl-6 pr-40 py-6 bg-input-theme border border-theme rounded-3xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all text-lg font-medium text-main placeholder-muted"
           disabled={isProcessing}
         />
         <button
           type="submit"
           disabled={!input.trim() || isProcessing}
-          className="absolute right-3 top-3 bottom-3 px-8 bg-[#CE4676] rounded-2xl font-black text-[10px] uppercase tracking-widest text-white hover:bg-[#9D2D51] transition-all flex items-center gap-3 disabled:opacity-50"
+          className="absolute right-3 top-3 bottom-3 px-8 bg-[#D4AF37] hover:bg-[#AA7C11] text-black rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 disabled:opacity-50"
         >
           {isProcessing ? (
             <Loader2 size={20} className="animate-spin" />
